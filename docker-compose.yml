@@ -1,0 +1,61 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:16
+    container_name: waadapp-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: tba_waad_system
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - tba_network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+    container_name: waadapp-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      EMAIL_ENABLED: ${EMAIL_ENABLED:-false}
+    volumes:
+      - ./uploads:/app/uploads
+    ports:
+      - "8080:8080"
+    networks:
+      - tba_network
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: ${VITE_API_URL}
+    container_name: waadapp-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80" # محلياً استخدم 3000 بدل 80
+    depends_on:
+      - backend
+    networks:
+      - tba_network
+
+networks:
+  tba_network:
+    driver: bridge
+
+volumes:
+  pgdata:

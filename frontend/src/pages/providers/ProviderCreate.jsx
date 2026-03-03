@@ -1,0 +1,1143 @@
+import { useState, useEffect, useMemo } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSnackbar } from 'notistack';
+import { useForm, Controller } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import {
+  Box,
+  Button,
+  Grid,
+  TextField,
+  MenuItem,
+  Typography,
+  Tabs,
+  Tab,
+  Divider,
+  Alert,
+  InputAdornment,
+  Chip,
+  Stack,
+  IconButton,
+  RadioGroup,
+  Badge,
+  CircularProgress,
+  FormControlLabel,
+  Radio,
+  Paper,
+  Autocomplete,
+  Avatar,
+  Switch,
+  LinearProgress
+} from '@mui/material';
+import {
+  ArrowBack,
+  Save,
+  LocalHospital as ProviderIcon,
+  Business,
+  LocationOn,
+  Phone,
+  People,
+  Person,
+  Lock,
+  Visibility,
+  VisibilityOff,
+  Link as LinkIcon,
+  PersonAdd,
+  Handshake,
+  VerifiedUser,
+  Info
+} from '@mui/icons-material';
+import MainCard from 'components/MainCard';
+import ModernPageHeader from 'components/tba/ModernPageHeader';
+import { useCreateProvider } from 'hooks/useProviders';
+import { usersService } from 'services/rbac/users.service';
+import { refreshToken } from 'services/auth/tokenRefresh.service';
+import { getEmployerSelectors } from 'services/api/employers.service';
+import { providersService } from 'services/api/providers.service';
+import GregorianDatePicker from 'components/common/GregorianDatePicker';
+import {
+  providerFormSchema,
+  accountCreationSchema,
+  providerDefaultValues,
+  accountCreationDefaultValues,
+  sanitizeProviderPayload,
+  getPasswordStrength
+} from 'schemas/providerSchema';
+
+const PROVIDER_TYPES = [
+  { value: 'HOSPITAL', label: 'مستشفى', icon: '🏥' },
+  { value: 'CLINIC', label: 'عيادة', icon: '🏥' },
+  { value: 'LAB', label: 'مختبر', icon: '🔬' },
+  { value: 'PHARMACY', label: 'صيدلية', icon: '💊' },
+  { value: 'RADIOLOGY', label: 'مركز أشعة', icon: '📷' }
+];
+
+const NETWORK_STATUS_OPTIONS = [
+  { value: 'IN_NETWORK', label: 'داخل الشبكة', description: 'مقدم خدمة معتمد داخل الشبكة' },
+  { value: 'OUT_OF_NETWORK', label: 'خارج الشبكة', description: 'مقدم خدمة خارج الشبكة' },
+  { value: 'PREFERRED', label: 'مزود مفضل', description: 'مقدم خدمة مفضل بخصومات أعلى' }
+];
+
+const ProviderCreate = () => {
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { enqueueSnackbar } = useSnackbar();
+  const { create, creating } = useCreateProvider();
+
+  // ============================================================================
+  // React Hook Form - Provider Form
+  // ============================================================================
+  const {
+    control: providerControl,
+    handleSubmit: handleProviderSubmit,
+    formState: { errors: providerErrors },
+    watch
+  } = useForm({
+    resolver: yupResolver(providerFormSchema),
+    defaultValues: providerDefaultValues,
+    mode: 'onBlur'
+  });
+
+  // ============================================================================
+  // React Hook Form - Account Creation Form
+  // ============================================================================
+  const {
+    control: accountControl,
+    formState: { errors: accountErrors },
+    watch: watchAccount,
+    setValue: setAccountValue
+  } = useForm({
+    resolver: yupResolver(accountCreationSchema),
+    defaultValues: accountCreationDefaultValues,
+    mode: 'onBlur'
+  });
+
+  // Watch form values for auto-generation and validation
+  const providerName = watch('name');
+  const providerType = watch('providerType');
+  const accountPassword = watchAccount('password');
+
+  // ============================================================================
+  // UI State (not form data)
+  // ============================================================================
+  const [activeTab, setActiveTab] = useState(() => {
+    const tabParam = searchParams.get('tab');
+    return tabParam ? parseInt(tabParam, 10) : 0;
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [accountMode, setAccountMode] = useState('CREATE');
+  const [unassignedUsers, setUnassignedUsers] = useState([]);
+  const [selectedUserToLink, setSelectedUserToLink] = useState(null);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [payers, setPayers] = useState([]);
+  const [loadingPayers, setLoadingPayers] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [savingStep, setSavingStep] = useState('');
+
+  // ============================================================================
+  // Computed Values
+  // ============================================================================
+
+  // Auto-generated provider code
+  const autoCode = useMemo(() => {
+    if (providerType && providerName) {
+      const typePrefix = providerType.substring(0, 3).toUpperCase();
+      const nameInitials = providerName
+        .split(' ')
+        .slice(0, 2)
+        .map((w) => w[0])
+        .join('');
+      const timestamp = Date.now().toString().slice(-4);
+      return `${typePrefix}-${nameInitials || 'XX'}-${timestamp}`;
+    }
+    return 'AUTO-GENERATED';
+  }, [providerType, providerName]);
+
+  // Password strength indicator
+  const passwordStrength = useMemo(() => {
+    return getPasswordStrength(accountPassword || '');
+  }, [accountPassword]);
+
+  // ✅ Count errors per tab for badges
+  const getTabErrors = (tabIndex) => {
+    let count = 0;
+    if (tabIndex === 0) {
+      if (providerErrors.name) count++;
+      if (providerErrors.licenseNumber) count++;
+      if (providerErrors.providerType) count++;
+      if (providerErrors.taxNumber) count++;
+    } else if (tabIndex === 1) {
+      if (providerErrors.city) count++;
+      if (providerErrors.address) count++;
+      if (providerErrors.phone) count++;
+      if (providerErrors.email) count++;
+    } else if (tabIndex === 2) {
+      if (providerErrors.contractStartDate) count++;
+      if (providerErrors.contractEndDate) count++;
+      if (providerErrors.defaultDiscountRate) count++;
+    } else if (tabIndex === 4 && accountMode === 'CREATE') {
+      if (accountErrors.username) count++;
+      if (accountErrors.password) count++;
+      if (accountErrors.confirmPassword) count++;
+      if (accountErrors.fullName) count++;
+    }
+    return count;
+  };
+
+  // ============================================================================
+  // Effects
+  // ============================================================================
+
+  // Load partners data on mount
+  useEffect(() => {
+    const loadPartnersData = async () => {
+      setLoadingPayers(true);
+      try {
+        const employersRes = await getEmployerSelectors();
+        const allEmployers = Array.isArray(employersRes) ? employersRes : employersRes?.data || [];
+        const mapped = allEmployers.map((emp) => ({
+          id: emp.id || emp.value,
+          name: emp.label || emp.name,
+          code: emp.code || 'EMP',
+          enabled: false
+        }));
+        setPayers(mapped);
+      } catch (error) {
+        console.error('Error loading partners:', error);
+        enqueueSnackbar('فشل تحميل بيانات الشركاء', { variant: 'error' });
+      } finally {
+        setLoadingPayers(false);
+      }
+    };
+    loadPartnersData();
+  }, [enqueueSnackbar]);
+
+  // Load unassigned users when switching to LINK mode
+  const loadUnassignedUsers = async () => {
+    setLoadingUsers(true);
+    try {
+      const users = await usersService.getUnassignedProviders();
+      setUnassignedUsers(users || []);
+    } catch (error) {
+      console.error('Error loading unassigned users:', error);
+      enqueueSnackbar('فشل تحميل المستخدمين غير المرتبطين', { variant: 'error' });
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  useEffect(() => {
+    if (accountMode === 'LINK' && activeTab === 4) {
+      loadUnassignedUsers();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accountMode, activeTab]);
+
+  // Auto-populate account fullName and username from provider name
+  useEffect(() => {
+    if (providerName && accountMode === 'CREATE') {
+      const currentFullName = watchAccount('fullName');
+      const currentUsername = watchAccount('username');
+
+      if (!currentFullName) {
+        setAccountValue('fullName', providerName);
+      }
+
+      if (!currentUsername) {
+        const generatedUsername = providerName.trim().toLowerCase().replace(/\s+/g, '_');
+        setAccountValue('username', generatedUsername);
+      }
+    }
+  }, [providerName, accountMode, setAccountValue, watchAccount]);
+
+  // ==============================================================================================
+  // Handlers
+  // ============================================================================
+
+  const handleTabChange = (event, newValue) => {
+    setActiveTab(newValue);
+    setSearchParams({ tab: newValue.toString() });
+  };
+
+  const handleNext = () => {
+    setActiveTab((prev) => Math.min(prev + 1, 4));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleBack = () => {
+    setActiveTab((prev) => Math.max(prev - 1, 0));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Navigate to tab with errors
+  const navigateToErrorTab = (errors) => {
+    // Check provider form errors
+    const basicInfoErrors = ['name', 'licenseNumber', 'providerType', 'taxNumber', 'networkStatus'];
+    if (basicInfoErrors.some((field) => errors[field])) {
+      setActiveTab(0); // Basic Info
+      enqueueSnackbar('يرجى تصحيح الأخطاء في البيانات الأساسية', { variant: 'error' });
+      return;
+    }
+
+    const locationErrors = ['city', 'address', 'phone', 'email'];
+    if (locationErrors.some((field) => errors[field])) {
+      setActiveTab(1); // Location
+      enqueueSnackbar('يرجى تصحيح الأخطاء في بيانات الموقع والتواصل', { variant: 'error' });
+      return;
+    }
+
+    const contractErrors = ['contractStartDate', 'contractEndDate', 'defaultDiscountRate'];
+    if (contractErrors.some((field) => errors[field])) {
+      setActiveTab(2); // Contract
+      enqueueSnackbar('يرجى تصحيح الأخطاء في معلومات العقد', { variant: 'error' });
+      return;
+    }
+
+    // Check account errors if in CREATE mode
+    // specific checking since accountErrors is separate
+    if (
+      accountMode === 'CREATE' &&
+      (accountErrors.username || accountErrors.password || accountErrors.confirmPassword || accountErrors.fullName)
+    ) {
+      setActiveTab(4); // Account tab
+      enqueueSnackbar('يرجى تصحيح الأخطاء في بيانات الحساب', { variant: 'error' });
+    }
+  };
+
+  const renderFooterActions = (currentTab) => (
+    <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4, pt: 2, borderTop: 1, borderColor: 'divider' }}>
+      {currentTab > 0 ? (
+        <Button onClick={handleBack} startIcon={<ArrowBack sx={{ transform: 'rotate(180deg)' }} />}>
+          السابق
+        </Button>
+      ) : (
+        <div />
+      )}
+
+      {currentTab < 4 ? (
+        <Button variant="contained" onClick={handleNext} endIcon={<ArrowBack sx={{ transform: 'rotate(0deg)' }} />}>
+          التالي
+        </Button>
+      ) : (
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={handleProviderSubmit(onSubmit, navigateToErrorTab)}
+          startIcon={<Save />}
+          disabled={creating || submitting}
+        >
+          {creating || submitting ? 'جاري الحفظ...' : 'حفظ مقدم الخدمة'}
+        </Button>
+      )}
+    </Box>
+  );
+
+  // ============================================================================
+  // Form Submission
+  // ============================================================================
+
+  const onSubmit = async (providerData) => {
+    setSubmitting(true);
+    setSavingStep('التحقق من البيانات...');
+
+    // Validate account mode specific requirements
+    if (accountMode === 'CREATE') {
+      // Get account form data and validate
+      const accountData = watchAccount();
+
+      try {
+        await accountCreationSchema.validate(accountData);
+      } catch {
+        enqueueSnackbar('يرجى إكمال بيانات حساب المسؤول الجديد بشكل صحيح', { variant: 'error' });
+        setActiveTab(4);
+        setSearchParams({ tab: '4' });
+        setSubmitting(false);
+        setSavingStep('');
+        return;
+      }
+
+      // ✅ Check for duplicate username
+      try {
+        const allUsers = await usersService.getAllUsers();
+        const duplicateUser = allUsers?.find((u) => u.username === accountData.username);
+        if (duplicateUser) {
+          enqueueSnackbar(`اسم المستخدم "${accountData.username}" مستخدم بالفعل. يرجى اختيار اسم آخر.`, { variant: 'error' });
+          setActiveTab(4);
+          setSearchParams({ tab: '4' });
+          setSubmitting(false);
+          setSavingStep('');
+          return;
+        }
+      } catch (error) {
+        console.warn('Could not check duplicate username:', error);
+      }
+    } else if (accountMode === 'LINK' && !selectedUserToLink) {
+      enqueueSnackbar('يرجى اختيار مستخدم لربطه كمسؤول', { variant: 'error' });
+      setActiveTab(4);
+      setSearchParams({ tab: '4' });
+      setSubmitting(false);
+      setSavingStep('');
+      return;
+    }
+
+    // Sanitize payload (convert empty strings to null, ensure numeric types)
+    const payload = sanitizeProviderPayload(providerData);
+
+    try {
+      setSavingStep('حفظ بيانات المزود...');
+      const result = await create(payload);
+      if (result.success) {
+        const newProviderId = result.data?.id || result.data?.data?.id || result.data;
+
+        if (newProviderId) {
+          // Step 1: Save Partners
+          setSavingStep('حفظ الشركاء...');
+          const enabledPartnerIds = payers.filter((p) => p.enabled).map((p) => p.id);
+          if (enabledPartnerIds.length > 0) {
+            try {
+              await providersService.updateAllowedEmployers(newProviderId, enabledPartnerIds);
+            } catch (partnerError) {
+              console.error('Failed to save partners:', partnerError);
+              enqueueSnackbar('تم إنشاء المزود ولكن فشل حفظ الشركاء', { variant: 'warning' });
+            }
+          }
+
+          // Step 2: Create/Link Account
+          setSavingStep('إنشاء حساب المسؤول...');
+          if (accountMode === 'CREATE') {
+            const accountData = watchAccount();
+            await createNewAccount(newProviderId, accountData, providerData.name);
+          } else if (accountMode === 'LINK' && selectedUserToLink) {
+            await linkExistingAccount(newProviderId, selectedUserToLink.id);
+          }
+        }
+
+        setSavingStep('اكتمل!');
+        enqueueSnackbar('تم إنشاء مقدم الخدمة بنجاح', { variant: 'success' });
+        navigate(`/providers/edit/${newProviderId}`);
+      } else {
+        enqueueSnackbar(result.error || 'فشل إنشاء مقدم الخدمة', { variant: 'error' });
+      }
+    } catch (error) {
+      console.error('Provider creation error:', error);
+      enqueueSnackbar('حدث خطأ غير متوقع', { variant: 'error' });
+    } finally {
+      setSubmitting(false);
+      setSavingStep('');
+    }
+  };
+
+  const createNewAccount = async (providerId, accountData, providerName) => {
+    try {
+      const userPayload = {
+        username: accountData.username,
+        password: accountData.password,
+        fullName: accountData.fullName || providerName,
+        email: `${accountData.username}@provider.local`,
+        providerId: providerId,
+        userType: 'PROVIDER_STAFF',
+        enabled: true
+      };
+
+      const userRes = await usersService.createUser(userPayload);
+      const userId = userRes?.data?.data?.id || userRes?.data?.id || userRes?.id;
+
+      if (userId) {
+        console.log('Provider user created with PROVIDER_STAFF type, id:', userId);
+      }
+    } catch (error) {
+      console.error('Account creation error:', error);
+      enqueueSnackbar('تم إنشاء المزود لكن فشلت عملية إنشاء الحساب. يرجى الربط يدوياً.', { variant: 'warning' });
+    }
+  };
+
+  const linkExistingAccount = async (providerId, userId) => {
+    try {
+      await usersService.updateUser(userId, { providerId });
+      enqueueSnackbar('تم ربط المستخدم بنجاح', { variant: 'success' });
+    } catch (error) {
+      console.error('User linking error:', error);
+      enqueueSnackbar('تم إنشاء المزود لكن فشل ربط المستخدم. يرجى الربط يدوياً.', { variant: 'warning' });
+    }
+  };
+
+  // ============================================================================
+  // Render Functions - Tab Content
+  // ============================================================================
+
+  const renderBasicInfo = () => (
+    <Box sx={{ p: 1 }}>
+      {/* ✅ Section Header */}
+      <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 3, pb: 2, borderBottom: 1, borderColor: 'divider' }}>
+        <Business color="primary" fontSize="large" />
+        <Box>
+          <Typography variant="h5" fontWeight={600}>
+            البيانات الأساسية
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            اسم ونوع وترخيص مقدم الخدمة
+          </Typography>
+        </Box>
+      </Stack>
+      <Grid container spacing={3}>
+        {/* Auto-generated Code */}
+        <Grid item xs={12}>
+          <Alert severity="info" sx={{ mb: 2 }}>
+            <Typography variant="body2">
+              <strong>الرمز التلقائي:</strong> سيتم إنشاء رمز تلقائي لمقدم الخدمة عند الحفظ
+            </Typography>
+          </Alert>
+          <TextField
+            fullWidth
+            label="الرمز التلقائي"
+            value={autoCode}
+            disabled
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Chip label="AUTO" size="small" color="primary" />
+                </InputAdornment>
+              )
+            }}
+          />
+        </Grid>
+
+        {/* Provider Name */}
+        <Grid item xs={12}>
+          <Controller
+            name="name"
+            control={providerControl}
+            render={({ field, fieldState: { error } }) => (
+              <TextField
+                {...field}
+                fullWidth
+                required
+                label="اسم مقدم الخدمة"
+                placeholder="مثال: مستشفى الواحة"
+                error={!!error}
+                helperText={error?.message}
+              />
+            )}
+          />
+        </Grid>
+
+        {/* Provider Type */}
+        <Grid item xs={12} md={6}>
+          <Controller
+            name="providerType"
+            control={providerControl}
+            render={({ field, fieldState: { error } }) => (
+              <TextField {...field} fullWidth required select label="نوع مقدم الخدمة" error={!!error} helperText={error?.message}>
+                {PROVIDER_TYPES.map((option) => (
+                  <MenuItem key={option.value} value={option.value}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <span>{option.icon}</span>
+                      <span>{option.label}</span>
+                    </Box>
+                  </MenuItem>
+                ))}
+              </TextField>
+            )}
+          />
+        </Grid>
+
+        {/* Network Status */}
+        <Grid item xs={12} md={6}>
+          <Controller
+            name="networkStatus"
+            control={providerControl}
+            render={({ field }) => (
+              <TextField {...field} fullWidth select label="حالة الشبكة">
+                <MenuItem value="">
+                  <em>غير محدد</em>
+                </MenuItem>
+                {NETWORK_STATUS_OPTIONS.map((option) => (
+                  <MenuItem key={option.value} value={option.value}>
+                    {option.label}
+                  </MenuItem>
+                ))}
+              </TextField>
+            )}
+          />
+        </Grid>
+
+        {/* License Number */}
+        <Grid item xs={12} md={6}>
+          <Controller
+            name="licenseNumber"
+            control={providerControl}
+            render={({ field, fieldState: { error } }) => (
+              <TextField {...field} fullWidth required label="رقم الترخيص" error={!!error} helperText={error?.message} />
+            )}
+          />
+        </Grid>
+
+        {/* Tax Number */}
+        <Grid item xs={12} md={6}>
+          <Controller
+            name="taxNumber"
+            control={providerControl}
+            render={({ field }) => <TextField {...field} fullWidth label="الرقم الضريبي (اختياري)" />}
+          />
+        </Grid>
+      </Grid>
+    </Box>
+  );
+
+  const renderLocationContact = () => (
+    <Box sx={{ p: 1 }}>
+      {/* ✅ Section Header */}
+      <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 3, pb: 2, borderBottom: 1, borderColor: 'divider' }}>
+        <LocationOn color="primary" fontSize="large" />
+        <Box>
+          <Typography variant="h5" fontWeight={600}>
+            الموقع والتواصل
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            عنوان وهاتف وبريد مقدم الخدمة
+          </Typography>
+        </Box>
+      </Stack>
+      <Grid container spacing={3}>
+        {/* City */}
+        <Grid item xs={12} md={6}>
+          <Controller
+            name="city"
+            control={providerControl}
+            render={({ field }) => <TextField {...field} fullWidth label="المدينة" placeholder="مثال: طرابلس" />}
+          />
+        </Grid>
+
+        {/* Address */}
+        <Grid item xs={12} md={6}>
+          <Controller
+            name="address"
+            control={providerControl}
+            render={({ field }) => <TextField {...field} fullWidth label="العنوان" placeholder="مثال: شارع الجمهورية" />}
+          />
+        </Grid>
+
+        {/* Phone */}
+        <Grid item xs={12} md={6}>
+          <Controller
+            name="phone"
+            control={providerControl}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                fullWidth
+                label="رقم الهاتف"
+                placeholder="+218-xx-xxxxxxx"
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Phone fontSize="small" />
+                    </InputAdornment>
+                  )
+                }}
+              />
+            )}
+          />
+        </Grid>
+
+        {/* Email */}
+        <Grid item xs={12} md={6}>
+          <Controller
+            name="email"
+            control={providerControl}
+            render={({ field, fieldState: { error } }) => (
+              <TextField
+                {...field}
+                fullWidth
+                label="البريد الإلكتروني"
+                placeholder="info@example.ly"
+                error={!!error}
+                helperText={error?.message}
+              />
+            )}
+          />
+        </Grid>
+      </Grid>
+    </Box>
+  );
+
+  const renderContractInfo = () => (
+    <Box sx={{ p: 1 }}>
+      {/* ✅ Section Header */}
+      <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 3, pb: 2, borderBottom: 1, borderColor: 'divider' }}>
+        <VerifiedUser color="primary" fontSize="large" />
+        <Box>
+          <Typography variant="h5" fontWeight={600}>
+            معلومات العقد
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            فترة العقد ونسبة الخصم الافتراضية
+          </Typography>
+        </Box>
+      </Stack>
+      <Alert severity="info" sx={{ mb: 3 }}>
+        إدخال بيانات العقد الآن يساعد في تفعيل مقدم الخدمة مباشرة على النظام.
+      </Alert>
+      <Grid container spacing={3}>
+        {/* Contract Start Date - 🔴 BUG-001 FIX: Using Controller properly */}
+        <Grid item xs={12} md={4}>
+          <Controller
+            name="contractStartDate"
+            control={providerControl}
+            render={({ field: { onChange, value, ...field }, fieldState: { error } }) => (
+              <GregorianDatePicker
+                {...field}
+                label="بداية العقد"
+                name="contractStartDate"
+                value={value || ''}
+                onChange={(event) => {
+                  // ✅ FIX: Extract value from event.target.value
+                  onChange(event.target.value);
+                }}
+                error={!!error}
+                helperText={error?.message}
+              />
+            )}
+          />
+        </Grid>
+
+        {/* Contract End Date - 🔴 BUG-001 FIX: Using Controller properly */}
+        <Grid item xs={12} md={4}>
+          <Controller
+            name="contractEndDate"
+            control={providerControl}
+            render={({ field: { onChange, value, ...field }, fieldState: { error } }) => (
+              <GregorianDatePicker
+                {...field}
+                label="نهاية العقد"
+                name="contractEndDate"
+                value={value || ''}
+                onChange={(event) => {
+                  // ✅ FIX: Extract value from event.target.value
+                  onChange(event.target.value);
+                }}
+                error={!!error}
+                helperText={error?.message}
+              />
+            )}
+          />
+        </Grid>
+
+        {/* Default Discount Rate */}
+        <Grid item xs={12} md={4}>
+          <Controller
+            name="defaultDiscountRate"
+            control={providerControl}
+            render={({ field, fieldState: { error } }) => (
+              <TextField
+                {...field}
+                fullWidth
+                type="number"
+                label="نسبة الخصم %"
+                error={!!error}
+                helperText={error?.message}
+                InputProps={{
+                  endAdornment: <InputAdornment position="end">%</InputAdornment>
+                }}
+              />
+            )}
+          />
+        </Grid>
+      </Grid>
+    </Box>
+  );
+
+  const renderPartners = () => (
+    <Box sx={{ p: 1 }}>
+      {/* ✅ Section Header */}
+      <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 3, pb: 2, borderBottom: 1, borderColor: 'divider' }}>
+        <Handshake color="primary" fontSize="large" />
+        <Box sx={{ flex: 1 }}>
+          <Typography variant="h5" fontWeight={600}>
+            الشركاء (شركات التأمين)
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            حدد الجهات المسموح لها بالتعامل مع هذا المزود
+          </Typography>
+        </Box>
+      </Stack>
+
+      {loadingPayers ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+          <CircularProgress />
+        </Box>
+      ) : payers.length === 0 ? (
+        /* ✅ Empty State */
+        <Paper variant="outlined" sx={{ p: 4, textAlign: 'center', bgcolor: 'grey.50' }}>
+          <Info sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+          <Typography variant="h6" color="text.secondary" gutterBottom>
+            لا توجد جهات تأمين متاحة
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            يرجى إضافة جهات أولاً من صفحة الجهات المؤمنة
+          </Typography>
+        </Paper>
+      ) : (
+        <Grid container spacing={2}>
+          {payers.map((payer) => (
+            <Grid item xs={12} sm={6} md={4} key={payer.id}>
+              <Paper
+                variant="outlined"
+                sx={{
+                  p: 2,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  border: payer.enabled ? '2px solid' : '1px solid',
+                  borderColor: payer.enabled ? 'primary.main' : 'divider',
+                  bgcolor: payer.enabled ? 'primary.lighter' : 'background.paper',
+                  transition: 'all 0.2s'
+                }}
+              >
+                <Box>
+                  <Typography variant="subtitle2" fontWeight="bold">
+                    {payer.name}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {payer.code}
+                  </Typography>
+                </Box>
+                <Switch
+                  checked={payer.enabled}
+                  onChange={() => {
+                    setPayers((prev) => prev.map((p) => (p.id === payer.id ? { ...p, enabled: !p.enabled } : p)));
+                  }}
+                />
+              </Paper>
+            </Grid>
+          ))}
+        </Grid>
+      )}
+    </Box>
+  );
+
+  const renderAccountManager = () => (
+    <Box sx={{ p: 1 }}>
+      {/* ✅ Section Header */}
+      <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 3, pb: 2, borderBottom: 1, borderColor: 'divider' }}>
+        <People color="primary" fontSize="large" />
+        <Box>
+          <Typography variant="h5" fontWeight={600}>
+            مدير الحساب
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            ربط مستخدم لإدارة بيانات مقدم الخدمة
+          </Typography>
+        </Box>
+      </Stack>
+
+      <Paper variant="outlined" sx={{ p: 3, mb: 3, bgcolor: 'primary.50' }}>
+        <Typography variant="subtitle2" gutterBottom fontWeight={600}>
+          اختر طريقة ربط المسؤول:
+        </Typography>
+        <RadioGroup row value={accountMode} onChange={(e) => setAccountMode(e.target.value)}>
+          <FormControlLabel
+            value="CREATE"
+            control={<Radio />}
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <PersonAdd fontSize="small" />
+                <Typography>إنشاء حساب جديد</Typography>
+              </Box>
+            }
+            sx={{ mr: 4 }}
+          />
+          <FormControlLabel
+            value="LINK"
+            control={<Radio />}
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <LinkIcon fontSize="small" />
+                <Typography>ربط مستخدم موجود (حر)</Typography>
+              </Box>
+            }
+            sx={{ mr: 4 }}
+          />
+          <FormControlLabel value="SKIP" control={<Radio />} label="تخطي (بدون مسؤول حالياً)" />
+        </RadioGroup>
+      </Paper>
+
+      {/* CREATE Mode: New Account Form */}
+      {accountMode === 'CREATE' && (
+        <Grid container spacing={3} maxWidth="md">
+          {/* Full Name */}
+          <Grid item xs={12}>
+            <Controller
+              name="fullName"
+              control={accountControl}
+              render={({ field }) => <TextField {...field} fullWidth label="الاسم الكامل" />}
+            />
+          </Grid>
+
+          {/* Username */}
+          <Grid item xs={12}>
+            <Controller
+              name="username"
+              control={accountControl}
+              render={({ field, fieldState: { error } }) => (
+                <TextField
+                  {...field}
+                  fullWidth
+                  required
+                  label="اسم المستخدم"
+                  error={!!error}
+                  helperText={error?.message}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Person />
+                      </InputAdornment>
+                    )
+                  }}
+                />
+              )}
+            />
+          </Grid>
+
+          {/* Password */}
+          <Grid item xs={12} md={6}>
+            <Controller
+              name="password"
+              control={accountControl}
+              render={({ field, fieldState: { error } }) => (
+                <TextField
+                  {...field}
+                  fullWidth
+                  required
+                  label="كلمة المرور"
+                  type={showPassword ? 'text' : 'password'}
+                  error={!!error}
+                  helperText={error?.message}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Lock />
+                      </InputAdornment>
+                    ),
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
+                          {showPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    )
+                  }}
+                />
+              )}
+            />
+          </Grid>
+
+          {/* Confirm Password */}
+          <Grid item xs={12} md={6}>
+            <Controller
+              name="confirmPassword"
+              control={accountControl}
+              render={({ field, fieldState: { error } }) => (
+                <TextField
+                  {...field}
+                  fullWidth
+                  required
+                  label="تأكيد كلمة المرور"
+                  type={showPassword ? 'text' : 'password'}
+                  error={!!error}
+                  helperText={error?.message}
+                />
+              )}
+            />
+          </Grid>
+
+          {/* Password Strength Indicator */}
+          {accountPassword && (
+            <Grid item xs={12}>
+              <Box sx={{ mb: 1 }}>
+                <Typography variant="caption" color="text.secondary">
+                  قوة كلمة المرور: <strong>{passwordStrength.label}</strong>
+                </Typography>
+              </Box>
+              <LinearProgress
+                variant="determinate"
+                value={passwordStrength.strength}
+                color={passwordStrength.strength < 40 ? 'error' : passwordStrength.strength < 80 ? 'warning' : 'success'}
+                sx={{ height: 6, borderRadius: 3 }}
+              />
+            </Grid>
+          )}
+        </Grid>
+      )}
+
+      {/* LINK Mode: Select Existing User */}
+      {accountMode === 'LINK' && (
+        <Box sx={{ maxWidth: 'md' }}>
+          <Typography variant="body2" color="text.secondary" paragraph>
+            ابحث عن مستخدم لديه صلاحية (PROVIDER) وغير مرتبط بأي مستشفى حالياً.
+          </Typography>
+
+          {/* ✅ Empty State when loading */}
+          {loadingUsers ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : unassignedUsers.length === 0 ? (
+            <Paper variant="outlined" sx={{ p: 4, textAlign: 'center', bgcolor: 'grey.50' }}>
+              <Info sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+              <Typography variant="h6" color="text.secondary" gutterBottom>
+                لا توجد مستخدمين متاحين
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                جميع المستخدمين مرتبطين بمقدمي خدمة آخرين. يمكنك إنشاء مستخدم جديد بدلاً من ذلك.
+              </Typography>
+            </Paper>
+          ) : (
+            <Autocomplete
+              options={unassignedUsers}
+              getOptionLabel={(option) => option.fullName || option.username || ''}
+              value={selectedUserToLink}
+              onChange={(e, newValue) => setSelectedUserToLink(newValue)}
+              loading={loadingUsers}
+              disabled={loadingUsers}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="اختر مستخدم"
+                  placeholder="ابحث..."
+                  helperText={unassignedUsers.length === 0 ? 'لا يوجد مستخدمين متاحين' : `${unassignedUsers.length} مستخدم متاح`}
+                />
+              )}
+              renderOption={(props, option) => (
+                <li {...props} key={option.id}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, width: '100%' }}>
+                    <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.light' }}>{option.fullName?.charAt(0)}</Avatar>
+                    <Box>
+                      <Typography variant="body1">{option.fullName}</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {option.email}
+                      </Typography>
+                    </Box>
+                    <Chip label="متاح" size="small" color="success" variant="outlined" sx={{ ml: 'auto' }} />
+                  </Box>
+                </li>
+              )}
+            />
+          )}
+        </Box>
+      )}
+
+      {/* SKIP Mode: Information */}
+      {accountMode === 'SKIP' && (
+        <Alert severity="warning">سيتم إنشاء مقدم الخدمة بدون مستخدم مسؤول. يمكنك ربط مستخدم لاحقاً من صفحة التعديل.</Alert>
+      )}
+    </Box>
+  );
+
+  // ============================================================================
+  // Main Render
+  // ============================================================================
+
+  return (
+    <>
+      <ModernPageHeader
+        title="إضافة مقدم خدمة صحية جديد"
+        subtitle="إنشاء سجل جديد وتعيين المسؤول"
+        icon={ProviderIcon}
+        breadcrumbs={[{ label: 'مقدمو الخدمات', path: '/providers' }, { label: 'إضافة جديد' }]}
+        actions={
+          <Stack direction="row" spacing={2}>
+            <Button startIcon={<ArrowBack />} onClick={() => navigate('/providers')} disabled={creating} color="inherit">
+              عودة
+            </Button>
+            
+              <Button
+                variant="contained"
+                startIcon={<Save />}
+                onClick={handleProviderSubmit(onSubmit, navigateToErrorTab)}
+                disabled={creating}
+              >
+                {creating ? 'جاري الحفظ...' : 'حفظ مقدم الخدمة'}
+              </Button>
+              
+          </Stack>
+        }
+      />
+
+      <MainCard>
+        {/* ✅ Saving Progress Indicator */}
+        {submitting && savingStep && (
+          <Alert severity="info" icon={<CircularProgress size={20} />} sx={{ mb: 3 }}>
+            <Typography variant="body2">{savingStep}</Typography>
+          </Alert>
+        )}
+
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+          <Tabs value={activeTab} onChange={handleTabChange}>
+            {/* ✅ Tab with error badge */}
+            <Tab
+              icon={
+                <Badge badgeContent={getTabErrors(0)} color="error">
+                  <Business />
+                </Badge>
+              }
+              label="البيانات الأساسية"
+              iconPosition="start"
+            />
+            <Tab
+              icon={
+                <Badge badgeContent={getTabErrors(1)} color="error">
+                  <LocationOn />
+                </Badge>
+              }
+              label="الموقع والتواصل"
+              iconPosition="start"
+            />
+            <Tab
+              icon={
+                <Badge badgeContent={getTabErrors(2)} color="error">
+                  <VerifiedUser />
+                </Badge>
+              }
+              label="معلومات العقد"
+              iconPosition="start"
+            />
+            <Tab icon={<Handshake />} label="الشركاء" iconPosition="start" />
+            <Tab
+              icon={
+                <Badge badgeContent={getTabErrors(4)} color="error">
+                  <People />
+                </Badge>
+              }
+              label="مدير الحساب"
+              iconPosition="start"
+            />
+          </Tabs>
+        </Box>
+
+        <Box sx={{ mb: 4, minHeight: 400 }}>
+          <Box role="tabpanel" hidden={activeTab !== 0}>
+            {activeTab === 0 && renderBasicInfo()}
+          </Box>
+          <Box role="tabpanel" hidden={activeTab !== 1}>
+            {activeTab === 1 && renderLocationContact()}
+          </Box>
+          <Box role="tabpanel" hidden={activeTab !== 2}>
+            {activeTab === 2 && renderContractInfo()}
+          </Box>
+          <Box role="tabpanel" hidden={activeTab !== 3}>
+            {activeTab === 3 && renderPartners()}
+          </Box>
+          <Box role="tabpanel" hidden={activeTab !== 4}>
+            {activeTab === 4 && renderAccountManager()}
+          </Box>
+        </Box>
+
+        {/* ✅ Wizard Navigation Actions */}
+        {renderFooterActions(activeTab)}
+      </MainCard>
+    </>
+  );
+};
+
+export default ProviderCreate;

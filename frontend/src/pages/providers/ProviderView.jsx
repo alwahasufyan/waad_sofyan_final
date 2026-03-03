@@ -1,0 +1,434 @@
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import {
+  Box,
+  Button,
+  Grid,
+  Paper,
+  Typography,
+  Chip,
+  CircularProgress,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Stack,
+  Divider,
+  Tooltip
+} from '@mui/material';
+import {
+  ArrowBack,
+  Edit,
+  Phone,
+  Email,
+  LocationOn,
+  Business,
+  Badge,
+  VerifiedUser,
+  LocalHospital as ProviderIcon
+} from '@mui/icons-material';
+import MainCard from 'components/MainCard';
+import ModernPageHeader from 'components/tba/ModernPageHeader';
+import { useProviderDetails } from 'hooks/useProviders';
+import { providersService } from 'services/api';
+import axiosClient from 'utils/axios';
+
+// Insurance UX Components - Phase B2 Step 6
+import { NetworkBadge, CardStatusBadge } from 'components/insurance';
+
+// ============ PROVIDER CONFIGURATION ============
+const PROVIDER_TYPE_LABELS = {
+  HOSPITAL: 'مستشفى',
+  CLINIC: 'عيادة',
+  LAB: 'مختبر',
+  LABORATORY: 'مختبر',
+  PHARMACY: 'صيدلية',
+  RADIOLOGY: 'مركز أشعة'
+};
+
+const PROVIDER_TYPE_COLORS = {
+  HOSPITAL: 'error',
+  CLINIC: 'primary',
+  LAB: 'warning',
+  LABORATORY: 'warning',
+  PHARMACY: 'success',
+  RADIOLOGY: 'info'
+};
+
+// Status Labels (Arabic)
+const STATUS_LABELS_AR = {
+  ACTIVE: 'نشط',
+  INACTIVE: 'غير نشط',
+  SUSPENDED: 'موقوف',
+  EXPIRED: 'منتهي'
+};
+
+// Network Status mapping
+const getNetworkTier = (provider) => {
+  if (provider?.networkStatus) return provider.networkStatus;
+  if (provider?.inNetwork === true) return 'IN_NETWORK';
+  if (provider?.inNetwork === false) return 'OUT_OF_NETWORK';
+  if (provider?.contracted === true) return 'IN_NETWORK';
+  if (provider?.contracted === false) return 'OUT_OF_NETWORK';
+  return null;
+};
+
+// Get provider status
+const getProviderStatus = (provider) => {
+  if (provider?.status) return provider.status;
+  if (provider?.active === true) return 'ACTIVE';
+  if (provider?.active === false) return 'INACTIVE';
+  return 'ACTIVE';
+};
+
+const ProviderView = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const { provider, loading } = useProviderDetails(id);
+  const [contracts, setContracts] = useState([]);
+  const [loadingContracts, setLoadingContracts] = useState(false);
+
+  useEffect(() => {
+    const fetchContracts = async () => {
+      if (id) {
+        setLoadingContracts(true);
+        try {
+          // Fetch contracts for this provider
+          const response = await axiosClient.get(`/api/provider-contracts/provider/${id}`);
+          // Handle paginated response (Page object) or array
+          const data = response.data?.data?.content || response.data?.data || response.data?.content || [];
+          setContracts(Array.isArray(data) ? data : [data]);
+        } catch (error) {
+          console.error('Failed to fetch contracts:', error);
+          setContracts([]);
+        } finally {
+          setLoadingContracts(false);
+        }
+      }
+    };
+    fetchContracts();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <MainCard>
+        <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+          <CircularProgress />
+        </Box>
+      </MainCard>
+    );
+  }
+
+  if (!provider) {
+    return (
+      <MainCard>
+        <Stack spacing={3} alignItems="center" sx={{ py: 4 }}>
+          <Business sx={{ fontSize: 48, color: '#ff4d4f' }} />
+          <Typography variant="h5" color="error">
+            مقدم الخدمة غير موجود
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            تأكد من صحة الرابط أو أن مقدم الخدمة لم يتم حذفه
+          </Typography>
+          <Button variant="contained" startIcon={<ArrowBack />} onClick={() => navigate('/providers')}>
+            العودة إلى القائمة
+          </Button>
+        </Stack>
+      </MainCard>
+    );
+  }
+
+  // Derive values defensively
+  const providerName = provider?.name ?? '—';
+  const providerDisplayName = providerName;
+  const providerStatus = getProviderStatus(provider);
+  const networkTier = getNetworkTier(provider);
+
+  return (
+    <>
+      <ModernPageHeader
+        title={`مقدم الخدمة: ${providerDisplayName}`}
+        subtitle={`نوع مقدم الخدمة: ${PROVIDER_TYPE_LABELS[provider?.providerType] ?? provider?.providerType ?? '—'}`}
+        icon={ProviderIcon}
+        breadcrumbs={[{ label: 'مقدمو الخدمات', path: '/providers' }, { label: providerDisplayName }]}
+        actions={
+          <Stack direction="row" spacing={1}>
+            <Button variant="contained" startIcon={<Edit />} onClick={() => navigate(`/providers/edit/${id}`)}>
+              تعديل
+            </Button>
+            <Button startIcon={<ArrowBack />} onClick={() => navigate('/providers')}>
+              عودة
+            </Button>
+          </Stack>
+        }
+      />
+
+      <MainCard>
+        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 3 }}>
+          {/* Provider Type Chip */}
+          <Chip
+            label={PROVIDER_TYPE_LABELS[provider?.providerType] ?? provider?.providerType ?? '—'}
+            color={PROVIDER_TYPE_COLORS[provider?.providerType] || 'default'}
+            size="small"
+            variant="outlined"
+          />
+          {/* Network Status Badge */}
+          {networkTier && <NetworkBadge networkTier={networkTier} showLabel={true} size="small" language="ar" />}
+          {/* Status Badge */}
+          <CardStatusBadge
+            status={providerStatus}
+            customLabel={STATUS_LABELS_AR[providerStatus] ?? 'غير محدد'}
+            size="small"
+            variant="chip"
+          />
+        </Stack>
+
+        <Grid container spacing={3}>
+          {/* Basic Information */}
+          <Grid item xs={12}>
+            <Paper sx={{ p: 3 }}>
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
+                <Badge sx={{ color: '#1890ff' }} />
+                <Typography variant="h5">البيانات الأساسية</Typography>
+              </Stack>
+              <Divider sx={{ mb: 2 }} />
+              <Grid container spacing={2}>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="body2" color="text.secondary">
+                    الرمز التلقائي
+                  </Typography>
+                  <Typography variant="body1" fontWeight={500}>
+                    {provider?.id ?? '—'}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="body2" color="text.secondary">
+                    اسم مقدم الخدمة
+                  </Typography>
+                  <Typography variant="body1" fontWeight={500}>
+                    {providerName}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="body2" color="text.secondary">
+                    رقم الترخيص
+                  </Typography>
+                  <Typography variant="body1" fontWeight={500}>
+                    {provider?.licenseNumber ?? '—'}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="body2" color="text.secondary">
+                    الرقم الضريبي
+                  </Typography>
+                  <Typography variant="body1" fontWeight={500}>
+                    {provider?.taxNumber ?? '—'}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="body2" color="text.secondary">
+                    نوع مقدم الخدمة
+                  </Typography>
+                  <Box sx={{ mt: 0.5 }}>
+                    <Chip
+                      label={PROVIDER_TYPE_LABELS[provider?.providerType] ?? provider?.providerType ?? '—'}
+                      color={PROVIDER_TYPE_COLORS[provider?.providerType] || 'default'}
+                      size="small"
+                    />
+                  </Box>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="body2" color="text.secondary">
+                    الحالة التشغيلية
+                  </Typography>
+                  <Box sx={{ mt: 0.5 }}>
+                    <CardStatusBadge
+                      status={providerStatus}
+                      customLabel={STATUS_LABELS_AR[providerStatus] ?? 'غير محدد'}
+                      size="small"
+                      variant="chip"
+                    />
+                  </Box>
+                </Grid>
+              </Grid>
+            </Paper>
+          </Grid>
+
+          {/* Location & Contact Information */}
+          <Grid item xs={12} md={6}>
+            <Paper sx={{ p: 3, height: '100%' }}>
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
+                <Phone sx={{ color: '#52c41a' }} />
+                <Typography variant="h5">بيانات التواصل</Typography>
+              </Stack>
+              <Divider sx={{ mb: 2 }} />
+              <Grid container spacing={2}>
+                <Grid item xs={12}>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <LocationOn sx={{ fontSize: 18, color: '#8c8c8c' }} />
+                    <Typography variant="body2" color="text.secondary">
+                      المدينة
+                    </Typography>
+                  </Stack>
+                  <Typography variant="body1" fontWeight={500} sx={{ mt: 0.5, mr: 3 }}>
+                    {provider?.city ?? '—'}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12}>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <LocationOn sx={{ fontSize: 18, color: '#8c8c8c' }} />
+                    <Typography variant="body2" color="text.secondary">
+                      العنوان
+                    </Typography>
+                  </Stack>
+                  <Typography variant="body1" fontWeight={500} sx={{ mt: 0.5, mr: 3 }}>
+                    {provider?.address ?? '—'}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12}>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Phone sx={{ fontSize: 18, color: '#8c8c8c' }} />
+                    <Typography variant="body2" color="text.secondary">
+                      رقم الهاتف
+                    </Typography>
+                  </Stack>
+                  <Typography variant="body1" fontWeight={500} sx={{ mt: 0.5, mr: 3 }}>
+                    {provider?.phone ?? '—'}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12}>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Email sx={{ fontSize: 18, color: '#8c8c8c' }} />
+                    <Typography variant="body2" color="text.secondary">
+                      البريد الإلكتروني
+                    </Typography>
+                  </Stack>
+                  <Typography variant="body1" fontWeight={500} sx={{ mt: 0.5, mr: 3 }}>
+                    {provider?.email ?? '—'}
+                  </Typography>
+                </Grid>
+              </Grid>
+            </Paper>
+          </Grid>
+
+          {/* Contract Information */}
+          <Grid item xs={12} md={6}>
+            <Paper sx={{ p: 3, height: '100%' }}>
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
+                <VerifiedUser sx={{ color: '#faad14' }} />
+                <Typography variant="h5">معلومات العقد والتشغيل</Typography>
+              </Stack>
+              <Divider sx={{ mb: 2 }} />
+              <Grid container spacing={2}>
+                <Grid item xs={12}>
+                  <Typography variant="body2" color="text.secondary">
+                    تاريخ بداية العقد
+                  </Typography>
+                  <Typography variant="body1" fontWeight={500}>
+                    {provider?.contractStartDate ?? '—'}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12}>
+                  <Typography variant="body2" color="text.secondary">
+                    تاريخ نهاية العقد
+                  </Typography>
+                  <Typography variant="body1" fontWeight={500}>
+                    {provider?.contractEndDate ?? '—'}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12}>
+                  <Typography variant="body2" color="text.secondary">
+                    نسبة الخصم الافتراضية
+                  </Typography>
+                  <Typography variant="body1" fontWeight={500}>
+                    {provider?.defaultDiscountRate ? `${provider.defaultDiscountRate}%` : '—'}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12}>
+                  <Typography variant="body2" color="text.secondary">
+                    تاريخ الإنشاء
+                  </Typography>
+                  <Typography variant="body1" fontWeight={500}>
+                    {provider?.createdAt ? new Date(provider.createdAt).toLocaleDateString('en-US') : '—'}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12}>
+                  <Typography variant="body2" color="text.secondary">
+                    آخر تحديث
+                  </Typography>
+                  <Typography variant="body1" fontWeight={500}>
+                    {provider?.updatedAt ? new Date(provider.updatedAt).toLocaleDateString('en-US') : '—'}
+                  </Typography>
+                </Grid>
+              </Grid>
+            </Paper>
+          </Grid>
+
+          {/* Provider Contracts */}
+          <Grid item xs={12}>
+            <Paper sx={{ p: 3 }}>
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
+                <VerifiedUser sx={{ color: '#1890ff' }} />
+                <Typography variant="h5">عقود مقدم الخدمة</Typography>
+              </Stack>
+              <Divider sx={{ mb: 2 }} />
+              {loadingContracts ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+                  <CircularProgress />
+                </Box>
+              ) : !Array.isArray(contracts) || contracts.length === 0 ? (
+                <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 3 }}>
+                  لا توجد عقود لهذا المزود
+                </Typography>
+              ) : (
+                <TableContainer>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>رقم العقد</TableCell>
+                        <TableCell>تاريخ البداية</TableCell>
+                        <TableCell>تاريخ النهاية</TableCell>
+                        <TableCell>نسبة الخصم</TableCell>
+                        <TableCell>التجديد التلقائي</TableCell>
+                        <TableCell>الحالة</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {Array.isArray(contracts) &&
+                        contracts.map((contract) => (
+                          <TableRow key={contract.id}>
+                            <TableCell>{contract.contractCode || contract.contractNumber || `#${contract.id}`}</TableCell>
+                            <TableCell>{contract.startDate ? new Date(contract.startDate).toLocaleDateString('ar-LY') : '—'}</TableCell>
+                            <TableCell>{contract.endDate ? new Date(contract.endDate).toLocaleDateString('ar-LY') : '—'}</TableCell>
+                            <TableCell>{contract.discountPercent ? `${contract.discountPercent}%` : '—'}</TableCell>
+                            <TableCell>
+                              <Chip
+                                label={contract.autoRenew ? 'نعم' : 'لا'}
+                                color={contract.autoRenew ? 'success' : 'default'}
+                                size="small"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Chip
+                                label={contract.statusLabel || (contract.isCurrentlyEffective ? 'ساري' : 'غير ساري')}
+                                color={contract.isCurrentlyEffective ? 'success' : 'default'}
+                                size="small"
+                              />
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
+            </Paper>
+          </Grid>
+        </Grid>
+      </MainCard>
+    </>
+  );
+};
+
+export default ProviderView;

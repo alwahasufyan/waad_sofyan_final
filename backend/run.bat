@@ -1,0 +1,3 @@
+@echo off
+echo Starting Backend...
+call C:\Maven\bin\mvn.cmd spring-boot:run

@@ -1,0 +1,72 @@
+version: "2"
+type: frontend
+tech_stack:
+  - JavaScript
+  - React 19
+  - Vite
+  - Material UI (MUI)
+  - TanStack Query
+  - Axios
+  - Zustand
+routes:
+  - path: /login
+    file: src/pages/auth/jwt/login/index.jsx
+    auth_required: false
+    description: User login page
+  - path: /dashboard
+    file: src/pages/dashboard/index.jsx
+    auth_required: true
+    description: Analytics and overview dashboard
+  - path: /members
+    file: src/pages/members/UnifiedMembersList.jsx
+    auth_required: true
+    description: List of medical members (principals and dependents)
+  - path: /medical-categories
+    file: src/pages/medical-categories/index.jsx
+    auth_required: true
+    description: Manage medical taxonomy categories
+  - path: /claims
+    file: src/pages/claims/ClaimsReviewList.jsx
+    auth_required: true
+    description: List of medical claims for review
+features:
+  - name: User Authentication
+    description: Secure login using email/password and JWT token
+    files:
+      - src/pages/auth/jwt/login/index.jsx
+      - src/routes/LoginRoutes.jsx
+    entry_route: /login
+    user_interactions:
+      - Input email "superadmin@tba.sa"
+      - Input password "Admin@123"
+      - Click Login button
+      - Redirect to /dashboard upon success
+    api_calls:
+      - method: POST
+        endpoint: /api/v1/auth/login
+    auth_required: false
+  - name: Medical Taxonomy Management
+    description: View and manage medical categories
+    files:
+      - src/pages/medical-categories/index.jsx
+      - src/routes/MainRoutes.jsx
+    entry_route: /medical-categories
+    user_interactions:
+      - View list of categories
+      - Search for categories
+    api_calls:
+      - method: GET
+        endpoint: /api/v1/medical-categories/all
+    auth_required: true
+  - name: Claims Review
+    description: Process and review medical claims
+    files:
+      - src/pages/claims/ClaimsReviewList.jsx
+    entry_route: /claims
+    user_interactions:
+      - View list of submitted claims
+    api_calls:
+      - method: GET
+        endpoint: /api/v1/claims
+    auth_required: true
+known_limitations: []

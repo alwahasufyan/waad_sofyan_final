@@ -1,0 +1,81 @@
+package com.waad.tba.modules.claim.dto;
+
+import jakarta.validation.constraints.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
+
+/**
+ * ClaimLine DTO (CANONICAL REBUILD 2026-01-16)
+ * 
+ * ARCHITECTURAL LAW:
+ * - medicalServiceId is MANDATORY - NO free-text services
+ * - unitPrice is AUTO-RESOLVED from Provider Contract (read-only in response)
+ * - totalPrice is SERVER-CALCULATED (read-only)
+ */
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class ClaimLineDto {
+    
+    private Long id;
+    
+    // ==================== INPUT (for create/update) ====================
+    
+    /**
+     * REQUIRED: Medical Service ID (from Provider Contract)
+     * ARCHITECTURAL LAW: Service MUST be selected - NO free-text
+     */
+    @NotNull(message = "Medical Service ID is required - Select from covered services")
+    @Positive(message = "Medical Service ID must be positive")
+    private Long medicalServiceId;
+    
+    /**
+     * REQUIRED: Quantity of service
+     */
+    @NotNull(message = "Quantity is required")
+    @Min(value = 1, message = "Quantity must be at least 1")
+    @Builder.Default
+    private Integer quantity = 1;
+    
+    // ==================== OUTPUT (read-only in response) ====================
+    
+    /**
+     * Service code (denormalized from MedicalService)
+     */
+    private String serviceCode;
+    
+    /**
+     * Service name (denormalized from MedicalService)
+     */
+    private String serviceName;
+    
+    /**
+     * Service category ID
+     */
+    private Long serviceCategoryId;
+    
+    /**
+     * Service category name
+     */
+    private String serviceCategoryName;
+    
+    /**
+     * Unit price from Provider Contract (READ-ONLY)
+     */
+    private BigDecimal unitPrice;
+    
+    /**
+     * Total price (SERVER-CALCULATED: quantity × unitPrice) (READ-ONLY)
+     */
+    private BigDecimal totalPrice;
+    
+    /**
+     * Whether service requires pre-authorization
+     */
+    private Boolean requiresPA;
+}

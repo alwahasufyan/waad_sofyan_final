@@ -1,0 +1,372 @@
+/**
+ * ============================================================================
+ * Company Settings Page - System Branding & Identity
+ * ============================================================================
+ *
+ * Page for managing TBA company information, branding, and identity.
+ *
+ * Features:
+ * - Edit company name, code, and status
+ * - Branding: logo, business type
+ * - Contact info: phone, email, address, website
+ * - Tax/registration details
+ * - Form validation
+ * - Auto-save with success/error notifications
+ * - RTL support
+ *
+ * Architecture:
+ * - Single company context (no multi-tenant)
+ * - Uses useSystemCompany() hook (no hardcoded codes)
+ * - All branding fields optional (if empty, not displayed)
+ *
+ * Permissions Required:
+ * - SUPER_ADMIN or MANAGE_COMPANIES
+ *
+ * @created 2026-01-02
+ * @updated 2026-01-02 - Added branding fields
+ */
+
+import { useState, useEffect } from 'react';
+import {
+  Box,
+  Card,
+  CardContent,
+  TextField,
+  Button,
+  FormControlLabel,
+  Radio,
+  RadioGroup,
+  FormControl,
+  FormLabel,
+  Grid,
+  Typography,
+  Divider,
+  CircularProgress,
+  Alert
+} from '@mui/material';
+import { Save as SaveIcon } from '@mui/icons-material';
+import ModernPageHeader from 'components/tba/ModernPageHeader';
+import { useSystemCompany, useUpdateCompany } from 'hooks/useCompany';
+
+const CompanySettingsPage = () => {
+  // ============================================================================
+  // STATE MANAGEMENT
+  // ============================================================================
+
+  const [formData, setFormData] = useState({
+    id: null,
+    name: '',
+    code: '',
+    active: true,
+    // Branding fields
+    logoUrl: '',
+    businessType: '',
+    phone: '',
+    email: '',
+    address: '',
+    website: '',
+    taxNumber: ''
+  });
+
+  const [errors, setErrors] = useState({});
+
+  // ============================================================================
+  // DATA FETCHING
+  // ============================================================================
+
+  // Fetch system company (single-company mode)
+  const { data: company, isLoading, error } = useSystemCompany();
+  const updateCompanyMutation = useUpdateCompany();
+
+  // Populate form when data is loaded
+  useEffect(() => {
+    if (company?.data) {
+      // Response structure: ApiResponse<CompanyDto>
+      // axios returns: response.data = { success, message, data: CompanyDto }
+      // service returns: response.data
+      // hook gets: { success, message, data: CompanyDto }
+      const companyData = company.data; // This is the CompanyDto
+      console.log('🏢 Company data received:', companyData);
+      console.log('🆔 Company ID:', companyData?.id);
+
+      if (!companyData) {
+        console.error('❌ Company data is null or undefined');
+        return;
+      }
+
+      setFormData({
+        id: companyData.id,
+        name: companyData.name || '',
+        code: companyData.code || '',
+        active: companyData.active !== undefined ? companyData.active : true,
+        // Branding fields (allow empty)
+        logoUrl: companyData.logoUrl || '',
+        businessType: companyData.businessType || '',
+        phone: companyData.phone || '',
+        email: companyData.email || '',
+        address: companyData.address || '',
+        website: companyData.website || '',
+        taxNumber: companyData.taxNumber || ''
+      });
+    }
+  }, [company]);
+
+  // ============================================================================
+  // FORM HANDLERS
+  // ============================================================================
+
+  const handleChange = (field) => (event) => {
+    const value = field === 'active' ? event.target.value === 'true' : event.target.value;
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value
+    }));
+
+    // Clear error for this field
+    if (errors[field]) {
+      setErrors((prev) => ({
+        ...prev,
+        [field]: null
+      }));
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+
+    if (!formData.name || formData.name.trim() === '') {
+      newErrors.name = 'اسم الشركة مطلوب';
+    }
+
+    if (!formData.code || formData.code.trim() === '') {
+      newErrors.code = 'كود الشركة مطلوب';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!validateForm()) {
+      return;
+    }
+
+    const { id, ...updateData } = formData;
+
+    console.log('📝 Submitting company update:');
+    console.log('   ID:', id);
+    console.log('   Data:', updateData);
+
+    updateCompanyMutation.mutate({
+      id: id,
+      data: updateData
+    });
+  };
+
+  // ============================================================================
+  // RENDER LOADING STATE
+  // ============================================================================
+
+  if (isLoading) {
+    return (
+      <Box>
+        <ModernPageHeader title="إعدادات الشركة" subtitle="إدارة معلومات شركة TBA للمراجعة الطبية" />
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight={400}>
+          <CircularProgress />
+        </Box>
+      </Box>
+    );
+  }
+
+  // ============================================================================
+  // RENDER ERROR STATE
+  // ============================================================================
+
+  if (error) {
+    return (
+      <Box>
+        <ModernPageHeader title="إعدادات الشركة" subtitle="إدارة معلومات شركة TBA للمراجعة الطبية" />
+        <Alert severity="error" sx={{ mt: 3 }}>
+          حدث خطأ أثناء تحميل بيانات الشركة. يرجى المحاولة مرة أخرى.
+        </Alert>
+      </Box>
+    );
+  }
+
+  // ============================================================================
+  // RENDER MAIN FORM
+  // ============================================================================
+
+  return (
+    <Box>
+      {/* Page Header */}
+      <ModernPageHeader title="إعدادات الشركة" subtitle="إدارة معلومات شركة TBA للمراجعة الطبية" />
+
+      {/* Company Settings Form */}
+      <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3 }}>
+        <Card>
+          <CardContent>
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="h6" gutterBottom>
+                معلومات الشركة الأساسية
+              </Typography>
+              <Divider />
+            </Box>
+
+            <Grid container spacing={3}>
+              {/* Company Name */}
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="اسم الشركة"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange('name')}
+                  error={!!errors.name}
+                  helperText={errors.name}
+                  required
+                  placeholder="شركة TBA للمراجعة الطبية"
+                />
+              </Grid>
+
+              {/* Company Code */}
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="كود الشركة"
+                  name="code"
+                  value={formData.code}
+                  onChange={handleChange('code')}
+                  error={!!errors.code}
+                  helperText={errors.code}
+                  required
+                  placeholder="TBA"
+                />
+              </Grid>
+
+              {/* Business Type */}
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="نوع النشاط"
+                  name="businessType"
+                  value={formData.businessType}
+                  onChange={handleChange('businessType')}
+                  placeholder="مراجعة طبية"
+                />
+              </Grid>
+
+              {/* Phone */}
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="الهاتف"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange('phone')}
+                  placeholder="+966 XX XXX XXXX"
+                />
+              </Grid>
+
+              {/* Email */}
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="البريد الإلكتروني"
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleChange('email')}
+                  placeholder="info@tba.com.sa"
+                />
+              </Grid>
+
+              {/* Website */}
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="الموقع الإلكتروني"
+                  name="website"
+                  value={formData.website}
+                  onChange={handleChange('website')}
+                  placeholder="https://www.tba.com.sa"
+                />
+              </Grid>
+
+              {/* Tax Number */}
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="الرقم الضريبي"
+                  name="taxNumber"
+                  value={formData.taxNumber}
+                  onChange={handleChange('taxNumber')}
+                  placeholder="300000000000003"
+                />
+              </Grid>
+
+              {/* Address */}
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="العنوان"
+                  name="address"
+                  multiline
+                  rows={3}
+                  value={formData.address}
+                  onChange={handleChange('address')}
+                  placeholder="المملكة العربية السعودية، الرياض"
+                />
+              </Grid>
+
+              {/* Logo URL */}
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="رابط الشعار"
+                  name="logoUrl"
+                  value={formData.logoUrl}
+                  onChange={handleChange('logoUrl')}
+                  placeholder="https://example.com/logo.png"
+                  helperText="رابط صورة الشعار (URL)"
+                />
+              </Grid>
+
+              {/* Active Status */}
+              <Grid item xs={12} md={6}>
+                <FormControl component="fieldset">
+                  <FormLabel component="legend">الحالة</FormLabel>
+                  <RadioGroup row name="active" value={formData.active.toString()} onChange={handleChange('active')}>
+                    <FormControlLabel value="true" control={<Radio />} label="نشط" />
+                    <FormControlLabel value="false" control={<Radio />} label="غير نشط" />
+                  </RadioGroup>
+                </FormControl>
+              </Grid>
+
+              {/* Submit Button */}
+              <Grid item xs={12}>
+                <Box display="flex" justifyContent="center" sx={{ mt: 2 }}>
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    color="primary"
+                    size="large"
+                    startIcon={updateCompanyMutation.isPending ? <CircularProgress size={20} /> : <SaveIcon />}
+                    disabled={updateCompanyMutation.isPending}
+                    sx={{ minWidth: 200 }}
+                  >
+                    {updateCompanyMutation.isPending ? 'جاري الحفظ...' : 'حفظ'}
+                  </Button>
+                </Box>
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
+      </Box>
+    </Box>
+  );
+};
+
+export default CompanySettingsPage;
