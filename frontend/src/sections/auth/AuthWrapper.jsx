@@ -54,8 +54,8 @@ export default function AuthWrapper({ children }) {
               alignItems: 'center'
             }}
           >
-            <Grid>
-              <AuthCard isDarkMode={isDarkMode}>{children}</AuthCard>
+            <Grid item xs={12}>
+              <AuthCard>{children}</AuthCard>
             </Grid>
           </Grid>
         </Box>

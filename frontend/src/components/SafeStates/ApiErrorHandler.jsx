@@ -71,8 +71,8 @@ const ERROR_CONFIGS = {
     icon: ErrorOutlineIcon,
     title: 'حدث خطأ',
     titleEn: 'Error Occurred',
-    message: 'حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى',
-    messageEn: 'An unexpected error occurred. Please try again',
+    message: 'عذراً، واجه النظام مشكلة أثناء معالجة طلبك، يرجى إعادة المحاولة.',
+    messageEn: 'Sorry, the system encountered an issue while processing your request. Please try again.',
     color: 'error',
     showLogin: false,
     showRetry: true

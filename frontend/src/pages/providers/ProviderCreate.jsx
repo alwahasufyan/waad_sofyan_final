@@ -420,7 +420,7 @@ const ProviderCreate = () => {
       }
     } catch (error) {
       console.error('Provider creation error:', error);
-      enqueueSnackbar('حدث خطأ غير متوقع', { variant: 'error' });
+      enqueueSnackbar('عذراً، فشلت عملية الحفظ بسبب خطأ غیر متوقع. يرجى إعادة المحاولة', { variant: 'error' });
     } finally {
       setSubmitting(false);
       setSavingStep('');
@@ -1050,16 +1050,16 @@ const ProviderCreate = () => {
             <Button startIcon={<ArrowBack />} onClick={() => navigate('/providers')} disabled={creating} color="inherit">
               عودة
             </Button>
-            
-              <Button
-                variant="contained"
-                startIcon={<Save />}
-                onClick={handleProviderSubmit(onSubmit, navigateToErrorTab)}
-                disabled={creating}
-              >
-                {creating ? 'جاري الحفظ...' : 'حفظ مقدم الخدمة'}
-              </Button>
-              
+
+            <Button
+              variant="contained"
+              startIcon={<Save />}
+              onClick={handleProviderSubmit(onSubmit, navigateToErrorTab)}
+              disabled={creating}
+            >
+              {creating ? 'جاري الحفظ...' : 'حفظ مقدم الخدمة'}
+            </Button>
+
           </Stack>
         }
       />

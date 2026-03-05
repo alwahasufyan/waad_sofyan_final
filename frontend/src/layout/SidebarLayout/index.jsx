@@ -1,66 +1,49 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════════
- * TBA WAAD SYSTEM - ENTERPRISE LAYOUT ARCHITECTURE
+ * TBA WAAD SYSTEM - ENTERPRISE NAVBAR LAYOUT ARCHITECTURE
  * ═══════════════════════════════════════════════════════════════════════════════
  *
- * Professional enterprise-grade layout for medical TPA/HIS systems.
- * Matches: SAP Fiori, Oracle Health, Epic Systems (desktop mode)
+ * Professional enterprise-grade layout using top navigation instead of sidebar.
  *
  * ARCHITECTURE (NON-NEGOTIABLE):
- * - TopBar: 56px height - Logo, User, Notifications ONLY (NO navigation)
- * - Sidebar: Primary navigation, permanent on desktop, collapsible to icons
- * - Content: 100% width fill, NO max-width containers, NO centering
+ * - TopBar: 64px height - Logo, Horizontal Navigation Menu, User, Profile
+ * - Content: 100% width fill, NO max-width containers
  * - Layout: 100vw × 100vh viewport occupation
  *
- * LAYOUT MODEL:
- * ┌───────────────────────────────────────────────────┐
- * │ TOP BAR (56px)                                     │
- * ├───────────────┬───────────────────────────────────┤
- * │ SIDEBAR (260) │ MAIN CONTENT (flex: 1, 100% fill) │
- * │               │                                   │
- * └───────────────┴───────────────────────────────────┘
- *
- * FEATURES:
- * ✅ Content fills ALL remaining horizontal space
- * ✅ Click-only navigation (ZERO hover dependency)
- * ✅ RBAC-aware menu filtering
- * ✅ Desktop-first responsive design
- * ✅ RTL support (sidebar on right for Arabic)
- * ✅ Zero empty space on viewport edges
- *
  * @author TBA WAAD Development Team
- * @version 4.0.0 - Architecture Correction
+ * @version 5.0.0 - Navbar Architecture
  * ═══════════════════════════════════════════════════════════════════════════════
  */
 
-import { useState, useEffect, useCallback, useMemo, createContext, useContext } from 'react';
+import { useState, useMemo, useCallback, createContext, useContext } from 'react';
 import { Outlet, useLocation, Navigate, useNavigate } from 'react-router-dom';
 import {
   Box,
   Drawer,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  Collapse,
   IconButton,
   Typography,
   Divider,
-  Chip,
-  Avatar,
   Stack,
   Tooltip,
   useMediaQuery,
   useTheme,
   alpha,
-  styled
+  styled,
+  Button,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
+  Avatar,
+  List,
+  ListItem,
+  ListItemButton,
+  Collapse,
+  Container
 } from '@mui/material';
 import {
   Menu as MenuIcon,
   ExpandMore as ExpandMoreIcon,
-  ChevronLeft as ChevronLeftIcon,
-  ChevronRight as ChevronRightIcon,
   Logout as LogoutIcon
 } from '@mui/icons-material';
 
@@ -70,100 +53,167 @@ import useRBACSidebar from 'hooks/useRBACSidebar';
 import Loader from 'components/Loader';
 import PageErrorBoundary from 'components/SafeStates/PageErrorBoundary';
 import { useCompanySettings } from 'contexts/CompanySettingsContext';
-import { SIDEBAR_CONFIG, NAV_BEHAVIOR } from 'config/NavigationConfig';
 import SimpleBar from 'components/third-party/SimpleBar';
 import Profile from 'layout/Dashboard/Header/HeaderContent/Profile';
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 8px SPACING SYSTEM CONSTANTS
+// CONSTANTS & STYLES
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const SPACING = {
-  xs: 4, // 0.5x - micro spacing
-  sm: 8, // 1x   - base unit
-  md: 16, // 2x   - standard
-  lg: 24, // 3x   - section gaps
-  xl: 32 // 4x   - large gaps
-};
+const TOPBAR_HEIGHT = 64;
 
-const TOPBAR_HEIGHT = 56;
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// STYLED COMPONENTS
-// ═══════════════════════════════════════════════════════════════════════════════
-
-const MainContent = styled(Box, {
-  shouldForwardProp: (prop) => prop !== 'sidebarWidth'
-})(({ theme, sidebarWidth }) => ({
+const MainContent = styled(Box)(({ theme }) => ({
   display: 'flex',
   flexDirection: 'column',
-  width: `calc(100% - ${sidebarWidth}px)`,
+  width: '100%',
   minWidth: 0,
   height: '100vh',
-  overflow: 'hidden',
-  transition: theme.transitions.create('width', {
-    easing: theme.transitions.easing.sharp,
-    duration: SIDEBAR_CONFIG.animation.duration
-  })
+  overflow: 'hidden'
 }));
 
-// Enterprise TopBar - 56px, minimal, professional (NO navigation)
+// Enterprise TopBar - 64px
 const TopBar = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
   height: TOPBAR_HEIGHT,
   minHeight: TOPBAR_HEIGHT,
   maxHeight: TOPBAR_HEIGHT,
-  padding: `0 ${SPACING.md}px 0 ${SPACING.lg}px`,
   backgroundColor: theme.palette.background.paper,
   borderBottom: `1px solid ${theme.palette.divider}`,
   flexShrink: 0,
   zIndex: theme.zIndex.appBar
 }));
 
-// Sidebar header - just collapse toggle
-const SidebarHeader = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  height: TOPBAR_HEIGHT,
-  minHeight: TOPBAR_HEIGHT,
-  padding: `0 ${SPACING.sm}px`,
-  borderBottom: `1px solid ${theme.palette.divider}`,
-  backgroundColor: theme.palette.background.paper
-}));
-
-// Navigation group title
-const NavGroupTitle = styled(Typography)(({ theme }) => ({
-  fontSize: '0.6875rem',
-  fontWeight: 700,
-  textTransform: 'uppercase',
-  letterSpacing: '0.08em',
-  color: theme.palette.text.secondary,
-  padding: `${SPACING.md}px ${SPACING.md}px ${SPACING.sm}px ${SPACING.md}px`,
-  marginTop: SPACING.sm
-}));
-
 // ═══════════════════════════════════════════════════════════════════════════════
-// SIDEBAR CONTEXT
+// DESKTOP HORIZONTAL NAVIGATION COMPONENTS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const SidebarContext = createContext({
-  expanded: true,
-  toggleExpanded: () => {},
-  setExpanded: () => {},
-  openGroups: {},
-  toggleGroup: () => {}
-});
+const DesktopNavItem = ({ item, onClick }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isActive = item.url === location.pathname || (item.url && location.pathname.startsWith(item.url + '/'));
+  const Icon = item.icon;
 
-export const useSidebar = () => useContext(SidebarContext);
+  const handleClick = () => {
+    if (item.url) {
+      navigate(item.url);
+      if (onClick) onClick();
+    }
+  };
+
+  return (
+    <MenuItem onClick={handleClick} selected={isActive} sx={{ borderRadius: 1, mb: 0.5, mx: 1 }}>
+      {Icon && (
+        <ListItemIcon sx={{ minWidth: 32 }}>
+          <Icon fontSize="small" color={isActive ? "primary" : "inherit"} />
+        </ListItemIcon>
+      )}
+      <ListItemText
+        primary={item.title}
+        primaryTypographyProps={{
+          fontWeight: isActive ? 600 : 400,
+          color: isActive ? 'primary.main' : 'text.primary',
+          fontSize: '0.875rem'
+        }}
+      />
+    </MenuItem>
+  );
+};
+
+const DesktopNavCollapseItems = ({ collapse, onClick }) => {
+  return (
+    <Box>
+      {collapse.title && (
+        <Typography variant="overline" sx={{ px: 2, pt: 1, pb: 0.5, color: 'text.secondary', display: 'block', lineHeight: 1, fontWeight: 700 }}>
+          {collapse.title}
+        </Typography>
+      )}
+      {collapse.children?.map(child => (
+        <DesktopNavItem key={child.id} item={child} onClick={onClick} />
+      ))}
+    </Box>
+  );
+};
+
+const DesktopNavGroupButton = ({ group }) => {
+  const [anchorEl, setAnchorEl] = useState(null);
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // If group has only 1 child and it's an item, it can be a direct link
+  const isDirectLink = group.children?.length === 1 && group.children[0].type === 'item';
+  const directItem = isDirectLink ? group.children[0] : null;
+
+  const isActive = useMemo(() => {
+    const checkActive = (nodes) => {
+      if (!nodes) return false;
+      return nodes.some(n => {
+        if (n.url && (location.pathname === n.url || location.pathname.startsWith(n.url + '/'))) return true;
+        if (n.children) return checkActive(n.children);
+        return false;
+      });
+    };
+    return checkActive(group.children);
+  }, [group, location.pathname]);
+
+  const handleClick = (event) => {
+    if (isDirectLink) {
+      if (directItem.url) navigate(directItem.url);
+    } else {
+      setAnchorEl(event.currentTarget);
+    }
+  };
+
+  const handleClose = () => setAnchorEl(null);
+
+  return (
+    <>
+      <Button
+        onClick={handleClick}
+        color={isActive ? "primary" : "inherit"}
+        endIcon={!isDirectLink ? <ExpandMoreIcon /> : null}
+        sx={{
+          fontWeight: isActive ? 700 : 500,
+          opacity: isActive ? 1 : 0.8,
+          '&:hover': { opacity: 1, backgroundColor: 'action.hover' },
+          mx: 0.5,
+          whiteSpace: 'nowrap',
+          fontSize: '0.9rem'
+        }}
+      >
+        {group.title}
+      </Button>
+      {!isDirectLink && (
+        <Menu
+          anchorEl={anchorEl}
+          open={Boolean(anchorEl)}
+          onClose={handleClose}
+          PaperProps={{
+            elevation: 3,
+            sx: { mt: 1.5, minWidth: 220, borderRadius: 2, p: 1 }
+          }}
+        >
+          {group.children?.map(child => {
+            if (child.type === 'item') {
+              return <DesktopNavItem key={child.id} item={child} onClick={handleClose} />;
+            }
+            if (child.type === 'collapse') {
+              return <Box key={child.id}>
+                <DesktopNavCollapseItems collapse={child} onClick={handleClose} />
+                <Divider sx={{ my: 1 }} />
+              </Box>;
+            }
+            return null;
+          })}
+        </Menu>
+      )}
+    </>
+  );
+};
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// NAVIGATION ITEM COMPONENT
+// MOBILE NAVIGATION COMPONENTS (DRAWER)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const NavItem = ({ item, level = 0, expanded }) => {
+const MobileNavItem = ({ item, level = 0, onClose }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
@@ -174,150 +224,57 @@ const NavItem = ({ item, level = 0, expanded }) => {
 
   const isActive = item.url === location.pathname || (item.url && location.pathname.startsWith(item.url + '/'));
   const Icon = item.icon;
-  const paddingLeft = expanded ? SPACING.md + level * SPACING.lg : SPACING.md;
+  const paddingLeft = 16 + level * 24;
 
   const handleClick = () => {
     if (item.url) {
       navigate(item.url);
+      if (onClose) onClose();
     }
   };
 
   return (
     <ListItem disablePadding sx={{ display: 'block' }}>
-      <Tooltip title={!expanded ? item.title : ''} placement="left" arrow>
-        <ListItemButton
-          onClick={handleClick}
-          sx={{
-            minHeight: 40,
-            px: 1.5,
-            pl: `${paddingLeft}px`,
-            borderRadius: `${SPACING.sm}px`,
-            mx: 1,
-            my: 0.125,
-            backgroundColor: isActive ? alpha(theme.palette.primary.main, 0.12) : 'transparent',
-            color: isActive ? 'primary.main' : 'text.primary',
-            '&:hover': {
-              backgroundColor: isActive ? alpha(theme.palette.primary.main, 0.16) : 'transparent',
-              '& .MuiListItemText-primary': {
-                color: 'primary.main'
-              },
-              '& .MuiListItemIcon-root': {
-                color: 'primary.main'
-              }
-            },
-            // Active indicator bar (left side - outer edge when sidebar on right)
-            position: 'relative',
-            '&::before': isActive
-              ? {
-                  content: '""',
-                  position: 'absolute',
-                  left: 0,
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  width: 3,
-                  height: '70%',
-                  borderRadius: SPACING.xs,
-                  backgroundColor: 'primary.main'
-                }
-              : {}
+      <ListItemButton
+        onClick={handleClick}
+        sx={{
+          minHeight: 40,
+          px: 1.5,
+          pl: `${paddingLeft}px`,
+          borderRadius: 1,
+          mx: 1,
+          my: 0.125,
+          backgroundColor: isActive ? alpha(theme.palette.primary.main, 0.12) : 'transparent',
+          color: isActive ? 'primary.main' : 'text.primary',
+          '&:hover': {
+            backgroundColor: isActive ? alpha(theme.palette.primary.main, 0.16) : 'transparent'
+          }
+        }}
+      >
+        {Icon && (
+          <ListItemIcon sx={{ minWidth: 40, color: isActive ? 'primary.main' : 'text.secondary' }}>
+            <Icon sx={{ fontSize: 22 }} />
+          </ListItemIcon>
+        )}
+        <ListItemText
+          primary={item.title}
+          primaryTypographyProps={{
+            fontSize: level === 0 ? '0.875rem' : '0.8125rem',
+            fontWeight: isActive ? 600 : 400
           }}
-        >
-          {Icon && (
-            <ListItemIcon
-              sx={{
-                minWidth: expanded ? 40 : 'auto',
-                mr: expanded ? 1.5 : 0,
-                color: isActive ? 'primary.main' : 'text.secondary',
-                justifyContent: 'center'
-              }}
-            >
-              <Icon sx={{ fontSize: 22 }} />
-            </ListItemIcon>
-          )}
-          {expanded && (
-            <>
-              <ListItemText
-                primary={item.title}
-                primaryTypographyProps={{
-                  fontSize: level === 0 ? '0.875rem' : '0.8125rem',
-                  fontWeight: isActive ? 600 : 400,
-                  noWrap: true
-                }}
-              />
-              {item.chip && (
-                <Chip
-                  label={item.chip.label}
-                  color={item.chip.color || 'default'}
-                  size="small"
-                  sx={{
-                    height: 20,
-                    fontSize: '0.65rem',
-                    ml: 1
-                  }}
-                />
-              )}
-            </>
-          )}
-        </ListItemButton>
-      </Tooltip>
+        />
+      </ListItemButton>
     </ListItem>
   );
 };
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// NAVIGATION GROUP (COLLAPSE) COMPONENT
-// ═══════════════════════════════════════════════════════════════════════════════
-
-const NavCollapse = ({ item, level = 0, expanded }) => {
-  const location = useLocation();
+const MobileNavCollapse = ({ item, level = 0, onClose }) => {
+  const [open, setOpen] = useState(false);
   const theme = useTheme();
-  const { openGroups, toggleGroup } = useSidebar();
-
-  // Check if any child is active
-  const hasActiveChild = useMemo(() => {
-    const checkActive = (children) => {
-      if (!children) return false;
-      return children.some((child) => {
-        if (child.url === location.pathname) return true;
-        if (child.url && location.pathname.startsWith(child.url + '/')) return true;
-        if (child.children) return checkActive(child.children);
-        return false;
-      });
-    };
-    return checkActive(item.children);
-  }, [item.children, location.pathname]);
-
-  const isOpen = openGroups[item.id] ?? hasActiveChild;
   const Icon = item.icon;
-  const paddingLeft = expanded ? SPACING.md + level * SPACING.lg : SPACING.md;
+  const paddingLeft = 16 + level * 24;
 
-  const handleToggle = () => {
-    toggleGroup(item.id);
-  };
-
-  if (!expanded) {
-    // Collapsed mode: show icon with tooltip
-    return (
-      <Tooltip title={item.title} placement="left" arrow>
-        <ListItem disablePadding sx={{ display: 'block' }}>
-          <ListItemButton
-            sx={{
-              minHeight: 40,
-              px: 1.5,
-              justifyContent: 'center',
-              borderRadius: `${SPACING.sm}px`,
-              mx: 1,
-              my: 0.125,
-              backgroundColor: hasActiveChild ? alpha(theme.palette.primary.main, 0.08) : 'transparent',
-              color: hasActiveChild ? 'primary.main' : 'text.secondary'
-            }}
-          >
-            {Icon && <Icon sx={{ fontSize: 22 }} />}
-          </ListItemButton>
-        </ListItem>
-      </Tooltip>
-    );
-  }
+  const handleToggle = () => setOpen(!open);
 
   return (
     <>
@@ -328,54 +285,25 @@ const NavCollapse = ({ item, level = 0, expanded }) => {
             minHeight: 40,
             px: 1.5,
             pl: `${paddingLeft}px`,
-            borderRadius: `${SPACING.sm}px`,
+            borderRadius: 1,
             mx: 1,
             my: 0.125,
-            backgroundColor: hasActiveChild ? alpha(theme.palette.primary.main, 0.08) : 'transparent',
-            color: hasActiveChild ? 'primary.main' : 'text.primary',
-            '&:hover': {
-              backgroundColor: 'transparent',
-              '& .MuiListItemText-primary': {
-                color: 'primary.main'
-              },
-              '& .MuiListItemIcon-root': {
-                color: 'primary.main'
-              }
-            }
+            color: 'text.primary'
           }}
         >
           {Icon && (
-            <ListItemIcon
-              sx={{
-                minWidth: 40,
-                mr: 1.5,
-                color: hasActiveChild ? 'primary.main' : 'text.secondary'
-              }}
-            >
+            <ListItemIcon sx={{ minWidth: 40, color: 'text.secondary' }}>
               <Icon sx={{ fontSize: 22 }} />
             </ListItemIcon>
           )}
-          <ListItemText
-            primary={item.title}
-            primaryTypographyProps={{
-              fontSize: '0.875rem',
-              fontWeight: hasActiveChild ? 600 : 500
-            }}
-          />
-          <ExpandMoreIcon
-            sx={{
-              fontSize: 18,
-              transition: 'transform 0.2s',
-              transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-              color: 'text.secondary'
-            }}
-          />
+          <ListItemText primary={item.title} primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 500 }} />
+          <ExpandMoreIcon sx={{ fontSize: 18, transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: '0.2s' }} />
         </ListItemButton>
       </ListItem>
-      <Collapse in={isOpen} timeout="auto" unmountOnExit>
+      <Collapse in={open} timeout="auto" unmountOnExit>
         <List component="div" disablePadding>
-          {item.children?.map((child) => (
-            <NavItemRenderer key={child.id} item={child} level={level + 1} expanded={expanded} />
+          {item.children?.map(child => (
+            <MobileNavItemRenderer key={child.id} item={child} level={level + 1} onClose={onClose} />
           ))}
         </List>
       </Collapse>
@@ -383,215 +311,61 @@ const NavCollapse = ({ item, level = 0, expanded }) => {
   );
 };
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// NAVIGATION GROUP HEADER COMPONENT
-// ═══════════════════════════════════════════════════════════════════════════════
-
-const NavGroup = ({ item, expanded }) => {
+const MobileNavGroup = ({ item, onClose }) => {
   if (!item.children || item.children.length === 0) return null;
 
   return (
     <Box component="nav" sx={{ mb: 1 }}>
-      {expanded && item.title && <NavGroupTitle>{item.title}</NavGroupTitle>}
-      {!expanded && <Divider sx={{ my: 1 }} />}
+      {item.title && (
+        <Typography sx={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', color: 'text.secondary', px: 2, py: 1, mt: 1 }}>
+          {item.title}
+        </Typography>
+      )}
       <List disablePadding>
-        {item.children.map((child) => (
-          <NavItemRenderer key={child.id} item={child} level={0} expanded={expanded} />
+        {item.children.map(child => (
+          <MobileNavItemRenderer key={child.id} item={child} level={0} onClose={onClose} />
         ))}
       </List>
     </Box>
   );
 };
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// NAVIGATION ITEM RENDERER (FACTORY)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-const NavItemRenderer = ({ item, level, expanded }) => {
+const MobileNavItemRenderer = ({ item, level, onClose }) => {
   if (!item) return null;
-
   switch (item.type) {
-    case 'group':
-      return <NavGroup item={item} expanded={expanded} />;
-    case 'collapse':
-      return <NavCollapse item={item} level={level} expanded={expanded} />;
-    case 'item':
-      return <NavItem item={item} level={level} expanded={expanded} />;
-    case 'divider':
-      return <Divider sx={{ my: 1, mx: 2 }} />;
-    default:
-      return null;
+    case 'group': return <MobileNavGroup item={item} onClose={onClose} />;
+    case 'collapse': return <MobileNavCollapse item={item} level={level} onClose={onClose} />;
+    case 'item': return <MobileNavItem item={item} level={level} onClose={onClose} />;
+    case 'divider': return <Divider sx={{ my: 1, mx: 2 }} />;
+    default: return null;
   }
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SIDEBAR NAVIGATION COMPONENT
+// MAIN LAYOUT COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const SidebarNavigation = ({ expanded }) => {
-  const { sidebarGroups, loading } = useRBACSidebar();
-
-  if (loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-        <Loader />
-      </Box>
-    );
-  }
-
-  return (
-    <SimpleBar style={{ maxHeight: `calc(100vh - ${TOPBAR_HEIGHT + 80}px)`, overflowX: 'hidden' }}>
-      <Box sx={{ py: 1 }}>
-        {sidebarGroups?.map((group) => (
-          <NavItemRenderer key={group.id} item={group} level={0} expanded={expanded} />
-        ))}
-      </Box>
-    </SimpleBar>
-  );
-};
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// SIDEBAR FOOTER (USER INFO - COMPACT)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-const SidebarFooter = ({ expanded }) => {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
-  const theme = useTheme();
-
-  if (!user) return null;
-
-  const isProvider = user?.roles?.includes('PROVIDER');
-
-  return (
-    <Box
-      sx={{
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        borderTop: `1px solid ${theme.palette.divider}`,
-        backgroundColor: theme.palette.background.paper,
-        p: `${SPACING.md}px`
-      }}
-    >
-      {expanded ? (
-        <Stack direction="row" alignItems="center" spacing={1.5}>
-          <Avatar
-            sx={{
-              width: 36,
-              height: 36,
-              bgcolor: isProvider ? 'success.main' : 'primary.main',
-              fontSize: '0.875rem'
-            }}
-          >
-            {user.fullName?.[0] || user.username?.[0] || 'U'}
-          </Avatar>
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography variant="subtitle2" noWrap fontWeight={600} fontSize="0.8125rem">
-              {user.fullName || user.username}
-            </Typography>
-            <Typography variant="caption" color="text.secondary" noWrap fontSize="0.6875rem">
-              {user.roles?.[0]?.replace('_', ' ') || 'مستخدم'}
-            </Typography>
-          </Box>
-          <Tooltip title="تسجيل الخروج" placement="top">
-            <IconButton size="small" onClick={logout} color="error">
-              <LogoutIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        </Stack>
-      ) : (
-        <Tooltip title={`${user.fullName || user.username} - الملف الشخصي`} placement="left">
-          <Avatar
-            sx={{
-              width: 36,
-              height: 36,
-              mx: 'auto',
-              bgcolor: isProvider ? 'success.main' : 'primary.main',
-              fontSize: '0.875rem',
-              cursor: 'pointer'
-            }}
-            onClick={() => navigate('/profile')}
-          >
-            {user.fullName?.[0] || user.username?.[0] || 'U'}
-          </Avatar>
-        </Tooltip>
-      )}
-    </Box>
-  );
-};
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// MAIN SIDEBAR LAYOUT COMPONENT
-// ═══════════════════════════════════════════════════════════════════════════════
+// Context kept for backwards compatibility if any deeply nested component uses it
+const SidebarContext = createContext({
+  expanded: true,
+  toggleExpanded: () => { },
+  setExpanded: () => { },
+  openGroups: {},
+  toggleGroup: () => { }
+});
+export const useSidebar = () => useContext(SidebarContext);
 
 export default function SidebarLayout() {
   const theme = useTheme();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { companyName, companyNameEn, getLogoSrc, settings } = useCompanySettings();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const isTablet = useMediaQuery(theme.breakpoints.down('lg'));
+  const isMobile = useMediaQuery(theme.breakpoints.down('lg'));
 
-  // Sidebar state
-  const [expanded, setExpanded] = useState(() => {
-    if (SIDEBAR_CONFIG.persistState) {
-      const saved = localStorage.getItem(SIDEBAR_CONFIG.storageKey);
-      if (saved !== null) return JSON.parse(saved);
-    }
-    return !isTablet;
-  });
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [openGroups, setOpenGroups] = useState({});
+  const toggleMobile = useCallback(() => setMobileOpen(prev => !prev), []);
 
-  // Persist expanded state
-  useEffect(() => {
-    if (SIDEBAR_CONFIG.persistState) {
-      localStorage.setItem(SIDEBAR_CONFIG.storageKey, JSON.stringify(expanded));
-    }
-  }, [expanded]);
+  const { sidebarGroups, loading } = useRBACSidebar();
 
-  // Auto-collapse on tablet - intentionally only reacts to isTablet changes
-  useEffect(() => {
-    if (isTablet) {
-      setExpanded(false);
-    } else {
-      const saved = localStorage.getItem(SIDEBAR_CONFIG.storageKey);
-      setExpanded(saved !== null ? JSON.parse(saved) : true);
-    }
-  }, [isTablet]);
-
-  const toggleExpanded = useCallback(() => {
-    setExpanded((prev) => !prev);
-  }, []);
-
-  const toggleMobile = useCallback(() => {
-    setMobileOpen((prev) => !prev);
-  }, []);
-
-  const toggleGroup = useCallback((groupId) => {
-    setOpenGroups((prev) => {
-      const newState = { ...prev };
-
-      // Auto-collapse other groups if enabled
-      if (NAV_BEHAVIOR.autoCollapse && !prev[groupId]) {
-        Object.keys(newState).forEach((key) => {
-          newState[key] = false;
-        });
-      }
-
-      newState[groupId] = !prev[groupId];
-      return newState;
-    });
-  }, []);
-
-  // Calculate sidebar width
-  const sidebarWidth = useMemo(() => {
-    if (isMobile) return 0;
-    return expanded ? SIDEBAR_CONFIG.width.expanded : SIDEBAR_CONFIG.width.collapsed;
-  }, [isMobile, expanded]);
-
-  // Redirect if not authenticated
   if (!user) {
     return <Navigate to="/login" replace />;
   }
@@ -600,88 +374,11 @@ export default function SidebarLayout() {
   const displayName = companyName || companyNameEn || 'TBA';
   const primaryRole = user.roles?.[0]?.replace('_', ' ') || 'مستخدم';
 
-  // Sidebar content (shared between desktop and mobile)
-  const sidebarContent = (
-    <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-        position: 'relative'
-      }}
-    >
-      {/* Sidebar Header - Collapse toggle only */}
-      <SidebarHeader>
-        {!isMobile && (
-          <IconButton
-            onClick={toggleExpanded}
-            size="small"
-            sx={{
-              backgroundColor: alpha(theme.palette.primary.main, 0.08),
-              '&:hover': {
-                backgroundColor: alpha(theme.palette.primary.main, 0.16)
-              }
-            }}
-          >
-            {/* RTL sidebar on right: expanded→collapse (ChevronRight), collapsed→expand (ChevronLeft) */}
-            {expanded ? <ChevronRightIcon fontSize="small" /> : <ChevronLeftIcon fontSize="small" />}
-          </IconButton>
-        )}
-        {isMobile && (
-          <Typography variant="subtitle2" fontWeight={600} color="text.primary">
-            القائمة الرئيسية
-          </Typography>
-        )}
-      </SidebarHeader>
-
-      {/* Navigation */}
-      <SidebarNavigation expanded={expanded || isMobile} />
-
-      {/* Footer */}
-      <SidebarFooter expanded={expanded || isMobile} />
-    </Box>
-  );
-
   return (
-    <SidebarContext.Provider value={{ expanded, toggleExpanded, setExpanded, openGroups, toggleGroup }}>
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'row-reverse',
-          width: '100vw',
-          height: '100vh',
-          overflow: 'hidden'
-        }}
-      >
-        {/* Desktop Sidebar - RTL: Inline on right side, pushes content */}
-        {!isMobile && (
-          <Drawer
-            variant="permanent"
-            anchor="right"
-            sx={{
-              width: sidebarWidth,
-              flexShrink: 0,
-              '& .MuiDrawer-paper': {
-                width: sidebarWidth,
-                boxSizing: 'border-box',
-                borderLeft: `1px solid ${theme.palette.divider}`,
-                borderRight: 'none',
-                backgroundColor: 'background.paper',
-                transition: (theme) =>
-                  theme.transitions.create('width', {
-                    easing: theme.transitions.easing.sharp,
-                    duration: SIDEBAR_CONFIG.animation.duration
-                  }),
-                overflowX: 'hidden',
-                position: 'relative'
-              }
-            }}
-          >
-            {sidebarContent}
-          </Drawer>
-        )}
+    <SidebarContext.Provider value={{ expanded: false, toggleExpanded: () => { }, setExpanded: () => { }, openGroups: {}, toggleGroup: () => { } }}>
+      <Box sx={{ display: 'flex', width: '100vw', height: '100vh', overflow: 'hidden' }}>
 
-        {/* Mobile Drawer - RTL: sidebar on right side */}
+        {/* Mobile Drawer (Only shown on small screens) */}
         {isMobile && (
           <Drawer
             variant="temporary"
@@ -689,83 +386,89 @@ export default function SidebarLayout() {
             open={mobileOpen}
             onClose={toggleMobile}
             ModalProps={{ keepMounted: true }}
-            sx={{
-              '& .MuiDrawer-paper': {
-                width: SIDEBAR_CONFIG.width.mobile,
-                boxSizing: 'border-box'
-              }
-            }}
+            sx={{ '& .MuiDrawer-paper': { width: 280, boxSizing: 'border-box' } }}
           >
-            {sidebarContent}
+            <Box sx={{ p: 2, display: 'flex', alignItems: 'center', borderBottom: 1, borderColor: 'divider' }}>
+              <Typography variant="h6" fontWeight={700} color="primary">القائمة الرئيسية</Typography>
+            </Box>
+            <SimpleBar style={{ height: 'calc(100vh - 140px)' }}>
+              <Box sx={{ py: 1 }}>
+                {!loading && sidebarGroups?.map(group => (
+                  <MobileNavItemRenderer key={group.id} item={group} level={0} onClose={toggleMobile} />
+                ))}
+              </Box>
+            </SimpleBar>
+            <Box sx={{ position: 'absolute', bottom: 0, width: '100%', p: 2, borderTop: 1, borderColor: 'divider', bgcolor: 'background.paper' }}>
+              <Stack direction="row" alignItems="center" spacing={1.5}>
+                <Avatar sx={{ width: 36, height: 36, bgcolor: isProvider ? 'success.main' : 'primary.main' }}>
+                  {user.fullName?.[0] || user.username?.[0] || 'U'}
+                </Avatar>
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Typography variant="subtitle2" noWrap fontWeight={600}>{user.fullName || user.username}</Typography>
+                  <Typography variant="caption" color="text.secondary" noWrap>{primaryRole}</Typography>
+                </Box>
+                <IconButton size="small" onClick={logout} color="error">
+                  <LogoutIcon fontSize="small" />
+                </IconButton>
+              </Stack>
+            </Box>
           </Drawer>
         )}
 
-        {/* Main Content - Flexible Width (adjusts with sidebar) */}
-        <MainContent sidebarWidth={sidebarWidth}>
-          {/* Enterprise Top Bar - Logo, System Name | User+Role, Notifications, Profile */}
+        {/* Main Content Area */}
+        <MainContent>
           <TopBar>
-            {/* Left/Start Section: Mobile Menu + Logo + System Name */}
-            <Stack direction="row" alignItems="center" spacing={2}>
-              {isMobile && (
-                <IconButton onClick={toggleMobile} edge="start" size="small">
-                  <MenuIcon />
-                </IconButton>
+            <Box sx={{ width: '100%', maxWidth: '1600px', mx: 'auto', px: { xs: 2, sm: 3 }, height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              {/* Left Section: Logo & Mobile Menu */}
+              <Stack direction="row" alignItems="center" spacing={2} sx={{ minWidth: 200 }}>
+                {isMobile && (
+                  <IconButton onClick={toggleMobile} edge="start">
+                    <MenuIcon />
+                  </IconButton>
+                )}
+                <Box
+                  component="img"
+                  src={getLogoSrc()}
+                  alt={displayName}
+                  sx={{ height: 38, width: 'auto', maxWidth: 120, objectFit: 'contain' }}
+                  onError={(e) => { e.target.style.display = 'none'; }}
+                />
+                {!isMobile && (
+                  <Box>
+                    <Typography variant="subtitle1" fontWeight={700} color="primary.main" lineHeight={1.2}>
+                      {displayName}
+                    </Typography>
+                  </Box>
+                )}
+              </Stack>
+
+              {/* Center Section: Desktop Navigation */}
+              {!isMobile && !loading && (
+                <Stack direction="row" alignItems="center" spacing={1} sx={{ flex: 1, justifyContent: 'center', overflowX: 'auto' }}>
+                  {sidebarGroups?.map(group => (
+                    <DesktopNavGroupButton key={group.id} group={group} />
+                  ))}
+                </Stack>
               )}
 
-              {/* Logo */}
-              <Box
-                component="img"
-                src={getLogoSrc()}
-                alt={displayName}
-                sx={{
-                  height: 32,
-                  width: 'auto',
-                  maxWidth: 100,
-                  objectFit: 'contain'
-                }}
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                }}
-              />
-
-              {/* System Name */}
-              {!isMobile && (
-                <Box>
-                  <Typography variant="subtitle1" fontWeight={700} color="primary.main" lineHeight={1.2}>
-                    {displayName}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary" fontSize="0.6875rem">
-                    {settings?.businessType || 'نظام إدارة التأمين'}
-                  </Typography>
-                </Box>
-              )}
-            </Stack>
-
-            {/* Right/End Section: User+Role, Notifications, Profile */}
-            <Stack direction="row" alignItems="center" spacing={1}>
-              {/* User + Role Display (desktop only) */}
-              {!isMobile && (
-                <Box sx={{ textAlign: 'left', mr: 1 }}>
-                  <Typography variant="body2" fontWeight={600} color="text.primary" lineHeight={1.2}>
-                    {user.fullName || user.username}
-                  </Typography>
-                  <Typography
-                    variant="caption"
-                    color={isProvider ? 'success.main' : 'text.secondary'}
-                    fontSize="0.6875rem"
-                    fontWeight={500}
-                  >
-                    {primaryRole}
-                  </Typography>
-                </Box>
-              )}
-
-              {/* Profile Menu */}
-              {!isMobile && <Profile />}
-            </Stack>
+              {/* Right Section: User & Profile */}
+              <Stack direction="row" alignItems="center" spacing={1} sx={{ minWidth: 200, justifyContent: 'flex-end' }}>
+                {!isMobile && (
+                  <Box sx={{ textAlign: 'left', mr: 1, display: { xs: 'none', lg: 'block' } }}>
+                    <Typography variant="body2" fontWeight={600} color="text.primary" lineHeight={1.2}>
+                      {user.fullName || user.username}
+                    </Typography>
+                    <Typography variant="caption" color={isProvider ? 'success.main' : 'text.secondary'} fontWeight={500}>
+                      {primaryRole}
+                    </Typography>
+                  </Box>
+                )}
+                {!isMobile && <Profile />}
+              </Stack>
+            </Box>
           </TopBar>
 
-          {/* Page Content - Full Width, Minimal Side Padding */}
+          {/* Page Content */}
           <Box
             component="main"
             sx={{
@@ -773,14 +476,15 @@ export default function SidebarLayout() {
               width: '100%',
               minWidth: 0,
               height: `calc(100vh - ${TOPBAR_HEIGHT}px)`,
-              p: { xs: '12px 8px', sm: '20px 12px' },
               overflow: 'auto',
               backgroundColor: (theme) => (theme.palette.mode === 'dark' ? 'background.default' : alpha(theme.palette.grey[100], 0.5))
             }}
           >
-            <PageErrorBoundary pageName="Dashboard Content">
-              <Outlet />
-            </PageErrorBoundary>
+            <Box sx={{ width: '100%', maxWidth: '1600px', mx: 'auto', px: { xs: 2, sm: 3 }, py: { xs: 1, sm: 1.5 } }}>
+              <PageErrorBoundary pageName="Dashboard Content">
+                <Outlet />
+              </PageErrorBoundary>
+            </Box>
           </Box>
         </MainContent>
       </Box>

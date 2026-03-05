@@ -95,13 +95,13 @@ const ErrorFallback = ({ errorId, onRetry, onGoHome, onReload }) => {
           />
 
           <Typography variant="h4" color="error.main" gutterBottom fontWeight={700}>
-            حدث خطأ غير متوقع
+            واجه النظام مشكلة غير متوقعة
           </Typography>
 
           <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-            نأسف لهذا الخطأ. فريقنا التقني يعمل على حل المشكلة.
+            نأسف لهذا الخلل. فريقنا التقني يعمل على حل المشكلة بأسرع وقت.
             <br />
-            يمكنك المحاولة مرة أخرى أو العودة للصفحة الرئيسية.
+            يمكنك محاولة تحديث الصفحة أو العودة للصفحة الرئيسية.
           </Typography>
 
           <Divider sx={{ my: 2 }} />

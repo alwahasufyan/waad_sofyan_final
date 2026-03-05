@@ -128,6 +128,11 @@ public class ExcelImportResult {
          * Value that caused the error
          */
         private String value;
+
+        /**
+         * Optional identifier for the row (e.g., member name)
+         */
+        private String rowIdentifier;
         
         public enum ErrorType {
             /**

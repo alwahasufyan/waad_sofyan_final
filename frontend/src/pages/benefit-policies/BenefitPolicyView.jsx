@@ -376,81 +376,81 @@ const BenefitPolicyView = () => {
             </Button>
 
             {/* Edit Button */}
-            
-              <Button
-                startIcon={<EditIcon />}
-                onClick={() => navigate(`/benefit-policies/edit/${id}`)}
-                variant="outlined"
-                color="primary"
-                size="small"
-                disabled={policy?.status === 'CANCELLED'}
-              >
-                تعديل
-              </Button>
-              
+
+            <Button
+              startIcon={<EditIcon />}
+              onClick={() => navigate(`/benefit-policies/edit/${id}`)}
+              variant="outlined"
+              color="primary"
+              size="small"
+              disabled={policy?.status === 'CANCELLED'}
+            >
+              تعديل
+            </Button>
+
 
             {/* Activate Button */}
             {statusConfig.canActivate && (
-              
-                <Button
-                  startIcon={<ActivateIcon />}
-                  onClick={handleActivate}
-                  variant="contained"
-                  color="success"
-                  size="small"
-                  disabled={isLoading_Action}
-                >
-                  تفعيل
-                </Button>
-                
+
+              <Button
+                startIcon={<ActivateIcon />}
+                onClick={handleActivate}
+                variant="contained"
+                color="success"
+                size="small"
+                disabled={isLoading_Action}
+              >
+                تفعيل
+              </Button>
+
             )}
 
             {/* Suspend Button */}
             {statusConfig.canSuspend && (
-              
-                <Button
-                  startIcon={<SuspendIcon />}
-                  onClick={handleSuspend}
-                  variant="contained"
-                  color="warning"
-                  size="small"
-                  disabled={isLoading_Action}
-                >
-                  إيقاف مؤقت
-                </Button>
-                
+
+              <Button
+                startIcon={<SuspendIcon />}
+                onClick={handleSuspend}
+                variant="contained"
+                color="warning"
+                size="small"
+                disabled={isLoading_Action}
+              >
+                إيقاف مؤقت
+              </Button>
+
             )}
 
             {/* Cancel Button */}
             {statusConfig.canCancel && (
-              
-                <Button
-                  startIcon={<CancelIcon />}
-                  onClick={handleCancel}
-                  variant="outlined"
-                  color="error"
-                  size="small"
-                  disabled={isLoading_Action}
-                >
-                  إلغاء
-                </Button>
-                
+
+              <Button
+                startIcon={<CancelIcon />}
+                onClick={handleCancel}
+                variant="outlined"
+                color="error"
+                size="small"
+                disabled={isLoading_Action}
+              >
+                إلغاء
+              </Button>
+
             )}
 
             {/* Delete Button */}
             {statusConfig.canDelete && (
-              
-                <Button
-                  startIcon={<DeleteIcon />}
-                  onClick={handleDelete}
-                  variant="outlined"
-                  color="error"
-                  size="small"
-                  disabled={isLoading_Action}
-                >
-                  حذف
-                </Button>
-                
+
+              <Button
+                startIcon={<DeleteIcon />}
+                onClick={handleDelete}
+                variant="outlined"
+                color="error"
+                size="small"
+                disabled={isLoading_Action}
+              >
+                حذف
+              </Button>
+
             )}
           </Stack>
         }
@@ -547,7 +547,7 @@ const BenefitPolicyView = () => {
       )}
 
       {/* Rules Tab */}
-      {activeTab === 1 && <BenefitPolicyRulesTab policyId={id} policyStatus={policy?.status} />}
+      {activeTab === 1 && <BenefitPolicyRulesTab policyId={id} policyStatus={policy?.status} policyDefaultCoveragePercent={policy?.defaultCoveragePercent} />}
 
       {/* Confirmation Dialog */}
       <ConfirmDialog

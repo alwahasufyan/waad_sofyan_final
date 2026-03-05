@@ -83,24 +83,7 @@ export const claimsService = {
     }
   },
 
-  /**
-   * Get financial summary statistics
-   * @param {Object} params - Filter params {employerId, providerId, status, dateFrom, dateTo}
-   */
-  getFinancialSummary: async (params = {}) => {
-    try {
-      const queryParams = new URLSearchParams();
-      Object.keys(params).forEach((key) => {
-        if (params[key] !== undefined && params[key] !== null && params[key] !== '') {
-          queryParams.append(key, params[key]);
-        }
-      });
-      const response = await axiosClient.get(`${BASE_URL}/financial-summary?${queryParams.toString()}`);
-      return unwrap(response);
-    } catch (error) {
-      throw handleClaimErrors(error);
-    }
-  },
+
 
   /**
    * Get claim by claim number
@@ -489,7 +472,7 @@ export const claimsService = {
   settle: async (id, data) => {
     throw new Error(
       'تم إيقاف التسوية المباشرة للمطالبات. يرجى استخدام دفعات التسوية من: /settlement/batches - ' +
-        'Legacy per-claim settlement is DISABLED. Use Settlement Batches API.'
+      'Legacy per-claim settlement is DISABLED. Use Settlement Batches API.'
     );
   },
 
@@ -590,7 +573,7 @@ export const claimsService = {
       if (params.toDate) queryParams.append('toDate', params.toDate);
 
       const queryString = queryParams.toString();
-      const url = `/api/reports/financial-summary${queryString ? `?${queryString}` : ''}`;
+      const url = `${BASE_URL}/financial-summary${queryString ? `?${queryString}` : ''}`;
       const response = await axiosClient.get(url);
       return unwrap(response);
     } catch (error) {
@@ -611,7 +594,7 @@ export const claimsService = {
       if (params.employerOrgId) queryParams.append('employerOrgId', params.employerOrgId);
 
       const queryString = queryParams.toString();
-      const url = `/api/reports/settlement-summary${queryString ? `?${queryString}` : ''}`;
+      const url = `${BASE_URL}/settlement-summary${queryString ? `?${queryString}` : ''}`;
       const response = await axiosClient.get(url);
       return unwrap(response);
     } catch (error) {

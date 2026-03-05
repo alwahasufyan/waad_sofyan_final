@@ -239,7 +239,7 @@ export const normalizeEmployerArrayResponse = (backendArray) => {
 export const handleEmployerErrors = (error) => {
   const status = error?.response?.status;
   const data = error?.response?.data;
-  const message = data?.message || error?.message || 'حدث خطأ غير متوقع';
+  const message = data?.message || error?.response?.statusText || error?.message || 'تعذر الاتصال بالخادم أو حدث خطأ داخلي غير متوقع';
 
   console.error('[EmployerService] Error occurred:', {
     status,
@@ -295,7 +295,11 @@ export const handleEmployerErrors = (error) => {
       break;
 
     default:
-      errorResponse.message = message || 'حدث خطأ أثناء معالجة الطلب';
+      if (message.includes('Network Error')) {
+        errorResponse.message = 'خطأ في الشبكة، يرجى التحقق من اتصالك بالإنترنت';
+      } else {
+        errorResponse.message = message || 'عذراً، حدث خطأ أثناء معالجة طلبك، يرجى إعادة المحاولة';
+      }
   }
 
   return errorResponse;

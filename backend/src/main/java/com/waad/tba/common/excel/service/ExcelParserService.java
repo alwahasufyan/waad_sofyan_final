@@ -255,42 +255,48 @@ public class ExcelParserService {
         if (headerRow == null || headerNames == null || headerNames.length == 0) {
             return null;
         }
-        
+
+        // Pass 1: Look for exact matches (most robust)
         for (int i = 0; i < headerRow.getLastCellNum(); i++) {
             Cell cell = headerRow.getCell(i);
             if (cell == null) continue;
-            
             String headerValue = getCellValueAsString(cell);
             if (headerValue == null) continue;
-            
-            // Remove asterisks (for required fields) and normalize
             headerValue = headerValue.replace("*", "").trim();
-            
-            // Handle multi-line headers: split by newline and check each part
             String[] headerParts = headerValue.split("[\\r\\n]+");
-            
+
             for (String name : headerNames) {
-                String nameLower = name.toLowerCase().trim();
-                
-                // Check full header value
-                if (headerValue.equalsIgnoreCase(name) || 
-                    headerValue.toLowerCase().contains(nameLower) || 
-                    nameLower.contains(headerValue.toLowerCase())) {
-                    return i;
-                }
-                
-                // Check each part of multi-line header
+                String nameTrimmed = name.trim();
+                // Check full value exact
+                if (headerValue.equalsIgnoreCase(nameTrimmed)) return i;
+                // Check parts exact
                 for (String part : headerParts) {
-                    String partTrimmed = part.trim();
-                    if (partTrimmed.equalsIgnoreCase(name) ||
-                        partTrimmed.toLowerCase().contains(nameLower) ||
-                        nameLower.contains(partTrimmed.toLowerCase())) {
-                        return i;
-                    }
+                    if (part.trim().equalsIgnoreCase(nameTrimmed)) return i;
                 }
             }
         }
-        
+
+        // Pass 2: Look for partial matches (if exact not found)
+        for (int i = 0; i < headerRow.getLastCellNum(); i++) {
+            Cell cell = headerRow.getCell(i);
+            if (cell == null) continue;
+            String headerValue = getCellValueAsString(cell);
+            if (headerValue == null) continue;
+            headerValue = headerValue.replace("*", "").trim();
+            String headerLower = headerValue.toLowerCase();
+            String[] headerParts = headerValue.split("[\\r\\n]+");
+
+            for (String name : headerNames) {
+                String nameLower = name.trim().toLowerCase();
+                if (nameLower.length() < 3) continue; // Avoid matching extremely short keywords like 'id' partially
+
+                if (headerLower.contains(nameLower)) return i;
+                for (String part : headerParts) {
+                    if (part.toLowerCase().contains(nameLower)) return i;
+                }
+            }
+        }
+
         return null;
     }
 }

@@ -165,6 +165,7 @@ const menuItem = [
   // 🏥 PROVIDER PORTAL (VISIT-CENTRIC FLOW)
   // For Provider Staff only
   // ═══════════════════════════════════════════════════════════════════════════
+  // ═══════════════════════════════════════════════════════════════════════════
   {
     id: 'group-provider-portal',
     title: 'بوابة مقدم الخدمة',
@@ -177,7 +178,7 @@ const menuItem = [
         titleEn: 'Provider Portal',
         type: 'collapse',
         icon: LocalHospitalIcon,
-        resource: 'provider_portal',
+        resource: '__hidden_provider_portal__', // Hid temporarily upon user request
         action: 'view',
         children: [
           {

@@ -105,10 +105,10 @@ function ServiceRow({ service, draggable = false, onDragStart = null, onClick = 
       onDragStart={
         draggable
           ? (e) => {
-              e.dataTransfer.setData('text/plain', String(service.id));
-              e.dataTransfer.effectAllowed = 'move';
-              onDragStart?.(service.id);
-            }
+            e.dataTransfer.setData('text/plain', String(service.id));
+            e.dataTransfer.effectAllowed = 'move';
+            onDragStart?.(service.id);
+          }
           : undefined
       }
       sx={{ py: 0.5, px: 1.5, '&:last-child': { borderBottom: 0 }, cursor: onClick ? 'pointer' : 'default', bgcolor: selected ? 'primary.lighter' : 'transparent' }}
@@ -197,6 +197,7 @@ function CategoryAccordion({ category, expanded, onToggle, onDropService, onDrag
             {label}
           </Typography>
           <Button
+            component="div"
             size="small"
             variant="text"
             onClick={(e) => {
@@ -208,6 +209,7 @@ function CategoryAccordion({ category, expanded, onToggle, onDropService, onDrag
           </Button>
           {selectedServiceCount > 0 && (
             <Button
+              component="div"
               size="small"
               variant="text"
               onClick={(e) => {
@@ -395,11 +397,11 @@ export default function MedicalCatalogPage() {
     const hasCatalogCategories = Array.isArray(allCategories) && allCategories.length > 0;
     const categoriesSource = hasCatalogCategories
       ? allCategories.map((c) => ({
-          categoryId: c.id,
-          code: c.code,
-          nameAr: c.nameAr || c.name,
-          nameEn: c.nameEn || c.name
-        }))
+        categoryId: c.id,
+        code: c.code,
+        nameAr: c.nameAr || c.name,
+        nameEn: c.nameEn || c.name
+      }))
       : filteredTree;
 
     return categoriesSource.map((cat) => ({

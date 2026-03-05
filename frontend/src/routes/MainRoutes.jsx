@@ -565,6 +565,7 @@ const MainRoutes = {
     // ═══════════════════════════════════════════════════════════════════════════
     {
       path: 'pre-approvals',
+      element: <TableRefreshLayout />,
       children: [
         {
           path: '',
@@ -627,6 +628,7 @@ const MainRoutes = {
     // Medical Categories (for category creation/maintenance workflows)
     {
       path: 'medical-categories',
+      element: <TableRefreshLayout />,
       children: [
         {
           path: '',
@@ -666,6 +668,7 @@ const MainRoutes = {
     // Medical Services (legacy routes kept for compatibility)
     {
       path: 'medical-services',
+      element: <TableRefreshLayout />,
       children: [
         {
           path: '',
@@ -963,6 +966,7 @@ const MainRoutes = {
       children: [
         {
           path: 'users',
+          element: <TableRefreshLayout />,
           children: [
             {
               path: '',

@@ -597,13 +597,40 @@ public class UnifiedMemberService {
                     predicates.add(cb.isNull(root.get("parent")));
                 } else if ("DEPENDENT".equalsIgnoreCase(type)) {
                     predicates.add(cb.isNotNull(root.get("parent")));
+                } else {
+                    // Try to filter by specific relationship
+                    try {
+                        Member.Relationship rel = Member.Relationship.valueOf(type.toUpperCase());
+                        predicates.add(cb.equal(root.get("relationship"), rel));
+                        predicates.add(cb.isNotNull(root.get("parent")));
+                    } catch (IllegalArgumentException e) {
+                        // Invalid relationship type, ignore or fallback
+                    }
                 }
             }
 
             return cb.and(predicates.toArray(new Predicate[0]));
         };
 
-        Page<Member> membersPage = memberRepository.findAll(spec, pageable);
+        // Fix Pageable sort since 'type' is transient
+        org.springframework.data.domain.Pageable safePageable = pageable;
+        if (pageable.getSort().isSorted()) {
+            java.util.List<org.springframework.data.domain.Sort.Order> safeOrders = new java.util.ArrayList<>();
+            for (org.springframework.data.domain.Sort.Order order : pageable.getSort()) {
+                if ("type".equalsIgnoreCase(order.getProperty())) {
+                    safeOrders.add(new org.springframework.data.domain.Sort.Order(order.getDirection(), "parent.id"));
+                } else {
+                    safeOrders.add(order);
+                }
+            }
+            safePageable = org.springframework.data.domain.PageRequest.of(
+                    pageable.getPageNumber(),
+                    pageable.getPageSize(),
+                    org.springframework.data.domain.Sort.by(safeOrders)
+            );
+        }
+
+        Page<Member> membersPage = memberRepository.findAll(spec, safePageable);
 
         // ✅ FIX-M1.2: Batch fetch ALL dependents in one query to eliminate N+1
         List<Long> principalIds = membersPage.getContent().stream()
@@ -680,6 +707,14 @@ public class UnifiedMemberService {
                     predicates.add(cb.isNull(root.get("parent")));
                 } else if ("DEPENDENT".equalsIgnoreCase(type)) {
                     predicates.add(cb.isNotNull(root.get("parent")));
+                } else {
+                    try {
+                        Member.Relationship rel = Member.Relationship.valueOf(type.toUpperCase());
+                        predicates.add(cb.equal(root.get("relationship"), rel));
+                        predicates.add(cb.isNotNull(root.get("parent")));
+                    } catch (IllegalArgumentException e) {
+                        // Ignore
+                    }
                 }
             }
 
@@ -800,13 +835,39 @@ public class UnifiedMemberService {
                     predicates.add(cb.isNull(root.get("parent")));
                 } else if ("DEPENDENT".equalsIgnoreCase(type)) {
                     predicates.add(cb.isNotNull(root.get("parent")));
+                } else {
+                    try {
+                        Member.Relationship rel = Member.Relationship.valueOf(type.toUpperCase());
+                        predicates.add(cb.equal(root.get("relationship"), rel));
+                        predicates.add(cb.isNotNull(root.get("parent")));
+                    } catch (IllegalArgumentException e) {
+                        // Ignore
+                    }
                 }
             }
 
             return cb.and(predicates.toArray(new Predicate[0]));
         };
 
-        Page<Member> membersPage = memberRepository.findAll(spec, pageable);
+        // Fix Pageable sort since 'type' is transient
+        org.springframework.data.domain.Pageable safePageable = pageable;
+        if (pageable.getSort().isSorted()) {
+            java.util.List<org.springframework.data.domain.Sort.Order> safeOrders = new java.util.ArrayList<>();
+            for (org.springframework.data.domain.Sort.Order order : pageable.getSort()) {
+                if ("type".equalsIgnoreCase(order.getProperty())) {
+                    safeOrders.add(new org.springframework.data.domain.Sort.Order(order.getDirection(), "parent.id"));
+                } else {
+                    safeOrders.add(order);
+                }
+            }
+            safePageable = org.springframework.data.domain.PageRequest.of(
+                    pageable.getPageNumber(),
+                    pageable.getPageSize(),
+                    org.springframework.data.domain.Sort.by(safeOrders)
+            );
+        }
+
+        Page<Member> membersPage = memberRepository.findAll(spec, safePageable);
 
         // ✅ FIX-M1.3: Batch fetch ALL dependents in one query to eliminate N+1
         List<Long> principalIds = membersPage.getContent().stream()

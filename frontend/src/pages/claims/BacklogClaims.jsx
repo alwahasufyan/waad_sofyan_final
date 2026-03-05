@@ -99,7 +99,7 @@ export default function BacklogClaims() {
         doctorName: '',
         diagnosis: '',
         networkStatus: 'IN_NETWORK',
-        lines: [{ serviceCode: '', serviceName: '', quantity: 1, grossAmount: 0, coveredAmount: 0 }]
+        lines: [{ serviceCode: '', serviceName: '', quantity: 1, grossAmount: 0, coveredAmount: 0, coveragePercent: '', timesLimit: '', amountLimit: '' }]
     });
 
     const [submitting, setSubmitting] = useState(false);
@@ -127,27 +127,34 @@ export default function BacklogClaims() {
 
     // Member search handler
     useEffect(() => {
-        if (!memberSearchQuery || memberSearchQuery.length < 3) {
+        if (!selectedPolicyId) {
             setMemberOptions([]);
             return;
         }
 
+        // We want to fetch initially even if query is empty
         const delayDebounceFn = setTimeout(async () => {
             setMembersLoading(true);
             try {
                 const criteria = {
-                    fullName: memberSearchQuery,
                     page: 0,
-                    size: 50
+                    size: 1000
                 };
-                if (selectedPolicyId) {
-                    criteria.benefitPolicyId = selectedPolicyId;
+
+                // Only add name/fullName to criteria if the user actually typed something
+                if (memberSearchQuery && memberSearchQuery.trim().length > 0) {
+                    criteria.fullName = memberSearchQuery.trim();
                 }
                 // Using unifiedMembersService for advanced filtering
                 const response = await unifiedMembersService.searchMembers(criteria);
                 // Unified members search returns a Page object or data content
-                const content = response.content || response.data?.content || response.data || response || [];
-                setMemberOptions(Array.isArray(content) ? content : []);
+                let content = [];
+                if (Array.isArray(response)) content = response;
+                else if (response?.data && Array.isArray(response.data)) content = response.data;
+                else if (response?.data?.content && Array.isArray(response.data.content)) content = response.data.content;
+                else if (response?.content && Array.isArray(response.content)) content = response.content;
+
+                setMemberOptions(content);
             } catch (err) {
                 console.error('Member search failed:', err);
                 setMemberOptions([]);
@@ -249,13 +256,17 @@ export default function BacklogClaims() {
     };
 
     const addLine = (serviceData = null) => {
+        const defaultPercent = selectedMember?.benefitPolicy?.defaultCoveragePercent || 100;
         const newLine = serviceData ? {
             serviceCode: serviceData.code || serviceData.medicalService?.code,
             serviceName: serviceData.name || serviceData.medicalService?.name,
             quantity: 1,
             grossAmount: serviceData.contractPrice || 0,
-            coveredAmount: serviceData.contractPrice || 0
-        } : { serviceCode: '', serviceName: '', quantity: 1, grossAmount: 0, coveredAmount: 0 };
+            coveredAmount: ((serviceData.contractPrice || 0) * defaultPercent) / 100,
+            coveragePercent: defaultPercent,
+            timesLimit: '',
+            amountLimit: ''
+        } : { serviceCode: '', serviceName: '', quantity: 1, grossAmount: 0, coveredAmount: 0, coveragePercent: defaultPercent, timesLimit: '', amountLimit: '' };
 
         setForm((prev) => ({
             ...prev,
@@ -269,14 +280,35 @@ export default function BacklogClaims() {
     };
 
     const handleSubmitManual = async () => {
-        if (!form.memberId || !form.providerId || form.lines.some(l => !l.serviceCode || l.grossAmount <= 0)) {
-            enqueueSnackbar('يرجى إكمال جميع الحقول المطلوبة', { variant: 'warning' });
+        if (!form.memberId || !form.providerId) {
+            enqueueSnackbar('يرجى اختيار المنتفع ومقدم الخدمة', { variant: 'warning' });
             return;
         }
 
+        if (form.lines.length === 0) {
+            enqueueSnackbar('يجب إضافة خدمة واحدة على الأقل', { variant: 'warning' });
+            return;
+        }
+
+        if (form.lines.some(l => !l.serviceCode || l.grossAmount === '' || l.grossAmount < 0)) {
+            enqueueSnackbar('يرجى التأكد من اختيار جميع الخدمات وإدخال مبلغ صحيح', { variant: 'warning' });
+            return;
+        }
+
+        // Clean up empty string fields before sending to API to prevent 400 Bad Request
+        const submittingForm = {
+            ...form,
+            lines: form.lines.map(line => ({
+                ...line,
+                coveragePercent: line.coveragePercent !== '' ? Number(line.coveragePercent) : null,
+                timesLimit: line.timesLimit !== '' ? Number(line.timesLimit) : null,
+                amountLimit: line.amountLimit !== '' ? Number(line.amountLimit) : null,
+            }))
+        };
+
         setSubmitting(true);
         try {
-            await backlogService.createManual(form);
+            await backlogService.createManual(submittingForm);
             enqueueSnackbar('تم إنشاء المطالبة المتراكمة بنجاح', { variant: 'success' });
             // Reset form
             setForm({
@@ -288,7 +320,7 @@ export default function BacklogClaims() {
                 doctorName: '',
                 diagnosis: '',
                 networkStatus: 'IN_NETWORK',
-                lines: [{ serviceCode: '', serviceName: '', quantity: 1, grossAmount: 0, coveredAmount: 0 }]
+                lines: [{ serviceCode: '', serviceName: '', quantity: 1, grossAmount: 0, coveredAmount: 0, coveragePercent: '', timesLimit: '', amountLimit: '' }]
             });
             setSelectedMember(null);
         } catch (err) {
@@ -342,7 +374,7 @@ export default function BacklogClaims() {
             {/* Manual Entry Tab */}
             {tabValue === 0 && (
                 <Grid container spacing={3}>
-                    <Grid size={{ xs: 12, lg: 8 }}>
+                    <Grid size={12}>
                         <MainCard title="بيانات المطالبة الأساسية">
                             <Grid container spacing={3}>
                                 <Grid size={{ xs: 12, md: 4 }}>
@@ -378,6 +410,12 @@ export default function BacklogClaims() {
                                         options={memberOptions}
                                         getOptionLabel={(option) => `${option.fullName} (${option.cardNumber || 'N/A'}) - ${option.civilId || ''}`}
                                         loading={membersLoading}
+                                        filterOptions={(x) => x}
+                                        noOptionsText={
+                                            !selectedPolicyId
+                                                ? "يرجى اختيار وثيقة التغطية أولاً"
+                                                : "لا توجد نتائج"
+                                        }
                                         onInputChange={(e, value) => {
                                             setMemberSearchQuery(value);
                                         }}
@@ -391,7 +429,7 @@ export default function BacklogClaims() {
                                                 {...params}
                                                 label="ابحث عن المنتفع (الاسم أو الرقم)"
                                                 required
-                                                placeholder={selectedPolicyId ? "أدخل 3 أحرف للبحث..." : "يرجى اختيار الوثيقة أولاً..."}
+                                                placeholder={selectedPolicyId ? "ابحث بالاسم أو الرقم العائلي..." : "يرجى اختيار الوثيقة أولاً..."}
                                                 disabled={!selectedPolicyId}
                                                 InputProps={{
                                                     ...params.InputProps,
@@ -531,60 +569,122 @@ export default function BacklogClaims() {
                             <TableContainer component={Paper} variant="outlined">
                                 <Table size="small">
                                     <TableHead sx={{ bgcolor: 'grey.50' }}>
-                                        <TableRow><TableCell width="60%">الخدمة (من قائمة أسعار الجهة)</TableCell><TableCell width="10%" align="center">الكمية</TableCell><TableCell width="25%" align="right">المبلغ المطلوب</TableCell><TableCell width="5%" align="center"></TableCell></TableRow>
+                                        <TableRow>
+                                            <TableCell width="30%">الخدمة (من القائمة)</TableCell>
+                                            <TableCell width="10%" align="center">الكمية</TableCell>
+                                            <TableCell width="15%" align="center">المبلغ المطلوب</TableCell>
+                                            <TableCell width="15%" align="center">نسبة التغطية %</TableCell>
+                                            <TableCell width="10%" align="center">عدد المرات</TableCell>
+                                            <TableCell width="15%" align="center">سقف التصنيف</TableCell>
+                                            <TableCell width="5%" align="center"></TableCell>
+                                        </TableRow>
                                     </TableHead>
                                     <TableBody>
                                         {form.lines.map((line, index) => (
-                                            <TableRow key={index}><TableCell><Autocomplete
-                                                size="small"
-                                                options={providerPricing}
-                                                getOptionLabel={(option) => `[${option.code || option.medicalService?.code}] ${option.name || option.medicalService?.nameAr || option.medicalService?.nameEn || ''}`}
-                                                loading={pricingLoading}
-                                                onChange={(e, value) => {
-                                                    if (value) {
-                                                        handleLineChange(index, 'serviceCode', value.code || value.medicalService?.code);
-                                                        handleLineChange(index, 'serviceName', value.name || value.medicalService?.nameAr || value.medicalService?.nameEn);
-                                                        handleLineChange(index, 'grossAmount', value.contractPrice || 0);
-                                                        handleLineChange(index, 'coveredAmount', value.contractPrice || 0);
-                                                    }
-                                                }}
-                                                renderInput={(params) => (
-                                                    <TextField
-                                                        {...params}
-                                                        placeholder="اختر الخدمة..."
-                                                        InputProps={{
-                                                            ...params.InputProps,
-                                                            endAdornment: (
-                                                                <>
-                                                                    {pricingLoading ? <CircularProgress color="inherit" size={20} /> : null}
-                                                                    {params.InputProps.endAdornment}
-                                                                </>
-                                                            )
+                                            <TableRow key={index}>
+                                                <TableCell>
+                                                    <Autocomplete
+                                                        size="small"
+                                                        options={providerPricing}
+                                                        getOptionLabel={(option) => `[${option.code || option.medicalService?.code}] ${option.name || option.medicalService?.nameAr || option.medicalService?.nameEn || ''}`}
+                                                        loading={pricingLoading}
+                                                        onChange={(e, value) => {
+                                                            if (value) {
+                                                                const gross = value.contractPrice || 0;
+                                                                const percent = Number(line.coveragePercent) || (selectedMember?.benefitPolicy?.defaultCoveragePercent || 100);
+                                                                const newLines = [...form.lines];
+                                                                newLines[index].serviceCode = value.code || value.medicalService?.code;
+                                                                newLines[index].serviceName = value.name || value.medicalService?.nameAr || value.medicalService?.nameEn;
+                                                                newLines[index].grossAmount = gross;
+                                                                newLines[index].coveragePercent = percent;
+                                                                newLines[index].coveredAmount = (gross * percent) / 100;
+                                                                setForm(prev => ({ ...prev, lines: newLines }));
+                                                            }
                                                         }}
+                                                        renderInput={(params) => (
+                                                            <TextField
+                                                                {...params}
+                                                                placeholder="اختر الخدمة..."
+                                                                InputProps={{
+                                                                    ...params.InputProps,
+                                                                    endAdornment: (
+                                                                        <>
+                                                                            {pricingLoading ? <CircularProgress color="inherit" size={20} /> : null}
+                                                                            {params.InputProps.endAdornment}
+                                                                        </>
+                                                                    )
+                                                                }}
+                                                            />
+                                                        )}
                                                     />
-                                                )}
-                                            /></TableCell><TableCell align="center"><TextField
-                                                type="number"
-                                                size="small"
-                                                value={line.quantity}
-                                                onChange={(e) => handleLineChange(index, 'quantity', e.target.value)}
-                                                sx={{ width: 70 }}
-                                            /></TableCell><TableCell align="right"><TextField
-                                                type="number"
-                                                size="small"
-                                                value={line.grossAmount}
-                                                onChange={(e) => {
-                                                    const val = Number(e.target.value);
-                                                    const newLines = [...form.lines];
-                                                    newLines[index].grossAmount = val;
-                                                    newLines[index].coveredAmount = val;
-                                                    setForm(prev => ({ ...prev, lines: newLines }));
-                                                }}
-                                                sx={{ width: 120 }}
-                                                InputProps={{
-                                                    endAdornment: <Typography variant="caption" sx={{ ml: 0.5 }}>د.ل</Typography>
-                                                }}
-                                            /></TableCell><TableCell align="center"><IconButton size="small" color="error" onClick={() => removeLine(index)}><DeleteIcon fontSize="small" /></IconButton></TableCell></TableRow>
+                                                </TableCell>
+                                                <TableCell align="center">
+                                                    <TextField
+                                                        type="number"
+                                                        size="small"
+                                                        value={line.quantity}
+                                                        onChange={(e) => handleLineChange(index, 'quantity', e.target.value)}
+                                                        sx={{ width: 60 }}
+                                                    />
+                                                </TableCell>
+                                                <TableCell align="center">
+                                                    <TextField
+                                                        type="number"
+                                                        size="small"
+                                                        value={line.grossAmount}
+                                                        onChange={(e) => {
+                                                            const val = Number(e.target.value);
+                                                            const percent = Number(form.lines[index].coveragePercent) || 0;
+                                                            const newLines = [...form.lines];
+                                                            newLines[index].grossAmount = val;
+                                                            newLines[index].coveredAmount = (val * percent) / 100;
+                                                            setForm(prev => ({ ...prev, lines: newLines }));
+                                                        }}
+                                                        sx={{ width: 100 }}
+                                                    />
+                                                </TableCell>
+                                                <TableCell align="center">
+                                                    <TextField
+                                                        type="number"
+                                                        size="small"
+                                                        value={line.coveragePercent}
+                                                        onChange={(e) => {
+                                                            const val = Number(e.target.value);
+                                                            const gross = Number(form.lines[index].grossAmount) || 0;
+                                                            const newLines = [...form.lines];
+                                                            newLines[index].coveragePercent = val;
+                                                            newLines[index].coveredAmount = (gross * val) / 100;
+                                                            setForm(prev => ({ ...prev, lines: newLines }));
+                                                        }}
+                                                        sx={{ width: 70 }}
+                                                    />
+                                                </TableCell>
+                                                <TableCell align="center">
+                                                    <TextField
+                                                        type="number"
+                                                        size="small"
+                                                        value={line.timesLimit}
+                                                        placeholder="مثال: 5"
+                                                        onChange={(e) => handleLineChange(index, 'timesLimit', e.target.value)}
+                                                        sx={{ width: 70 }}
+                                                    />
+                                                </TableCell>
+                                                <TableCell align="center">
+                                                    <TextField
+                                                        type="number"
+                                                        size="small"
+                                                        value={line.amountLimit}
+                                                        placeholder="سقف.."
+                                                        onChange={(e) => handleLineChange(index, 'amountLimit', e.target.value)}
+                                                        sx={{ width: 90 }}
+                                                    />
+                                                </TableCell>
+                                                <TableCell align="center">
+                                                    <IconButton size="small" color="error" onClick={() => removeLine(index)}>
+                                                        <DeleteIcon fontSize="small" />
+                                                    </IconButton>
+                                                </TableCell>
+                                            </TableRow>
                                         ))}
                                     </TableBody>
                                 </Table>
@@ -647,25 +747,6 @@ export default function BacklogClaims() {
                                 {submitting ? 'جاري الحفظ...' : 'حفظ المطالبة المتراكمة'}
                             </Button>
                         </Box>
-                    </Grid>
-
-                    <Grid size={{ xs: 12, lg: 4 }}>
-                        <MainCard title="معلومات هامة">
-                            <Stack spacing={2}>
-                                <Alert severity="info" variant="outlined">
-                                    <b>Visit-Centric:</b> سيقوم النظام تلقائياً بإنشاء "زيارة ظل" (Shadow Visit) لربط هذه المطالبة بها، لضمان توافق البيانات.
-                                </Alert>
-                                <Alert severity="warning" variant="outlined">
-                                    <b>الوضع المالي:</b> سيتم إنشاء المطالبة بحالة "SETTLED" (مسواة) مباشرة لأنها مطالبة قديمة مدفوعة مسبقاً، ولن تمر عبر دورة المراجعة الطبية الحالية.
-                                </Alert>
-                                <Divider />
-                                <Typography variant="subtitle2" color="text.secondary">
-                                    - تأكد من صحة رقم المرجع الورقي لسهولة العودة للملفات الحقيقية.
-                                    <br />
-                                    - رمز الخدمة يساعد في التبويب الإحصائي للخدمات المقدمة قديماً.
-                                </Typography>
-                            </Stack>
-                        </MainCard>
                     </Grid>
                 </Grid>
             )}

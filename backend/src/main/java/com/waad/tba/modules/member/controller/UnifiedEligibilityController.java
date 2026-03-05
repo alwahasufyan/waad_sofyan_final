@@ -94,6 +94,37 @@ public class UnifiedEligibilityController {
         }
     }
 
+    /**
+     * Get Member Service Coverage Limits
+     * 
+     * GET /api/v1/members/{memberId}/service-coverage?serviceCode=...
+     * 
+     * Returns detailed coverage percentages and limits (amount and times) for a specific service.
+     */
+    @GetMapping("/{memberId}/service-coverage")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'EMPLOYER_ADMIN', 'PROVIDER_STAFF')")
+    @Operation(
+        summary = "Get Member Service Coverage",
+        description = "Returns coverage details and calculated limits for a specific service against a member's active policy."
+    )
+    public ResponseEntity<ApiResponse<com.waad.tba.modules.member.dto.CoverageLimitsDto>> getServiceCoverage(
+            @PathVariable Long memberId,
+            @RequestParam String serviceCode) {
+        
+        log.info("📊 Retrieving service coverage limits: memberId={}, serviceCode={}", memberId, serviceCode);
+        
+        try {
+            com.waad.tba.modules.member.dto.CoverageLimitsDto limits = financialSummaryService.getServiceCoverageLimits(memberId, serviceCode);
+            return ResponseEntity.ok(ApiResponse.success(limits));
+        } catch (com.waad.tba.common.exception.BusinessRuleException e) {
+            log.warn("⚠️ Failed to get service coverage limits: memberId={}, serviceCode={}, msg={}", memberId, serviceCode, e.getMessage());
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            log.error("💥 Error retrieving service coverage limits", e);
+            return ResponseEntity.internalServerError().body(ApiResponse.error("Internal Server Error"));
+        }
+    }
+
     // ==================== ELIGIBILITY CHECK ====================
 
     /**

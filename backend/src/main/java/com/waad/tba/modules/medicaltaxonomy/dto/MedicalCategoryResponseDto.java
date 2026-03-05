@@ -22,6 +22,7 @@ public class MedicalCategoryResponseDto {
     private String name;
     private Long parentId;
     private String parentName; // For UX - display parent category name
+    private String context;   // Clinical care-setting: INPATIENT, OUTPATIENT, OPERATING_ROOM, EMERGENCY, SPECIAL, ANY
     private boolean active;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

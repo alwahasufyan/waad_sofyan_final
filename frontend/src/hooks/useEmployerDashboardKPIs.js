@@ -162,7 +162,7 @@ export const useEmployerDashboardKPIs = (employerId) => {
   const fetchClaimsStatusBreakdown = useCallback(async () => {
     try {
       const params = employerId ? { employerOrgId: employerId } : {};
-      const response = await axiosClient.get('/reports/financial-summary', { params });
+      const response = await axiosClient.get('/claims/financial-summary', { params });
       const data = unwrap(response);
 
       // Build status counts from backend response

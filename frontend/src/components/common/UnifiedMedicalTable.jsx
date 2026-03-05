@@ -147,6 +147,7 @@ const UnifiedMedicalTable = ({
 
   // Styling
   sx = {},
+  tableContainerSx = {},
   ...otherProps
 }) => {
   const theme = useTheme();
@@ -189,6 +190,8 @@ const UnifiedMedicalTable = ({
     <Box
       sx={{
         width: '100%',
+        display: 'flex',
+        flexDirection: 'column',
         ...sx
       }}
       {...otherProps}
@@ -199,10 +202,12 @@ const UnifiedMedicalTable = ({
         variant="outlined"
         sx={{
           borderRadius: 2,
-          overflow: 'hidden',
+          overflow: 'auto',
           border: `1px solid ${theme.palette.divider}`,
           boxShadow: 'none', // NO shadows
-          width: '100%'
+          width: '100%',
+          flexGrow: 1,
+          ...tableContainerSx
         }}
       >
         <Table size={size} stickyHeader={stickyHeader}>
@@ -318,7 +323,7 @@ const UnifiedMedicalTable = ({
                         py: 1.5
                       }}
                     >
-                      {renderCell ? renderCell(row, column) : row[column.id]}
+                      {renderCell ? renderCell(row, column, rowIndex) : row[column.id]}
                     </TableCell>
                   ))}
                 </TableRow>
@@ -342,7 +347,8 @@ const UnifiedMedicalTable = ({
           labelDisplayedRows={({ from, to, count }) => `${from}-${to} من ${count !== -1 ? count : `أكثر من ${to}`}`}
           sx={{
             borderTop: `1px solid ${theme.palette.divider}`,
-            bgcolor: theme.palette.background.paper
+            bgcolor: theme.palette.background.paper,
+            overflow: 'hidden'
           }}
         />
       )}

@@ -111,6 +111,17 @@ public class MemberExcelTemplateService {
                                 "Dependent relationship (WIFE, HUSBAND, SON, DAUGHTER, FATHER, MOTHER, BROTHER, SISTER)")
                         .descriptionAr("قرابة التابع (WIFE, HUSBAND, SON, DAUGHTER, FATHER, MOTHER, BROTHER, SISTER)")
                         .width(22)
+                        .build(),
+
+                ExcelTemplateColumn.builder()
+                        .name("card_number")
+                        .nameAr("رقم البطاقة")
+                        .type(ColumnType.TEXT)
+                        .required(false)
+                        .example("001234")
+                        .description("Member card number (optional, system will generate if empty)")
+                        .descriptionAr("رقم بطاقة العضو (اختياري، سيقوم النظام بالتوليد إذا كان فارغاً)")
+                        .width(20)
                         .build());
     }
 
@@ -181,6 +192,10 @@ public class MemberExcelTemplateService {
             // Build employer lookup map
             Map<String, Employer> employerLookup = buildEmployerLookup();
             Map<Long, Set<String>> existingNamesCache = new HashMap<>();
+            
+            // Session cache for newly imported principals (to allow linking dependents in same file)
+            Map<String, Member> importedPrincipalsCache = new HashMap<>();
+            
             Set<String> inFileKeys = new HashSet<>();
             List<Member> memberBatch = new ArrayList<>();
             final int BATCH_SIZE = 100;
@@ -200,7 +215,7 @@ public class MemberExcelTemplateService {
                 }
 
                 try {
-                    Member member = parseAndCreateMember(row, rowNum, columnIndices, employerLookup, errors);
+                    Member member = parseAndCreateMember(row, rowNum, columnIndices, employerLookup, importedPrincipalsCache, errors);
 
                     if (member != null) {
                         String fullNameLower = member.getFullName().trim().toLowerCase();
@@ -226,14 +241,21 @@ public class MemberExcelTemplateService {
                         // 3. Mark as unique and prepare for saving
                         inFileKeys.add(duplicateKey);
 
-                        // 4. Generate IDs only for valid, unique members (Phase 1: PRINCIPAL only in
-                        // this template)
+                        // 4. Handle IDs and Card Numbers
                         if (member.isPrincipal()) {
+                            // If card number provided in Excel, use it. Otherwise generate.
+                            if (member.getCardNumber() == null || member.getCardNumber().isBlank()) {
+                                member.setCardNumber(cardNumberGeneratorService.generateUniqueForPrincipal());
+                            }
                             member.setBarcode(barcodeGeneratorService.generateUniqueBarcodeForPrincipal());
-                            member.setCardNumber(cardNumberGeneratorService.generateUniqueForPrincipal());
+                            
+                            // Add to session cache for dependents to find
+                            importedPrincipalsCache.put(member.getCardNumber(), member);
                         } else {
-                            // Dependent ID generation logic (if added later)
-                            member.setCardNumber(cardNumberGeneratorService.generateForDependent(member.getParent()));
+                            // Dependent ID generation logic
+                            if (member.getCardNumber() == null || member.getCardNumber().isBlank()) {
+                                member.setCardNumber(cardNumberGeneratorService.generateForDependent(member.getParent()));
+                            }
                         }
 
                         memberBatch.add(member);
@@ -295,14 +317,17 @@ public class MemberExcelTemplateService {
         Map<String, Integer> indices = new HashMap<>();
 
         indices.put("full_name", parserService.findColumnIndex(headerRow,
-                "full_name", "الاسم الكامل", "name", "الاسم"));
+                "full_name", "الاسم الكامل", "full name", "اسم الموظف"));
         indices.put("employer", parserService.findColumnIndex(headerRow,
-                "employer", "جهة العمل", "company", "الشركة"));
+                "employer", "جهة العمل", "emp name", "company"));
         indices.put("principal_card_number", parserService.findColumnIndex(headerRow,
-                "principal_card_number", "رقم بطاقة الرئيسي", "principal_card", "parent_card_number"));
+                "principal_card_number", "رقم بطاقة الرئيسي", "principal card", "parent card"));
         indices.put("relationship", parserService.findColumnIndex(headerRow,
-                "relationship", "القرابة", "relation", "صلة القرابة"));
-
+                "relationship", "القرابة", "rel type", "صلة القرابة"));
+        indices.put("card_number", parserService.findColumnIndex(headerRow,
+                "card_number", "رقم البطاقة", "member card", "معرّف البطاقة"));
+        
+        log.info("[MemberImport] Final Column Indices Detection: {}", indices);
         return indices;
     }
 
@@ -345,6 +370,13 @@ public class MemberExcelTemplateService {
                 .replaceAll("ة", "ه")
                 .replaceAll("ى", "ي")
                 .replaceAll("\\s+", " ");
+    }
+
+    private String normalizeCardNumber(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim().toUpperCase(Locale.ROOT);
     }
 
     private Map<String, Employer> buildEmployerLookup() {
@@ -417,43 +449,68 @@ public class MemberExcelTemplateService {
             int rowNum,
             Map<String, Integer> columnIndices,
             Map<String, Employer> employerLookup,
+            Map<String, Member> sessionPrincipals,
             List<ImportError> errors) {
         // Extract values
         String fullName = normalizeMemberName(getCellValue(row, columnIndices.get("full_name")));
         String employerName = getCellValue(row, columnIndices.get("employer"));
-        String principalCardNumber = normalizeText(getCellValue(row, columnIndices.get("principal_card_number")));
+        String principalCardNumber = normalizeCardNumber(getCellValue(row, columnIndices.get("principal_card_number")));
         String relationshipValue = normalizeText(getCellValue(row, columnIndices.get("relationship")));
+        String excelCardNumber = normalizeCardNumber(getCellValue(row, columnIndices.get("card_number")));
 
         boolean hasPrincipalCard = principalCardNumber != null && !principalCardNumber.isBlank();
         boolean hasRelationship = relationshipValue != null && !relationshipValue.isBlank();
-        boolean dependentRow = hasPrincipalCard || hasRelationship;
+        boolean hasEmployerName = employerName != null && !employerName.isBlank();
+
+        // ═══════════════════════════════════════════════════════════════════════════
+        // MEMBER TYPE IDENTIFICATION - IMPROVED
+        // ═══════════════════════════════════════════════════════════════════════════
+        
+        // A row is a dependent if:
+        // 1. It has a relationship specified
+        // 2. OR it specifies a principal card number
+        // 3. OR it lacks an employer name (Principals in this system MUST belong to an employer)
+        
+        boolean dependentRow = hasRelationship || hasPrincipalCard || !hasEmployerName;
+        
+        // If it's a dependent but lacks a relationship, default to a placeholder or fail
+        // In some cases, we might want to default to SON/DAUGHTER if unknown but it's better to keep it null and let validator catch it if needed
+        
+        // Special Case: If it says "موظف" or "self" in relationship, it's actually a principal
+        if (hasRelationship && (relationshipValue.equalsIgnoreCase("موظف") || 
+                               relationshipValue.equalsIgnoreCase("SELF") || 
+                               relationshipValue.equalsIgnoreCase("PRINCIPAL"))) {
+            dependentRow = false;
+        }
 
         // Validate mandatory fields
         boolean hasErrors = false;
 
         if (fullName == null || fullName.trim().isEmpty()) {
             errors.add(createError(rowNum, ErrorType.MISSING_REQUIRED, "full_name",
-                    "الاسم الكامل مطلوب", "Full name is required", fullName));
+                    "الاسم الكامل مطلوب", "Full name is required", fullName, "Unknown"));
             hasErrors = true;
         }
+
+        Member.Relationship relationship = null; // Moved this declaration here to be in scope for dependentRow logic
 
         if (dependentRow) {
             if (!hasPrincipalCard) {
                 errors.add(createError(rowNum, ErrorType.MISSING_REQUIRED, "principal_card_number",
                         "رقم بطاقة الرئيسي مطلوب لإضافة تابع", "Principal card number is required for dependent rows",
-                        principalCardNumber));
+                        principalCardNumber, fullName));
                 hasErrors = true;
             }
             if (!hasRelationship) {
                 errors.add(createError(rowNum, ErrorType.MISSING_REQUIRED, "relationship",
                         "حقل القرابة مطلوب لإضافة تابع", "Relationship is required for dependent rows",
-                        relationshipValue));
+                        relationshipValue, fullName));
                 hasErrors = true;
             }
         } else {
             if (employerName == null || employerName.trim().isEmpty()) {
                 errors.add(createError(rowNum, ErrorType.MISSING_REQUIRED, "employer",
-                        "جهة العمل مطلوبة للعضو الرئيسي", "Employer is required for principal rows", employerName));
+                        "جهة العمل مطلوبة للعضو الرئيسي", "Employer is required for principal rows", employerName, fullName));
                 hasErrors = true;
             }
         }
@@ -463,18 +520,23 @@ public class MemberExcelTemplateService {
 
         Employer employer = null;
         Member principal = null;
-        Member.Relationship relationship = null;
 
         if (dependentRow) {
             if (hasPrincipalCard) {
-                principal = memberRepository.findByCardNumber(principalCardNumber)
-                        .orElse(null);
+                // Try session cache first
+                principal = sessionPrincipals.get(principalCardNumber);
+                
+                // Then try DB
+                if (principal == null) {
+                    principal = memberRepository.findByCardNumber(principalCardNumber)
+                            .orElse(null);
+                }
 
                 if (principal == null || !principal.isPrincipal() || !Boolean.TRUE.equals(principal.getActive())) {
                     errors.add(createError(rowNum, ErrorType.LOOKUP_FAILED, "principal_card_number",
                             "لم يتم العثور على عضو رئيسي صالح برقم البطاقة: " + principalCardNumber,
                             "Valid principal not found by card number: " + principalCardNumber,
-                            principalCardNumber));
+                            principalCardNumber, fullName));
                     hasErrors = true;
                 }
             }
@@ -485,7 +547,7 @@ public class MemberExcelTemplateService {
                     errors.add(createError(rowNum, ErrorType.INVALID_FORMAT, "relationship",
                             "قيمة القرابة غير صحيحة: " + relationshipValue,
                             "Invalid relationship value: " + relationshipValue,
-                            relationshipValue));
+                            relationshipValue, fullName));
                     hasErrors = true;
                 }
             }
@@ -501,7 +563,7 @@ public class MemberExcelTemplateService {
                 errors.add(createError(rowNum, ErrorType.LOOKUP_FAILED, "employer",
                         "جهة العمل غير موجودة: " + employerName + ". تأكد من تطابق الاسم مع قائمة جهات العمل.",
                         "Employer not found: " + employerName + ". Please check the Employers lookup sheet.",
-                        employerName));
+                        employerName, fullName));
                 hasErrors = true;
             }
         }
@@ -518,12 +580,14 @@ public class MemberExcelTemplateService {
                     .employer(employer)
                     .parent(principal)
                     .relationship(relationship)
+                    .cardNumber(excelCardNumber)
                     .status(MemberStatus.ACTIVE)
                     .build();
         } else {
             member = Member.builder()
                     .fullName(fullName.trim())
                     .employer(employer)
+                    .cardNumber(excelCardNumber)
                     .status(MemberStatus.ACTIVE)
                     .build();
         }
@@ -584,14 +648,15 @@ public class MemberExcelTemplateService {
     }
 
     private ImportError createError(int rowNum, ErrorType type, String columnName,
-            String messageAr, String messageEn, String value) {
+            String messageAr, String messageEn, String value, String rowIdentifier) {
         return ImportError.builder()
-                .rowNumber(rowNum - 1) // Adjust for user-friendly numbering
+                .rowNumber(rowNum + 1) // Excel 1-based row number
                 .errorType(type)
                 .columnName(columnName)
                 .messageAr(messageAr)
                 .messageEn(messageEn)
                 .value(value)
+                .rowIdentifier(rowIdentifier)
                 .build();
     }
 

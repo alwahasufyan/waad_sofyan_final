@@ -110,12 +110,14 @@ public class BacklogService {
                     .serviceCode(lineDto.getServiceCode())
                     .serviceName(lineDto.getServiceName() != null ? lineDto.getServiceName() : 
                                  (medicalService != null ? medicalService.getName() : "خدمة متراكمة"))
-                    .serviceCategoryId(medicalService != null ? medicalService.getCategoryId() : 0L)
+                    .serviceCategoryId(medicalService != null && medicalService.getCategoryId() != null ? medicalService.getCategoryId() : null)
                     .serviceCategoryName(medicalService != null ? "Category" : "Backlog")
                     .quantity(lineDto.getQuantity() != null ? lineDto.getQuantity() : 1)
                     .unitPrice(lineDto.getGrossAmount())
                     .totalPrice(lineDto.getGrossAmount().multiply(new BigDecimal(lineDto.getQuantity() != null ? lineDto.getQuantity() : 1)))
-                    .coveragePercentSnapshot(100)
+                    .coveragePercentSnapshot(lineDto.getCoveragePercent() != null ? lineDto.getCoveragePercent() : 100)
+                    .timesLimitSnapshot(lineDto.getTimesLimit())
+                    .amountLimitSnapshot(lineDto.getAmountLimit())
                     .build();
             
             claim.addLine(line);

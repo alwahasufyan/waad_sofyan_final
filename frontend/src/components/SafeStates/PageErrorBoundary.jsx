@@ -70,7 +70,7 @@ const PageErrorFallback = ({ pageName, errorId, onRetry, onGoHome }) => (
         )}
 
         <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-          حدث خطأ غير متوقع. يمكنك المحاولة مرة أخرى أو العودة للصفحة الرئيسية.
+          عذراً، واجه النظام مشكلة أثناء تحميل هذه الصفحة. يمكنك الإنتقال للصفحة الرئيسية أو إعادة المحاولة.
         </Typography>
 
         <Stack direction="row" spacing={2} justifyContent="center" sx={{ mb: 2 }}>

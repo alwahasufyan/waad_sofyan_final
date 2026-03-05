@@ -57,40 +57,75 @@ public class ProviderContractPricingExcelService {
     /**
      * Column name mappings (supports both Arabic and English)
      */
-    private static final Map<String, String> COLUMN_MAPPINGS = Map.ofEntries(
-        // Sequence
-        Map.entry("تسلسل", "sequence"),
-        Map.entry("sequence", "sequence"),
-        
-        // Price List Name
-        Map.entry("قائمة الأسعار", "priceListName"),
-        Map.entry("price list", "priceListName"),
-        Map.entry("pricelist", "priceListName"),
-        
-        // Service Name
-        Map.entry("قالب المنتج", "serviceName"),
-        Map.entry("service name", "serviceName"),
-        Map.entry("product template", "serviceName"),
-        
-        // Service Code
-        Map.entry("كود منتج المورد", "serviceCode"),
-        Map.entry("supplier product code", "serviceCode"),
-        Map.entry("service code", "serviceCode"),
-        Map.entry("code", "serviceCode"),
-        
-        // Currency
-        Map.entry("العملة", "currency"),
-        Map.entry("currency", "currency"),
-        
-        // Quantity (ignored)
-        Map.entry("الكمية", "quantity"),
-        Map.entry("quantity", "quantity"),
-        
-        // Contract Price
-        Map.entry("السعر", "contractPrice"),
-        Map.entry("price", "contractPrice"),
-        Map.entry("سعر", "contractPrice")
-    );
+    /**
+     * REQUIRED column names in the official template.
+     * Displayed in error messages when the file doesn't match.
+     */
+    private static final String TEMPLATE_REQUIRED_COLS = "service_name / اسم الخدمة ★";
+    private static final String TEMPLATE_OPTIONAL_COLS = "service_code / الكود | unit_price / السعر | category / التصنيف | specialty / التخصص | notes / ملاحظات";
+
+    private static final Map<String, String> COLUMN_MAPPINGS = new java.util.LinkedHashMap<>();
+
+    static {
+        // ─── Sequence (optional) ────────────────────────────────────────────────
+        COLUMN_MAPPINGS.put("تسلسل",          "sequence");
+        COLUMN_MAPPINGS.put("sequence",        "sequence");
+
+        // ─── Price List Name (optional) ─────────────────────────────────────────
+        COLUMN_MAPPINGS.put("قائمة الأسعار",   "priceListName");
+        COLUMN_MAPPINGS.put("price list",      "priceListName");
+        COLUMN_MAPPINGS.put("pricelist",       "priceListName");
+
+        // ─── Service Name (REQUIRED) ────────────────────────────────────────────
+        // New official template format
+        COLUMN_MAPPINGS.put("service_name / اسم الخدمة ★", "serviceName");
+        COLUMN_MAPPINGS.put("service_name",    "serviceName");
+        // Legacy / Odoo format
+        COLUMN_MAPPINGS.put("قالب المنتج",      "serviceName");
+        COLUMN_MAPPINGS.put("service name",    "serviceName");
+        COLUMN_MAPPINGS.put("product template","serviceName");
+        COLUMN_MAPPINGS.put("اسم الخدمة",       "serviceName");
+        COLUMN_MAPPINGS.put("اسم الخدمة ★",     "serviceName");
+
+        // ─── Service Code (optional) ────────────────────────────────────────────
+        // New official template format
+        COLUMN_MAPPINGS.put("service_code / الكود", "serviceCode");
+        COLUMN_MAPPINGS.put("service_code",    "serviceCode");
+        // Legacy / Odoo format
+        COLUMN_MAPPINGS.put("كود منتج المورد", "serviceCode");
+        COLUMN_MAPPINGS.put("supplier product code", "serviceCode");
+        COLUMN_MAPPINGS.put("service code",    "serviceCode");
+        COLUMN_MAPPINGS.put("code",             "serviceCode");
+        COLUMN_MAPPINGS.put("الكود",             "serviceCode");
+
+        // ─── Currency (optional) ────────────────────────────────────────────────
+        COLUMN_MAPPINGS.put("العملة",           "currency");
+        COLUMN_MAPPINGS.put("currency",         "currency");
+
+        // ─── Quantity (optional / ignored) ──────────────────────────────────────
+        COLUMN_MAPPINGS.put("الكمية",           "quantity");
+        COLUMN_MAPPINGS.put("quantity",         "quantity");
+
+        // ─── Contract Price (required) ──────────────────────────────────────────
+        // New official template format
+        COLUMN_MAPPINGS.put("unit_price / السعر", "contractPrice");
+        COLUMN_MAPPINGS.put("unit_price",        "contractPrice");
+        // Legacy / Odoo format
+        COLUMN_MAPPINGS.put("السعر",             "contractPrice");
+        COLUMN_MAPPINGS.put("price",             "contractPrice");
+        COLUMN_MAPPINGS.put("سعر",               "contractPrice");
+
+        // ─── Extra fields (optional, stored as notes) ────────────────────────────
+        COLUMN_MAPPINGS.put("category / التصنيف", "category");
+        COLUMN_MAPPINGS.put("category",           "category");
+        COLUMN_MAPPINGS.put("التصنيف",             "category");
+        COLUMN_MAPPINGS.put("specialty / التخصص", "specialty");
+        COLUMN_MAPPINGS.put("specialty",           "specialty");
+        COLUMN_MAPPINGS.put("التخصص",              "specialty");
+        COLUMN_MAPPINGS.put("notes / ملاحظات",     "notes");
+        COLUMN_MAPPINGS.put("notes",               "notes");
+        COLUMN_MAPPINGS.put("ملاحظات",             "notes");
+    }
 
     /**
      * Import pricing items from Excel file
@@ -127,24 +162,38 @@ public class ProviderContractPricingExcelService {
             if (headerRow == null) {
                 return ExcelImportResultDto.builder()
                         .success(false)
-                        .message("Excel file is empty or has no header row")
+                        .message("❌ الملف فارغ أو لا يحتوي على سطر رأس (Header). تأكد من استخدام القالب الرسمي.")
                         .build();
             }
 
             // Map column indices
             Map<String, Integer> columnIndices = mapColumns(headerRow);
 
-            // Validate required columns
-            if (!columnIndices.containsKey("serviceName") && !columnIndices.containsKey("serviceCode")) {
-                return ExcelImportResultDto.builder()
-                        .success(false)
-                        .message("Missing required column: 'قالب المنتج' or 'كود منتج المورد'")
-                        .build();
+            // Collect actual column names for error reporting
+            List<String> actualHeaders = new java.util.ArrayList<>();
+            for (Cell hCell : headerRow) {
+                if (hCell != null && hCell.getCellType() != CellType.BLANK) {
+                    actualHeaders.add(hCell.getStringCellValue().trim());
+                }
             }
-            if (!columnIndices.containsKey("contractPrice")) {
+            log.info("Detected headers: {}", actualHeaders);
+
+            // Validate required column: service name
+            if (!columnIndices.containsKey("serviceName") && !columnIndices.containsKey("serviceCode")) {
+                String detectedCols = actualHeaders.isEmpty() ? "(لا توجد أعمدة مكتشفة)" : String.join(" | ", actualHeaders);
                 return ExcelImportResultDto.builder()
                         .success(false)
-                        .message("Missing required column: 'السعر'")
+                        .message(String.format(
+                            "❌ الملف لا يطابق القالب المطلوب.%n" +
+                            "العمود الإلزامي المفقود: '%s'%n%n" +
+                            "الأعمدة المكتشفة في ملفك: %s%n%n" +
+                            "الأعمدة المطلوبة في القالب الرسمي:%n" +
+                            "  ★ إلزامي: %s%n" +
+                            "  ○ اختياري: %s%n%n" +
+                            "يرجى تحميل القالب الرسمي من صفحة العقد والمحاولة مرة أخرى.",
+                            TEMPLATE_REQUIRED_COLS, detectedCols,
+                            TEMPLATE_REQUIRED_COLS, TEMPLATE_OPTIONAL_COLS
+                        ))
                         .build();
             }
 

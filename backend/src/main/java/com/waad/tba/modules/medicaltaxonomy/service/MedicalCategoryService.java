@@ -70,6 +70,7 @@ public class MedicalCategoryService {
             .name(normalizedName)
                 .parentId(dto.getParentId())
                 .active(dto.getActive() != null ? dto.getActive() : true)
+                .context(parseContext(dto.getContext()))
                 .build();
 
         category = categoryRepository.save(category);
@@ -202,6 +203,9 @@ public class MedicalCategoryService {
         if (dto.getActive() != null) {
             category.setActive(dto.getActive());
         }
+        if (dto.getContext() != null) {
+            category.setContext(parseContext(dto.getContext()));
+        }
 
         category = categoryRepository.save(category);
         log.info("✅ Updated medical category: {}", id);
@@ -327,6 +331,7 @@ public class MedicalCategoryService {
                 .name(category.getName())
                 .parentId(category.getParentId())
                 .parentName(parentName)
+                .context(category.getContext() != null ? category.getContext().name() : "ANY")
                 .active(category.isActive())
                 .createdAt(category.getCreatedAt())
                 .updatedAt(category.getUpdatedAt())
@@ -351,6 +356,26 @@ public class MedicalCategoryService {
                 .createdAt(service.getCreatedAt())
                 .updatedAt(service.getUpdatedAt())
                 .build();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // HELPERS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Safely parse a String into a {@link com.waad.tba.modules.medicaltaxonomy.enums.CategoryContext}.
+     * Returns {@code CategoryContext.ANY} for null or unrecognised values (backward-compatible).
+     */
+    private com.waad.tba.modules.medicaltaxonomy.enums.CategoryContext parseContext(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return com.waad.tba.modules.medicaltaxonomy.enums.CategoryContext.ANY;
+        }
+        try {
+            return com.waad.tba.modules.medicaltaxonomy.enums.CategoryContext.valueOf(raw.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            log.warn("Unknown CategoryContext '{}' — falling back to ANY", raw);
+            return com.waad.tba.modules.medicaltaxonomy.enums.CategoryContext.ANY;
+        }
     }
 }
 

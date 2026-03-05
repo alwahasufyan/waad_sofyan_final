@@ -29,7 +29,7 @@ export default function ErrorFallback({ error, onRetry, fullHeight = false }) {
 
         {error && (
           <Alert severity="error" sx={{ width: '100%' }}>
-            {typeof error === 'string' ? error : error.message || 'An unexpected error occurred'}
+            {typeof error === 'string' ? error : error.message || 'عذراً، حدث خطأ غير متوقع ولن نتمكن من عرض هذا القسم'}
           </Alert>
         )}
 

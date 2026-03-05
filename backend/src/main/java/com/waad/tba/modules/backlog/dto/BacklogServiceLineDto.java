@@ -18,4 +18,7 @@ public class BacklogServiceLineDto {
     private BigDecimal grossAmount; // Requested amount per unit
     private BigDecimal coveredAmount; // Approved amount per unit
     private BigDecimal netAmount; // What we actually pay (after co-pay/deductible)
+    private Integer coveragePercent;
+    private Integer timesLimit;
+    private BigDecimal amountLimit;
 }

@@ -1,14 +1,19 @@
 package com.waad.tba.modules.member.service;
 
 import com.waad.tba.common.exception.ResourceNotFoundException;
+import com.waad.tba.common.exception.BusinessRuleException;
 import com.waad.tba.modules.benefitpolicy.entity.BenefitPolicy;
 import com.waad.tba.modules.benefitpolicy.service.BenefitPolicyCoverageService;
 import com.waad.tba.modules.claim.entity.Claim;
+import com.waad.tba.modules.claim.entity.ClaimLine;
 import com.waad.tba.modules.claim.entity.ClaimStatus;
 import com.waad.tba.modules.claim.repository.ClaimRepository;
 import com.waad.tba.modules.member.dto.MemberFinancialSummaryDto;
+import com.waad.tba.modules.member.dto.CoverageLimitsDto;
 import com.waad.tba.modules.member.entity.Member;
 import com.waad.tba.modules.member.repository.MemberRepository;
+import com.waad.tba.modules.medicaltaxonomy.repository.MedicalServiceRepository;
+import com.waad.tba.modules.medicaltaxonomy.entity.MedicalService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -45,8 +50,9 @@ import java.util.List;
 public class MemberFinancialSummaryService {
 
     private final MemberRepository memberRepository;
+    private final BenefitPolicyCoverageService coverageService;
     private final ClaimRepository claimRepository;
-    private final BenefitPolicyCoverageService benefitPolicyCoverageService;
+    private final MedicalServiceRepository medicalServiceRepository;
 
     /**
      * Get comprehensive financial summary for a member
@@ -108,7 +114,7 @@ public class MemberFinancialSummaryService {
         BigDecimal utilizationPercent = BigDecimal.ZERO;
         
         if (policy != null) {
-            remainingCoverage = benefitPolicyCoverageService.getRemainingCoverage(member, LocalDate.now());
+            remainingCoverage = coverageService.getRemainingCoverage(member, LocalDate.now());
             builder.remainingCoverage(remainingCoverage);
 
             // Calculate utilization %
@@ -183,6 +189,84 @@ public class MemberFinancialSummaryService {
                  totalClaimed, totalApproved, remainingCoverage, utilizationPercent);
 
         return summary;
+    }
+
+    /**
+     * Get Coverage Limits (times and amounts) for a specific service based on member's active policy.
+     * 
+     * @param memberId Member ID
+     * @param serviceCode Medical Service Code
+     * @return CoverageLimitsDto
+     */
+    public CoverageLimitsDto getServiceCoverageLimits(Long memberId, String serviceCode) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new ResourceNotFoundException("Member not found: " + memberId));
+
+        MedicalService service = medicalServiceRepository.findByCode(serviceCode)
+                .orElseThrow(() -> new BusinessRuleException("Service not found: " + serviceCode));
+
+        // Get limits from policy
+        var coverageInfoOpt = coverageService.getCoverageForService(member, service.getId());
+        if (coverageInfoOpt.isEmpty()) {
+            return CoverageLimitsDto.builder()
+                    .covered(false)
+                    .warningMessage("الخدمة غير مغطاة تحت هذه الوثيقة")
+                    .build();
+        }
+
+        var coverageInfo = coverageInfoOpt.get();
+        if (!coverageInfo.isCovered()) {
+            return CoverageLimitsDto.builder()
+                    .covered(false)
+                    .warningMessage("الخدمة غير مغطاة تحت هذه الوثيقة")
+                    .build();
+        }
+
+        int coveragePercent = coverageInfo.getCoveragePercent();
+        BigDecimal amountLimit = coverageInfo.getAmountLimit();
+        Integer timesLimit = coverageInfo.getTimesLimit();
+        int timesUsed = 0;
+        int remainingTimes = timesLimit != null ? timesLimit : 999;
+        boolean timesLimitExceeded = false;
+        String warningMessage = null;
+
+        // If times limit exists, we must calculate historical usage
+        if (timesLimit != null) {
+            List<Claim> claims = claimRepository.findByMemberId(memberId);
+            int currentYear = LocalDate.now().getYear();
+            
+            for (Claim c : claims) {
+                // Only consider claims from the current policy year and that are not rejected
+                if (c.getStatus() == ClaimStatus.REJECTED || c.getServiceDate() == null || c.getServiceDate().getYear() != currentYear) {
+                    continue;
+                }
+                if (c.getLines() != null) {
+                    for (ClaimLine line : c.getLines()) {
+                        if (serviceCode.equals(line.getServiceCode())) {
+                            timesUsed++;
+                        }
+                    }
+                }
+            }
+            
+            remainingTimes = timesLimit - timesUsed;
+            if (remainingTimes <= 0) {
+                remainingTimes = 0;
+                timesLimitExceeded = true;
+                warningMessage = "تم تجاوز الحد الأقصى لعدد المرات المسموح بها (" + timesLimit + " مرات). المرات المتبقية: صفر.";
+            }
+        }
+
+        return CoverageLimitsDto.builder()
+                .covered(true)
+                .coveragePercent(coveragePercent)
+                .amountLimit(amountLimit)
+                .timesLimit(timesLimit)
+                .timesUsed(timesUsed)
+                .remainingTimes(remainingTimes)
+                .timesLimitExceeded(timesLimitExceeded)
+                .warningMessage(warningMessage)
+                .build();
     }
 
     // ==================== PRIVATE HELPER METHODS ====================

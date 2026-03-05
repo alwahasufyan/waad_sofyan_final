@@ -45,6 +45,13 @@ public class MedicalCategoryCreateDto {
     private Long parentId;
 
     /**
+     * Clinical care-setting context.
+     * Accepted values: INPATIENT, OUTPATIENT, OPERATING_ROOM, EMERGENCY, SPECIAL, ANY
+     * Defaults to ANY if not provided.
+     */
+    private String context;
+
+    /**
      * Active status (defaults to true)
      */
     @Builder.Default

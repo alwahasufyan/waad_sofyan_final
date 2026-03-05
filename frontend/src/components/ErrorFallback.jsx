@@ -12,7 +12,7 @@ export default function ErrorFallback({ error, resetErrorBoundary }) {
           Something went wrong
         </Typography>
         <Typography variant="body1" color="textSecondary" sx={{ mb: 3 }}>
-          {error?.message || 'An unexpected error occurred'}
+          {error?.message || 'عذراً، حدث خطأ غير متوقع'}
         </Typography>
         {resetErrorBoundary && (
           <Button variant="contained" onClick={resetErrorBoundary}>

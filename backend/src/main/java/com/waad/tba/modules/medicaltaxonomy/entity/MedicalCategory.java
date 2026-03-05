@@ -1,5 +1,6 @@
 package com.waad.tba.modules.medicaltaxonomy.entity;
 
+import com.waad.tba.modules.medicaltaxonomy.enums.CategoryContext;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -49,6 +50,20 @@ public class MedicalCategory {
      */
     @Column(name = "parent_id")
     private Long parentId;
+
+    /**
+     * Clinical care-setting context for this category.
+     *
+     * <p>Controls which categories are visible / applicable in:
+     * - Benefit Policy Rule creation (filter by context)
+     * - Claim / Pre-auth form (show only categories matching visit type)
+     *
+     * <p>NULL is treated as {@link CategoryContext#ANY} throughout the system.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "context", length = 20)
+    @Builder.Default
+    private CategoryContext context = CategoryContext.ANY;
 
     /**
      * Arabic display name (unified catalog — bilingual support)

@@ -140,6 +140,12 @@ public class ClaimLine {
     @Column(name = "patient_copay_percent_snapshot")
     private Integer patientCopayPercentSnapshot;
 
+    @Column(name = "times_limit_snapshot")
+    private Integer timesLimitSnapshot;
+
+    @Column(name = "amount_limit_snapshot", precision = 15, scale = 2)
+    private BigDecimal amountLimitSnapshot;
+
     // ==================== LIFECYCLE HOOKS ====================
 
     @PrePersist

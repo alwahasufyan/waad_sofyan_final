@@ -75,7 +75,7 @@ import { UnifiedMedicalTable } from 'components/common';
 import MembersBulkUploadDialog from 'components/members/MembersBulkUploadDialog';
 import DataExportWizard from 'components/tba/DataExportWizard';
 import {
-  getAllMembers,
+  searchMembers,
   downloadTemplate,
   exportMembers,
   deleteMember,
@@ -85,6 +85,7 @@ import {
   MEMBER_STATUSES
 } from 'services/api/unified-members.service';
 import axiosClient from 'utils/axios';
+import { RELATIONSHIP_CONFIG } from 'components/insurance/MemberTypeIndicator';
 
 /**
  * Unified Members List Component
@@ -109,7 +110,6 @@ const UnifiedMembersList = () => {
   const [sortDirection, setSortDirection] = useState('desc');
 
   // Filters
-  const [showFilters, setShowFilters] = useState(true);
   const [showDeleted, setShowDeleted] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState({
@@ -142,19 +142,20 @@ const UnifiedMembersList = () => {
   const fetchMembers = async () => {
     setLoading(true);
     try {
+      const hasSearch = !!searchTerm.trim();
       const params = {
         page,
         size: rowsPerPage,
         sort: sortBy,
         direction: sortDirection.toUpperCase(),
         deleted: showDeleted,
-        ...(filters.organizationId && { organizationId: filters.organizationId }),
+        ...(filters.organizationId && { employerId: filters.organizationId }),
         ...(filters.type && { type: filters.type }),
         ...(filters.status && { status: filters.status }),
-        ...(searchTerm.trim() && { fullName: searchTerm.trim() })
+        ...(hasSearch && { fullName: searchTerm.trim() })
       };
 
-      const response = await getAllMembers(params);
+      const response = await searchMembers(params);
       const pageData = response?.data || response;
 
       setMembers(pageData?.content || []);
@@ -293,41 +294,41 @@ const UnifiedMembersList = () => {
   // TABLE COLUMNS DEFINITION
   // ════════════════════════════════════════════════════════════════════════
   const columns = [
-    { id: 'avatar', label: 'الصورة', minWidth: 80, sortable: false },
+    { id: 'index', label: '#', minWidth: 50, sortable: false, align: 'center' },
     {
       id: 'cardNumber',
       label: 'رقم البطاقة',
       minWidth: 130,
-      icon: <CreditCardIcon fontSize="small" />,
+      align: 'center',
       sortable: true
     },
     {
       id: 'fullName',
       label: 'الاسم',
       minWidth: 180,
-      icon: <PersonIcon fontSize="small" />,
+      align: 'center',
       sortable: true
     },
-    { id: 'type', label: 'النوع', minWidth: 100, sortable: true },
-    { id: 'status', label: 'الحالة', minWidth: 100, sortable: true },
+    { id: 'type', label: 'النوع', minWidth: 100, sortable: true, align: 'center' },
+    { id: 'status', label: 'الحالة', minWidth: 100, sortable: true, align: 'center' },
     {
       id: 'employerName',
       label: 'جهة العمل',
       minWidth: 150,
-      icon: <BusinessIcon fontSize="small" />,
+      align: 'center',
       sortable: true
     },
-    { id: 'dependentsCount', label: 'التابعون', minWidth: 90, sortable: false },
-    { id: 'actions', label: 'إجراءات', minWidth: 150, sortable: false }
+    { id: 'dependentsCount', label: 'التبعية / التابعون', minWidth: 120, sortable: false, align: 'center' },
+    { id: 'actions', label: 'إجراءات', minWidth: 150, sortable: false, align: 'center' }
   ];
 
   // ════════════════════════════════════════════════════════════════════════
   // TABLE CELL RENDERER
   // ════════════════════════════════════════════════════════════════════════
-  const renderCell = (member, column) => {
+  const renderCell = (member, column, rowIndex) => {
     switch (column.id) {
-      case 'avatar':
-        return <MemberAvatar member={member} size={36} />;
+      case 'index':
+        return <Typography variant="body2" color="textSecondary" fontWeight="bold">{(page * rowsPerPage) + rowIndex + 1}</Typography>;
 
       case 'cardNumber':
         return (
@@ -361,12 +362,15 @@ const UnifiedMembersList = () => {
           </Box>
         );
 
-      case 'type':
-        return member.type === MEMBER_TYPES.PRINCIPAL ? (
-          <Chip label="رئيسي" color="primary" size="small" />
-        ) : (
-          <Chip label="تابع" color="secondary" size="small" />
-        );
+      case 'type': {
+        if (member.type === MEMBER_TYPES.PRINCIPAL) {
+          return <Chip label="رئيسي" color="primary" size="small" sx={{ width: 80, minWidth: 80, fontWeight: 600, justifyContent: 'center' }} />;
+        }
+        const relConfig = RELATIONSHIP_CONFIG[member.relationship];
+        const labelAr = relConfig ? relConfig.labelAr : 'تابع';
+        const badgeColor = relConfig ? relConfig.color : 'default';
+        return <Chip label={labelAr} color={badgeColor} size="small" variant="outlined" sx={{ width: 80, minWidth: 80, fontWeight: 600, justifyContent: 'center' }} />;
+      }
 
       case 'status':
         const statusConfig = {
@@ -382,21 +386,42 @@ const UnifiedMembersList = () => {
         return <Typography variant="body2">{member.employerName || '-'}</Typography>;
 
       case 'dependentsCount':
+        if (member.type === MEMBER_TYPES.DEPENDENT) {
+          return (
+            <Tooltip title={`عرض المستفيد الرئيسي (${member.parentFullName || 'غير محدد'})`}>
+              <IconButton
+                size="small"
+                color="info"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (member.parentId) navigate(`/members/${member.parentId}`);
+                }}
+                sx={{ border: '1px solid', borderColor: 'info.main', borderRadius: 1 }}
+              >
+                <VisibilityIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          );
+        }
+
+        // PRINCIPAL member dependents badge
         return (
-          <Chip
-            label={member.dependentsCount || 0}
-            size="small"
-            variant="outlined"
-            sx={{
-              minWidth: 28,
-              height: 20,
-              borderRadius: '6px',
-              bgcolor: member.dependentsCount > 0 ? 'secondary.lighter' : 'transparent',
-              borderColor: member.dependentsCount > 0 ? 'secondary.light' : 'divider',
-              color: member.dependentsCount > 0 ? 'secondary.main' : 'text.disabled',
-              fontWeight: member.dependentsCount > 0 ? 600 : 400
-            }}
-          />
+          <Tooltip title={member.dependentsCount > 0 ? "يملك تابعين (اضغط عرض لمعرفتهم)" : "لا يوجد تابعين"}>
+            <Chip
+              label={member.dependentsCount || 0}
+              size="small"
+              variant="outlined"
+              sx={{
+                minWidth: 28,
+                height: 20,
+                borderRadius: '6px',
+                bgcolor: member.dependentsCount > 0 ? 'secondary.lighter' : 'transparent',
+                borderColor: member.dependentsCount > 0 ? 'secondary.light' : 'divider',
+                color: member.dependentsCount > 0 ? 'secondary.main' : 'text.disabled',
+                fontWeight: member.dependentsCount > 0 ? 600 : 400
+              }}
+            />
+          </Tooltip>
         );
 
       case 'actions':
@@ -455,7 +480,7 @@ const UnifiedMembersList = () => {
   // RENDER
   // ════════════════════════════════════════════════════════════════════════
   return (
-    <Box>
+    <Box sx={{ height: 'calc(100vh - 90px)', display: 'flex', flexDirection: 'column' }}>
       {/* Page Header */}
       <ModernPageHeader
         title="قائمة المستفيدين"
@@ -531,15 +556,7 @@ const UnifiedMembersList = () => {
               {showDeleted ? 'عرض النشطة' : 'سجل المحذوفات'}
             </Button>
 
-            <Tooltip title={showFilters ? 'إخفاء الفلاتر' : 'عرض الفلاتر'}>
-              <Button
-                variant="outlined"
-                onClick={() => setShowFilters(!showFilters)}
-                startIcon={showFilters ? <FilterAltOffIcon /> : <FilterListIcon />}
-              >
-                {showFilters ? 'إخفاء الفلاتر' : 'الفلاتر'}
-              </Button>
-            </Tooltip>
+
             <Button variant="contained" startIcon={<AddIcon />} onClick={() => navigate('/members/add')}>
               إضافة مستفيد
             </Button>
@@ -548,127 +565,146 @@ const UnifiedMembersList = () => {
         sx={{ mb: 0.5 }}
       />
 
-      <MainCard>
-        {/* FILTERS ROW - ABOVE TABLE */}
-        <Box sx={{ mb: 2 }}>
-          <TextField
-            fullWidth
-            placeholder="بحث بالاسم أو رقم البطاقة..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon color="action" />
-                </InputAdornment>
-              ),
-              endAdornment: searchTerm && (
-                <InputAdornment position="end">
-                  <IconButton size="small" onClick={() => setSearchTerm('')}>
-                    <CloseIcon fontSize="small" />
-                  </IconButton>
-                </InputAdornment>
-              )
-            }}
-            sx={{ bgcolor: 'background.paper' }}
-          />
-        </Box>
-
-        {/* Advanced Filters */}
-        <Collapse in={showFilters}>
-          <Paper variant="outlined" sx={{ p: 2, mb: 2, bgcolor: '#fafafa' }}>
-            <Grid container spacing={2} alignItems="center">
-              <Grid item xs={12} md={3}>
-                <FormControl fullWidth size="small">
-                  <InputLabel>جهة العمل</InputLabel>
-                  <Select
-                    value={filters.organizationId}
-                    onChange={(e) => handleFilterChange('organizationId', e.target.value)}
-                    label="جهة العمل"
-                  >
-                    <MenuItem value="">
-                      <em>الكل</em>
-                    </MenuItem>
-                    {employers.map((emp) => (
-                      <MenuItem key={emp.id} value={emp.id}>
-                        {emp.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-
-              <Grid item xs={12} md={3}>
-                <FormControl fullWidth size="small">
-                  <InputLabel>النوع</InputLabel>
-                  <Select value={filters.type} onChange={(e) => handleFilterChange('type', e.target.value)} label="النوع">
-                    <MenuItem value="">
-                      <em>الكل</em>
-                    </MenuItem>
-                    <MenuItem value={MEMBER_TYPES.PRINCIPAL}>رئيسي</MenuItem>
-                    <MenuItem value={MEMBER_TYPES.DEPENDENT}>تابع</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-
-              <Grid item xs={12} md={3}>
-                <FormControl fullWidth size="small">
-                  <InputLabel>الحالة</InputLabel>
-                  <Select value={filters.status} onChange={(e) => handleFilterChange('status', e.target.value)} label="الحالة">
-                    <MenuItem value="">
-                      <em>الكل</em>
-                    </MenuItem>
-                    <MenuItem value={MEMBER_STATUSES.ACTIVE}>نشط</MenuItem>
-                    <MenuItem value={MEMBER_STATUSES.SUSPENDED}>معلق</MenuItem>
-                    <MenuItem value={MEMBER_STATUSES.TERMINATED}>منتهي</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-
-              <Grid item xs={12} md={3}>
-                <Button fullWidth variant="outlined" color="secondary" onClick={handleResetFilters} startIcon={<FilterAltOffIcon />}>
-                  إعادة ضبط
-                </Button>
-              </Grid>
-            </Grid>
-          </Paper>
-        </Collapse>
-
-        {/* Stats Summary */}
-        <Box sx={{ mb: 2 }}>
-          <Stack direction="row" spacing={2} flexWrap="wrap" alignItems="center">
-            <Chip icon={<PersonIcon />} label={`إجمالي: ${totalCount} مستفيد`} variant="outlined" color="primary" />
-            {searchTerm && <Chip label={`نتائج البحث: "${searchTerm}"`} onDelete={() => setSearchTerm('')} color="info" size="small" />}
-            <Box sx={{ flex: 1 }} />
+      <MainCard sx={{ mb: 1, flexShrink: 0 }}>
+        {/* FILTERS AND SEARCH ROW */}
+        <Box>
+          <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} alignItems="center" sx={{ width: '100%' }}>
+            {/* Refresh */}
             <Tooltip title="تحديث">
-              <IconButton onClick={fetchMembers} color="primary" size="small">
+              <IconButton onClick={fetchMembers} color="primary" sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, width: 40, height: 40 }}>
                 <RefreshIcon />
               </IconButton>
             </Tooltip>
+
+            {/* Total Count */}
+            <Chip
+              icon={<PersonIcon fontSize="small" />}
+              label={`${totalCount} مستفيد`}
+              variant="outlined"
+              color="primary"
+              sx={{ height: 40, borderRadius: 1, fontWeight: 'bold', fontSize: '14px', px: 1 }}
+            />
+
+            {/* Search Input */}
+            <TextField
+              sx={{ flexGrow: 1, minWidth: { md: '200px' } }}
+              size="small"
+              placeholder="بحث بالاسم أو رقم البطاقة..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon color="action" />
+                  </InputAdornment>
+                ),
+                endAdornment: searchTerm && (
+                  <InputAdornment position="end">
+                    <IconButton size="small" onClick={() => setSearchTerm('')}>
+                      <CloseIcon fontSize="small" />
+                    </IconButton>
+                  </InputAdornment>
+                ),
+                sx: { height: 40 }
+              }}
+            />
+
+            {/* Employer Filter */}
+            <TextField
+              select
+              size="small"
+              label="جهة العمل"
+              value={filters.organizationId}
+              onChange={(e) => handleFilterChange('organizationId', e.target.value)}
+              sx={{ minWidth: 140, bgcolor: 'background.paper' }}
+              InputProps={{ sx: { height: 40 } }}
+              InputLabelProps={{ shrink: true }}
+            >
+              <MenuItem value="">
+                <em>الكل</em>
+              </MenuItem>
+              {employers.map((emp) => (
+                <MenuItem key={emp.id} value={emp.id}>
+                  {emp.label}
+                </MenuItem>
+              ))}
+            </TextField>
+
+            {/* Type Filter */}
+            <TextField
+              select
+              size="small"
+              label="النوع"
+              value={filters.type}
+              onChange={(e) => handleFilterChange('type', e.target.value)}
+              sx={{ minWidth: 110, bgcolor: 'background.paper' }}
+              InputProps={{ sx: { height: 40 } }}
+              InputLabelProps={{ shrink: true }}
+            >
+              <MenuItem value="">
+                <em>الكل</em>
+              </MenuItem>
+              <MenuItem value={MEMBER_TYPES.PRINCIPAL}>رئيسي</MenuItem>
+              <MenuItem value={MEMBER_TYPES.DEPENDENT}>تابع (الكل)</MenuItem>
+              <MenuItem value="WIFE">تابع - زوجة</MenuItem>
+              <MenuItem value="HUSBAND">تابع - زوج</MenuItem>
+              <MenuItem value="SON">تابع - ابن</MenuItem>
+              <MenuItem value="DAUGHTER">تابع - ابنة</MenuItem>
+              <MenuItem value="FATHER">تابع - أب</MenuItem>
+              <MenuItem value="MOTHER">تابع - أم</MenuItem>
+            </TextField>
+
+            {/* Status Filter */}
+            <TextField
+              select
+              size="small"
+              label="الحالة"
+              value={filters.status}
+              onChange={(e) => handleFilterChange('status', e.target.value)}
+              sx={{ minWidth: 110, bgcolor: 'background.paper' }}
+              InputProps={{ sx: { height: 40 } }}
+              InputLabelProps={{ shrink: true }}
+            >
+              <MenuItem value="">
+                <em>الكل</em>
+              </MenuItem>
+              <MenuItem value={MEMBER_STATUSES.ACTIVE}>نشط</MenuItem>
+              <MenuItem value={MEMBER_STATUSES.SUSPENDED}>معلق</MenuItem>
+              <MenuItem value={MEMBER_STATUSES.TERMINATED}>منتهي</MenuItem>
+            </TextField>
+
+            {/* Reset Button */}
+            <Button variant="outlined" color="secondary" onClick={handleResetFilters} startIcon={<FilterAltOffIcon />} sx={{ minWidth: 120, height: 40 }}>
+              إعادة ضبط
+            </Button>
           </Stack>
         </Box>
-
-        {/* ═══════════════════════════════════════════════════════════════════ */}
-        {/* UNIFIED MEDICAL TABLE - FINAL STANDARD                               */}
-        {/* ═══════════════════════════════════════════════════════════════════ */}
-        <UnifiedMedicalTable
-          columns={columns}
-          rows={members}
-          loading={loading}
-          totalCount={totalCount}
-          page={page}
-          rowsPerPage={rowsPerPage}
-          onPageChange={(newPage) => setPage(newPage)}
-          onRowsPerPageChange={(newSize) => setRowsPerPage(newSize)}
-          sortBy={sortBy}
-          sortDirection={sortDirection}
-          onSort={handleSort}
-          renderCell={renderCell}
-          getRowKey={(member) => member.id}
-          emptyMessage={showDeleted ? 'لا توجد مستفيدين محذوفين' : 'لا توجد مستفيدين'}
-          loadingMessage="جارِ التحميل..."
-        />
       </MainCard>
+
+      <UnifiedMedicalTable
+        columns={columns}
+        rows={members}
+        loading={loading}
+        totalCount={totalCount}
+        page={page}
+        rowsPerPage={rowsPerPage}
+        onPageChange={(newPage) => setPage(newPage)}
+        onRowsPerPageChange={(newSize) => setRowsPerPage(newSize)}
+        sortBy={sortBy}
+        sortDirection={sortDirection}
+        onSort={handleSort}
+        renderCell={renderCell}
+        getRowKey={(member) => member.id}
+        emptyMessage={showDeleted ? 'لا توجد مستفيدين محذوفين' : 'لا توجد مستفيدين'}
+        loadingMessage="جارِ التحميل..."
+        sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0, mb: 1, '& .MuiTableSortLabel-icon': { display: 'none !important' } }}
+        tableContainerSx={{ flexGrow: 1, minHeight: 0 }}
+      />
+
+      {/* Footer Title */}
+      <Box sx={{ textAlign: 'center', py: 1, color: 'text.secondary', fontSize: '12px' }}>
+        Designed & Developed by TBA WAAD Team - 2026
+      </Box>
 
       {/* Import Dialog */}
       <MembersBulkUploadDialog open={importDialogOpen} onClose={handleCloseImportDialog} />

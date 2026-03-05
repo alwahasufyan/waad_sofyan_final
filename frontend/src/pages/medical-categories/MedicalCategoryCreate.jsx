@@ -66,6 +66,7 @@ const INITIAL_FORM_STATE = {
   code: '',
   name: '',
   parentId: '',
+  context: 'ANY',
   active: true
 };
 
@@ -73,6 +74,16 @@ const CATEGORY_TYPE = {
   MAIN: 'main',
   SUB: 'sub'
 };
+
+/** Clinical context options — Arabic labels matching benefit-table terminology */
+const CONTEXT_OPTIONS = [
+  { value: 'ANY', label: 'أي سياق (افتراضي)', color: 'default' },
+  { value: 'INPATIENT', label: 'إيواء داخل المستشفى', color: 'primary' },
+  { value: 'OUTPATIENT', label: 'عيادات خارجية', color: 'success' },
+  { value: 'OPERATING_ROOM', label: 'عمليات جراحية / غرفة عمليات', color: 'warning' },
+  { value: 'EMERGENCY', label: 'طوارئ وإسعاف', color: 'error' },
+  { value: 'SPECIAL', label: 'منافع خاصة', color: 'secondary' }
+];
 
 // ============================================================================
 // HELPER COMPONENTS
@@ -320,6 +331,7 @@ const MedicalCategoryCreate = () => {
           code: form.code?.trim().toUpperCase(),
           name: form.name?.trim(),
           parentId: categoryType === CATEGORY_TYPE.SUB ? form.parentId : null,
+          context: form.context || 'ANY',
           active: form.active
         };
 
@@ -516,6 +528,25 @@ const MedicalCategoryCreate = () => {
               />
             </Grid>
 
+            {/* Context / Care-Setting Field */}
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth>
+                <InputLabel>السياق السريري (نوع الرعاية)</InputLabel>
+                <Select
+                  value={form.context}
+                  onChange={handleChange('context')}
+                  label="السياق السريري (نوع الرعاية)"
+                  disabled={submitting}
+                >
+                  {CONTEXT_OPTIONS.map((opt) => (
+                    <MenuItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+
             {/* Active Status */}
             <Grid item xs={12}>
               <Paper
@@ -575,11 +606,11 @@ const MedicalCategoryCreate = () => {
               إلغاء
             </Button>
 
-            
-              <Button type="submit" variant="contained" size="large" startIcon={<SaveIcon />} disabled={submitting} sx={{ minWidth: 140 }}>
-                {submitting ? 'جارِ الحفظ...' : 'حفظ التصنيف'}
-              </Button>
-              
+
+            <Button type="submit" variant="contained" size="large" startIcon={<SaveIcon />} disabled={submitting} sx={{ minWidth: 140 }}>
+              {submitting ? 'جارِ الحفظ...' : 'حفظ التصنيف'}
+            </Button>
+
           </Stack>
         </Box>
       </MainCard>

@@ -153,7 +153,7 @@ export const extractErrorMessage = (error) => {
   if (error?.message) return error.message;
 
   // Fallback
-  return 'حدث خطأ غير متوقع';
+  return error?.response?.statusText || 'تعذر الاتصال بالخادم، يرجى المحاولة لاحقاً';
 };
 
 /**

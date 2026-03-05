@@ -41,7 +41,7 @@ const parseValidationError = (errorData) => {
   };
 
   if (!errorData) {
-    result.message = 'حدث خطأ غير متوقع';
+    result.message = 'تعذر الاتصال بالخادم أو حدث خطأ داخلي غير متوقع';
     return result;
   }
 
@@ -69,7 +69,7 @@ const parseValidationError = (errorData) => {
       result.message = errorData.message || 'فشل التحقق من صحة البيانات';
     }
   } else {
-    result.message = errorData.message || errorData.messageAr || 'حدث خطأ غير متوقع';
+    result.message = errorData.message || errorData.messageAr || errorData.error || 'عذراً، حدث خطأ أثناء معالجة طلبك';
   }
 
   return result;

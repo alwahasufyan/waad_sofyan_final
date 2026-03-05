@@ -71,6 +71,7 @@ const INITIAL_FORM_STATE = {
   code: '',
   name: '',
   parentId: '',
+  context: 'ANY',
   active: true
 };
 
@@ -78,6 +79,16 @@ const CATEGORY_TYPE = {
   MAIN: 'main',
   SUB: 'sub'
 };
+
+/** Clinical context options — Arabic labels matching benefit-table terminology */
+const CONTEXT_OPTIONS = [
+  { value: 'ANY', label: 'أي سياق (افتراضي)' },
+  { value: 'INPATIENT', label: 'إيواء داخل المستشفى' },
+  { value: 'OUTPATIENT', label: 'عيادات خارجية' },
+  { value: 'OPERATING_ROOM', label: 'عمليات جراحية / غرفة عمليات' },
+  { value: 'EMERGENCY', label: 'طوارئ وإسعاف' },
+  { value: 'SPECIAL', label: 'منافع خاصة' }
+];
 
 // ============================================================================
 // HELPER COMPONENTS
@@ -263,6 +274,7 @@ const MedicalCategoryEdit = () => {
         code: categoryData.code || '',
         name: categoryData.name || '',
         parentId: categoryData.parentId || '',
+        context: categoryData.context || 'ANY',
         active: categoryData.active !== false
       });
       setCategoryType(categoryData.parentId ? CATEGORY_TYPE.SUB : CATEGORY_TYPE.MAIN);
@@ -331,6 +343,7 @@ const MedicalCategoryEdit = () => {
         const payload = {
           name: form.name?.trim(),
           parentId: categoryType === CATEGORY_TYPE.SUB ? form.parentId : null,
+          context: form.context || 'ANY',
           active: form.active
         };
 
@@ -587,6 +600,25 @@ const MedicalCategoryEdit = () => {
                   )
                 }}
               />
+            </Grid>
+
+            {/* Context / Care-Setting Field */}
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth>
+                <InputLabel>السياق السريري (نوع الرعاية)</InputLabel>
+                <Select
+                  value={form.context}
+                  onChange={handleChange('context')}
+                  label="السياق السريري (نوع الرعاية)"
+                  disabled={submitting}
+                >
+                  {CONTEXT_OPTIONS.map((opt) => (
+                    <MenuItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
             </Grid>
 
             {/* Active Status */}

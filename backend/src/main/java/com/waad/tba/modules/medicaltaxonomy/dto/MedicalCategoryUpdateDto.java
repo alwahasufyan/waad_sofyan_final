@@ -35,6 +35,12 @@ public class MedicalCategoryUpdateDto {
     private Long parentId;
 
     /**
+     * Clinical care-setting context (optional).
+     * Accepted values: INPATIENT, OUTPATIENT, OPERATING_ROOM, EMERGENCY, SPECIAL, ANY
+     */
+    private String context;
+
+    /**
      * Active status
      */
     private Boolean active;
