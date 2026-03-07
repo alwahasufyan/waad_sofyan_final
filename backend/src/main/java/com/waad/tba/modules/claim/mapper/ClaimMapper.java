@@ -127,6 +127,10 @@ public class ClaimMapper {
                     .quantity(quantity)
                     .unitPrice(unitPrice)
                     .totalPrice(lineTotal)
+                    .requestedUnitPrice(unitPrice)
+                    .requestedQuantity(quantity)
+                    .approvedUnitPrice(unitPrice)
+                    .approvedQuantity(quantity)
                     .build();
 
             lines.add(line);
@@ -233,6 +237,12 @@ public class ClaimMapper {
                     .quantity(quantity)
                     .unitPrice(unitPrice)
                     .totalPrice(lineTotal)
+                    .requestedUnitPrice(unitPrice)
+                    .requestedQuantity(quantity)
+                    .approvedUnitPrice(Boolean.TRUE.equals(lineDto.getRejected()) ? BigDecimal.ZERO : unitPrice)
+                    .approvedQuantity(Boolean.TRUE.equals(lineDto.getRejected()) ? 0 : quantity)
+                    .rejectionReasonCode(lineDto.getRejectionReasonCode())
+                    .reviewerNotes(lineDto.getReviewerNotes())
                     .build();
 
             newLines.add(line);

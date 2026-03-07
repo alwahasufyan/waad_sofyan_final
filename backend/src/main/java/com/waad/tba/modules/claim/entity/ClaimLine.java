@@ -149,6 +149,18 @@ public class ClaimLine {
     @Column(name = "rejection_reason", length = 500)
     private String rejectionReason;
 
+    /**
+     * Rejection reason code (e.g., "PRICE_EXCEEDED", "NOT_COVERED", "PRE_AUTH_REQUIRED")
+     */
+    @Column(name = "rejection_reason_code", length = 50)
+    private String rejectionReasonCode;
+
+    /**
+     * Detailed notes from the medical reviewer
+     */
+    @Column(name = "reviewer_notes", columnDefinition = "TEXT")
+    private String reviewerNotes;
+
     @Column(name = "rejected")
     @Builder.Default
     private Boolean rejected = false;
@@ -157,11 +169,26 @@ public class ClaimLine {
     @Builder.Default
     private BigDecimal refusedAmount = BigDecimal.ZERO;
 
+    // ==================== FINANCIAL AUDIT: REQUESTED VS APPROVED ====================
+
+    @Column(name = "requested_unit_price", precision = 15, scale = 2)
+    private BigDecimal requestedUnitPrice;
+
+    @Column(name = "approved_unit_price", precision = 15, scale = 2)
+    private BigDecimal approvedUnitPrice;
+
+    @Column(name = "requested_quantity")
+    private Integer requestedQuantity;
+
+    @Column(name = "approved_quantity")
+    private Integer approvedQuantity;
+
     // ==================== LIFECYCLE HOOKS ====================
 
     @PrePersist
     private void prePersist() {
         populateDenormalizedFields();
+        initializeFinancialAuditFields();
         calculateTotalPrice();
         validateArchitecturalRules();
     }
@@ -173,6 +200,19 @@ public class ClaimLine {
         validateArchitecturalRules();
     }
     
+    private void initializeFinancialAuditFields() {
+        if (requestedUnitPrice == null) requestedUnitPrice = unitPrice;
+        if (requestedQuantity == null) requestedQuantity = quantity;
+        
+        if (Boolean.TRUE.equals(rejected)) {
+            approvedUnitPrice = BigDecimal.ZERO;
+            approvedQuantity = 0;
+        } else {
+            if (approvedUnitPrice == null) approvedUnitPrice = unitPrice;
+            if (approvedQuantity == null) approvedQuantity = quantity;
+        }
+    }
+
     /**
      * Populate denormalized fields from MedicalService
      */

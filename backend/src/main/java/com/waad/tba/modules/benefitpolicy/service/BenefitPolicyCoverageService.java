@@ -477,6 +477,23 @@ public class BenefitPolicyCoverageService {
             }
         }
 
+        // ═══════════════════════════════════════════════════════════════════════════
+        // PHASE 2.2: PER-FAMILY LIMIT VALIDATION
+        // ═══════════════════════════════════════════════════════════════════════════
+        BigDecimal perFamilyLimit = benefitPolicy.getPerFamilyLimit();
+        if (perFamilyLimit != null && perFamilyLimit.compareTo(BigDecimal.ZERO) > 0 && member.getFamilyId() != null) {
+            BigDecimal familyUsed = calculateFamilyUsedAmountForYear(member.getFamilyId(), serviceDate.getYear());
+            BigDecimal remainingFamily = perFamilyLimit.subtract(familyUsed);
+
+            if (requestedAmount.compareTo(remainingFamily) > 0) {
+                log.warn("❌ Per-family limit exceeded for family {}: requested={}, remaining={}, familyLimit={}", 
+                        member.getFamilyId(), requestedAmount, remainingFamily, perFamilyLimit);
+                throw new BusinessRuleException(
+                        String.format("المبلغ المطلوب (%.2f) يتجاوز حد العائلة المتبقي (%.2f). حد العائلة: %.2f، المستخدم: %.2f",
+                                requestedAmount, remainingFamily, perFamilyLimit, familyUsed));
+            }
+        }
+
         log.debug("✅ Amount limits validation passed for member {}", member.getId());
     }
 
@@ -652,26 +669,40 @@ public class BenefitPolicyCoverageService {
     // ═══════════════════════════════════════════════════════════════════════════
 
     /**
-     * Calculate used amount for a member in a specific year.
+     * Calculate used amount for a member in a specific year using DB aggregation.
+     * PERFORMANCE: O(1) query replaces loading all claims into memory.
      */
     private BigDecimal calculateUsedAmountForYear(Long memberId, int year) {
-        List<Claim> claims = claimRepository.findByMemberId(memberId);
+        List<com.waad.tba.modules.claim.entity.ClaimStatus> validStatuses = List.of(
+            com.waad.tba.modules.claim.entity.ClaimStatus.APPROVED,
+            com.waad.tba.modules.claim.entity.ClaimStatus.SETTLED,
+            com.waad.tba.modules.claim.entity.ClaimStatus.BATCHED
+        );
+        return claimRepository.sumApprovedAmountByMemberAndYear(memberId, year, validStatuses);
+    }
 
-        return claims.stream()
-                .filter(c -> c.getServiceDate() != null && c.getServiceDate().getYear() == year)
-                .filter(c -> c.getApprovedAmount() != null)
-                .map(Claim::getApprovedAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    /**
+     * Calculate used amount for a whole family in a specific year using DB aggregation.
+     */
+    private BigDecimal calculateFamilyUsedAmountForYear(String familyId, int year) {
+        List<com.waad.tba.modules.claim.entity.ClaimStatus> validStatuses = List.of(
+            com.waad.tba.modules.claim.entity.ClaimStatus.APPROVED,
+            com.waad.tba.modules.claim.entity.ClaimStatus.SETTLED,
+            com.waad.tba.modules.claim.entity.ClaimStatus.BATCHED
+        );
+        return claimRepository.sumApprovedAmountByFamilyAndYear(familyId, year, validStatuses);
     }
 
     /**
      * Calculate total used for a member (all time).
      */
     private BigDecimal calculateTotalUsedForMember(Long memberId) {
+        // We could optimize this too, but usually annual is the bottleneck
         List<Claim> claims = claimRepository.findByMemberId(memberId);
 
         return claims.stream()
                 .filter(c -> c.getApprovedAmount() != null)
+                .filter(c -> c.getStatus() != com.waad.tba.modules.claim.entity.ClaimStatus.REJECTED)
                 .map(Claim::getApprovedAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }

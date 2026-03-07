@@ -136,6 +136,15 @@ public class BenefitPolicy {
     private BigDecimal annualDeductible = BigDecimal.ZERO;
 
     /**
+     * Out-of-pocket maximum per member.
+     * Maximum amount the patient pays (Deductible + Co-Pay) before insurance covers 100%.
+     */
+    @DecimalMin(value = "0.00", message = "Out-of-pocket maximum must be >= 0")
+    @Column(name = "out_of_pocket_max", precision = 15, scale = 2)
+    @Builder.Default
+    private BigDecimal outOfPocketMax = BigDecimal.ZERO;
+
+    /**
      * Default waiting period in days (policy-level default).
      * Individual BenefitPolicyRule can override this per service/category.
      * If null or 0, no waiting period applies.

@@ -363,6 +363,15 @@ public class ClaimResponse {
         
         private BigDecimal refusedAmount;
         private String notes;
+        
+        // Detailed Audit Fields
+        private BigDecimal requestedUnitPrice;
+        private BigDecimal approvedUnitPrice;
+        private Integer requestedQuantity;
+        private Integer approvedQuantity;
+        private String rejectionReasonCode;
+        private String reviewerNotes;
+
         private Boolean active;
     }
     

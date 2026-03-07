@@ -285,9 +285,15 @@ public class ClaimApiMapper {
                 .unitPrice(dto.getUnitPrice())
                 .totalPrice(dto.getTotalPrice())
                 .refusedAmount(dto.getRefusedAmount())
-                .approvedPrice(null) // Not in ClaimLineDto - would need to be added
-                .notes(null) // Not in ClaimLineDto
-                .active(true) // Not in ClaimLineDto - default to true
+                .approvedPrice(dto.getApprovedUnitPrice()) // Maps approvedUnitPrice to approvedPrice
+                .requestedUnitPrice(dto.getRequestedUnitPrice())
+                .approvedUnitPrice(dto.getApprovedUnitPrice())
+                .requestedQuantity(dto.getRequestedQuantity())
+                .approvedQuantity(dto.getApprovedQuantity())
+                .rejectionReasonCode(dto.getRejectionReasonCode())
+                .reviewerNotes(dto.getReviewerNotes())
+                .notes(dto.getReviewerNotes()) // Map reviewerNotes to legacy notes field
+                .active(true)
                 .build();
     }
     

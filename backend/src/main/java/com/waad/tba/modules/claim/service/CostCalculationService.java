@@ -500,20 +500,17 @@ public class CostCalculationService {
      * Uses perMemberLimit or a fraction of annualLimit as the basis.
      */
     private BigDecimal getOutOfPocketMax(BenefitPolicy benefitPolicy) {
-        if (benefitPolicy != null) {
-            // Use per-member limit if available
-            if (benefitPolicy.getPerMemberLimit() != null) {
-                // Use 10% of per-member limit as out-of-pocket max
-                return benefitPolicy.getPerMemberLimit().multiply(new BigDecimal("0.1"))
-                    .setScale(2, RoundingMode.HALF_UP);
-            }
-            // Fall back to annual limit
-            if (benefitPolicy.getAnnualLimit() != null) {
-                // Use 10% of annual limit as out-of-pocket max
-                return benefitPolicy.getAnnualLimit().multiply(new BigDecimal("0.1"))
-                    .setScale(2, RoundingMode.HALF_UP);
-            }
+        if (benefitPolicy != null && benefitPolicy.getOutOfPocketMax() != null && 
+            benefitPolicy.getOutOfPocketMax().compareTo(BigDecimal.ZERO) > 0) {
+            return benefitPolicy.getOutOfPocketMax();
         }
+        
+        // Fallback for legacy policies (10% of per-member limit)
+        if (benefitPolicy != null && benefitPolicy.getPerMemberLimit() != null) {
+            return benefitPolicy.getPerMemberLimit().multiply(new BigDecimal("0.1"))
+                .setScale(2, RoundingMode.HALF_UP);
+        }
+        
         return DEFAULT_OUT_OF_POCKET_MAX;
     }
     

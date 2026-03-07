@@ -722,7 +722,7 @@ public interface ClaimRepository extends JpaRepository<Claim, Long> {
         */
        @Query("SELECT COALESCE(SUM(c.deductibleApplied), 0) FROM Claim c " +
                      "WHERE c.member.id = :memberId " +
-                     "AND YEAR(c.createdAt) = :year " +
+                     "AND YEAR(COALESCE(c.serviceDate, c.createdAt)) = :year " +
                      "AND c.status IN :statuses " +
                      "AND c.id <> :excludeClaimId")
        java.math.BigDecimal sumDeductibleForYear(
@@ -734,9 +734,9 @@ public interface ClaimRepository extends JpaRepository<Claim, Long> {
        /**
         * Calculate total patient out-of-pocket for a member in a given year.
         */
-       @Query("SELECT COALESCE(SUM(c.patientCoPay), 0) FROM Claim c " +
+       @Query("SELECT COALESCE(SUM(c.patientCoPay + c.deductibleApplied), 0) FROM Claim c " +
                      "WHERE c.member.id = :memberId " +
-                     "AND YEAR(c.createdAt) = :year " +
+                     "AND YEAR(COALESCE(c.serviceDate, c.createdAt)) = :year " +
                      "AND c.status IN :statuses " +
                      "AND c.id <> :excludeClaimId")
        java.math.BigDecimal sumPatientCopayForYear(
@@ -744,6 +744,15 @@ public interface ClaimRepository extends JpaRepository<Claim, Long> {
                      @Param("year") int year,
                      @Param("statuses") List<com.waad.tba.modules.claim.entity.ClaimStatus> statuses,
                      @Param("excludeClaimId") Long excludeClaimId);
+
+       @Query("SELECT COALESCE(SUM(c.approvedAmount), 0) FROM Claim c " +
+                     "WHERE c.member.familyId = :familyId " +
+                     "AND YEAR(c.serviceDate) = :year " +
+                     "AND c.status IN :statuses")
+       java.math.BigDecimal sumApprovedAmountByFamilyAndYear(
+                     @Param("familyId") String familyId,
+                     @Param("year") int year,
+                     @Param("statuses") List<com.waad.tba.modules.claim.entity.ClaimStatus> statuses);
 
        /**
         * Calculate total approved amount for a member in a given year.

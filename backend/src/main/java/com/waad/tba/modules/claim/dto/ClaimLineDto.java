@@ -81,8 +81,16 @@ public class ClaimLineDto {
 
     private Boolean rejected;
     private String rejectionReason;
+    private String rejectionReasonCode;
+    private String reviewerNotes;
     private BigDecimal refusedAmount;
     
+    // Financial Audit (READ-ONLY)
+    private BigDecimal requestedUnitPrice;
+    private BigDecimal approvedUnitPrice;
+    private Integer requestedQuantity;
+    private Integer approvedQuantity;
+
     // Financial Split (READ-ONLY)
     private Integer coveragePercent;
     private Integer patientSharePercent;
