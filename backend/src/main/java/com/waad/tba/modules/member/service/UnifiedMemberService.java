@@ -124,6 +124,10 @@ public class UnifiedMemberService {
         principal.setBenefitPolicy(benefitPolicy);
         principal.setParent(null); // PRINCIPAL
         principal.setRelationship(null); // PRINCIPAL has no relationship
+        // Sync status with active flag on creation
+        if (Boolean.FALSE.equals(dto.getActive())) {
+            principal.setStatus(Member.MemberStatus.TERMINATED);
+        }
 
         // 4. Generate CARD NUMBER (formula: EMPLOYER_CODE-JOIN_YEAR-EMPLOYEE_NUMBER)
         String cardNumber = dto.getCardNumber();
@@ -274,6 +278,11 @@ public class UnifiedMemberService {
         dependent.setEmployer(principal.getEmployer());
         dependent.setBenefitPolicy(principal.getBenefitPolicy());
         dependent.setPolicyNumber(principal.getPolicyNumber());
+
+        // Sync status with active flag on creation
+        if (Boolean.FALSE.equals(dto.getActive())) {
+            dependent.setStatus(Member.MemberStatus.TERMINATED);
+        }
 
         // 4. Save
         dependent = memberRepository.save(dependent);
@@ -521,17 +530,20 @@ public class UnifiedMemberService {
         String idList = allIds.stream().map(String::valueOf).collect(java.util.stream.Collectors.joining(","));
 
         // Block soft deletion if any financial/medical records exist
-        long claimsCount       = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM claims WHERE member_id IN (" + idList + ")", Long.class);
-        long preAuthCount      = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM preauthorization_requests WHERE member_id IN (" + idList + ")", Long.class);
-        long visitsCount       = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM visits WHERE member_id IN (" + idList + ")", Long.class);
+        long claimsCount = jdbcTemplate
+                .queryForObject("SELECT COUNT(*) FROM claims WHERE member_id IN (" + idList + ")", Long.class);
+        long preAuthCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM preauthorization_requests WHERE member_id IN (" + idList + ")", Long.class);
+        long visitsCount = jdbcTemplate
+                .queryForObject("SELECT COUNT(*) FROM visits WHERE member_id IN (" + idList + ")", Long.class);
 
         if (claimsCount > 0 || preAuthCount > 0 || visitsCount > 0) {
             String details = String.format(
-                "مطالبات: %d، موافقات مسبقة: %d، زيارات: %d",
-                claimsCount, preAuthCount, visitsCount);
+                    "مطالبات: %d، موافقات مسبقة: %d، زيارات: %d",
+                    claimsCount, preAuthCount, visitsCount);
             throw new IllegalStateException(
-                "لا يمكن حذف المستفيد لأن له معاملات مالية مرتبطة (" + details + "). " +
-                "يُرجى أرشفة المستفيد بدلاً من الحذف، أو مراجعة السجلات المالية أولاً.");
+                    "لا يمكن حذف المستفيد لأن له معاملات مالية مرتبطة (" + details + "). " +
+                            "يُرجى أرشفة المستفيد بدلاً من الحذف، أو مراجعة السجلات المالية أولاً.");
         }
 
         member.setActive(false);
@@ -1112,7 +1124,8 @@ public class UnifiedMemberService {
         jdbcTemplate.update("DELETE FROM member_policy_assignments WHERE member_id IN (" + idList + ")");
         jdbcTemplate.update("DELETE FROM member_deductibles WHERE member_id IN (" + idList + ")");
 
-        // Delete dependents first (self-FK parent_id SET NULL is OK, but easier to delete directly)
+        // Delete dependents first (self-FK parent_id SET NULL is OK, but easier to
+        // delete directly)
         if (!member.isDependent()) {
             memberRepository.deleteByParentId(memberId);
         }

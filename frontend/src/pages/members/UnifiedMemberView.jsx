@@ -73,7 +73,7 @@ import MainCard from 'components/MainCard';
 import ModernPageHeader from 'components/tba/ModernPageHeader';
 import MemberAvatar from 'components/tba/MemberAvatar';
 import DependentModal from './DependentModal';
-import { getMember, deleteMember, restoreMember, MEMBER_TYPES, GENDERS, RELATIONSHIPS } from 'services/api/unified-members.service';
+import { getMember, deleteMember, hardDeleteMember, restoreMember, MEMBER_TYPES, GENDERS, RELATIONSHIPS } from 'services/api/unified-members.service';
 import { openSnackbar } from 'api/snackbar';
 
 import { RELATIONSHIP_AR } from './member.shared';
@@ -103,6 +103,8 @@ const UnifiedMemberView = () => {
   // Dialog States
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingMember, setDeletingMember] = useState(null);
+  const [hardDeleteDepDialogOpen, setHardDeleteDepDialogOpen] = useState(false);
+  const [hardDeletingDep, setHardDeletingDep] = useState(null);
 
   const handleChangePage = (event, newPage) => {
     setPg(newPage);
@@ -161,9 +163,36 @@ const UnifiedMemberView = () => {
   const handleRestore = async (id) => {
     try {
       await restoreMember(id);
-      fetchMemberData(); // Refresh list
+      openSnackbar({ open: true, message: 'تم استعادة التابع بنجاح', variant: 'alert', alert: { color: 'success' } });
+      fetchMemberData();
     } catch (error) {
       console.error('Error restoring member:', error);
+      openSnackbar({ open: true, message: 'خطأ في استعادة التابع', variant: 'alert', alert: { color: 'error' } });
+    }
+  };
+
+  const handleHardDeleteDepConfirm = (dep) => {
+    setHardDeletingDep(dep);
+    setHardDeleteDepDialogOpen(true);
+  };
+
+  const handleHardDeleteDepExecute = async () => {
+    if (!hardDeletingDep) return;
+    try {
+      await hardDeleteMember(hardDeletingDep.id);
+      openSnackbar({ open: true, message: 'تم الحذف النهائي للتابع بنجاح', variant: 'alert', alert: { color: 'success' } });
+      fetchMemberData();
+    } catch (error) {
+      console.error('Error hard-deleting dependent:', error);
+      openSnackbar({
+        open: true,
+        message: error.response?.data?.message || 'خطأ في الحذف النهائي',
+        variant: 'alert',
+        alert: { color: 'error' }
+      });
+    } finally {
+      setHardDeleteDepDialogOpen(false);
+      setHardDeletingDep(null);
     }
   };
 
@@ -190,7 +219,7 @@ const UnifiedMemberView = () => {
       if (isPrincipal) {
         navigate('/members');
       } else {
-        fetchMember();
+        fetchMemberData();
       }
     } catch (error) {
       console.error('Error deleting member:', error);
@@ -321,8 +350,8 @@ const UnifiedMemberView = () => {
                           sx={{ height: 24, fontSize: '0.75rem' }}
                         />
                         <Chip
-                          label={member.status === 'ACTIVE' ? 'نشط' : member.status}
-                          color={member.status === 'ACTIVE' ? 'success' : 'default'}
+                          label={{ ACTIVE: 'نشط', TERMINATED: 'غير نشط', SUSPENDED: 'معلق', PENDING: 'قيد المراجعة' }[member.status] || member.status}
+                          color={{ ACTIVE: 'success', TERMINATED: 'error', SUSPENDED: 'warning', PENDING: 'warning' }[member.status] || 'default'}
                           size="small"
                           sx={{ height: 24, fontSize: '0.75rem' }}
                         />
@@ -612,8 +641,8 @@ const UnifiedMemberView = () => {
                                   <TableCell align="center">{dep.birthDate || '-'}</TableCell>
                                   <TableCell align="center">
                                     <Chip
-                                      label={dep.status === 'ACTIVE' ? 'نشط' : dep.status}
-                                      color={dep.status === 'ACTIVE' ? 'success' : 'default'}
+                                      label={{ ACTIVE: 'نشط', TERMINATED: 'غير نشط', SUSPENDED: 'معلق', PENDING: 'قيد المراجعة' }[dep.status] || dep.status}
+                                      color={{ ACTIVE: 'success', TERMINATED: 'error', SUSPENDED: 'warning', PENDING: 'warning' }[dep.status] || 'default'}
                                       size="small"
                                       sx={{ height: 24 }}
                                     />
@@ -621,22 +650,20 @@ const UnifiedMemberView = () => {
                                   <TableCell align="center">
                                     <Stack direction="row" spacing={1} justifyContent="center">
                                       {showDeleted ? (
-                                        <Button
-                                          size="small"
-                                          variant="outlined"
-                                          color="warning"
-                                          onClick={() => handleRestore(dep.id)}
-                                          startIcon={<RestoreFromTrashIcon />}
-                                        >
-                                          استعادة
-                                        </Button>
-                                      ) : (
                                         <>
-                                          <Tooltip title="عرض التفاصيل">
-                                            <IconButton size="small" color="primary" onClick={() => navigate(`/members/${dep.id}`)}>
-                                              <BadgeIcon fontSize="small" />
+                                          <Tooltip title="استعادة">
+                                            <IconButton size="small" color="success" onClick={() => handleRestore(dep.id)}>
+                                              <RestoreFromTrashIcon fontSize="small" />
                                             </IconButton>
                                           </Tooltip>
+                                          <Tooltip title="حذف نهائي">
+                                            <IconButton size="small" color="error" onClick={() => handleHardDeleteDepConfirm(dep)}>
+                                              <DeleteIcon fontSize="small" />
+                                            </IconButton>
+                                          </Tooltip>
+                                        </>
+                                      ) : (
+                                        <>
                                           <Tooltip title="تعديل">
                                             <IconButton size="small" color="secondary" onClick={() => handleEditClick(dep)}>
                                               <EditIcon fontSize="small" />
@@ -681,8 +708,29 @@ const UnifiedMemberView = () => {
         onClose={() => setModalOpen(false)}
         principalId={member?.id}
         dependent={selectedDependent}
+        existingDependents={dependents}
+        principalGender={member?.gender}
         onSave={handleModalSave}
       />
+
+      {/* Hard Delete Dependent Confirmation Dialog */}
+      <Dialog open={hardDeleteDepDialogOpen} onClose={() => setHardDeleteDepDialogOpen(false)}>
+        <DialogTitle sx={{ fontWeight: 600 }}>حذف نهائي؟</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            سيتم حذف التابع <strong>{hardDeletingDep?.fullName}</strong> نهائياً من قاعدة البيانات. هذا الإجراء لا يمكن التراجع عنه!
+            <Alert severity="error" sx={{ mt: 2 }}>
+              <strong>تنبيه:</strong> إذا كان للتابع مطالبات أو زيارات مرتبطة سيفشل الحذف.
+            </Alert>
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setHardDeleteDepDialogOpen(false)}>إلغاء</Button>
+          <Button onClick={handleHardDeleteDepExecute} color="error" variant="contained" autoFocus>
+            تأكيد الحذف النهائي
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>

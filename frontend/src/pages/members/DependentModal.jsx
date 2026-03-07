@@ -44,11 +44,29 @@ import { openSnackbar } from 'api/snackbar';
 import MemberAvatar from '../../components/tba/MemberAvatar';
 import { RELATIONSHIP_AR } from './member.shared';
 
-const DependentModal = ({ open, onClose, dependent, principalId, onSave }) => {
+const DependentModal = ({ open, onClose, dependent, principalId, onSave, existingDependents = [], principalGender = '' }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isEditMode = Boolean(dependent);
   const title = isEditMode ? 'تعديل بيانات التابع' : 'إضافة تابع جديد';
+
+  // Relationships excluded based on principal's gender:
+  // - MALE principal cannot have a HUSBAND
+  // - FEMALE principal cannot have a WIFE
+  const GENDER_EXCLUDED_RELATIONSHIPS =
+    principalGender === 'MALE' ? ['HUSBAND'] : principalGender === 'FEMALE' ? ['WIFE'] : [];
+
+  // Relationships that can only be used once per principal
+  // HUSBAND is unique only for FEMALE principals; WIFE can be multiple for MALE principals
+  const UNIQUE_RELATIONSHIPS =
+    principalGender === 'FEMALE' ? ['HUSBAND', 'FATHER', 'MOTHER'] : ['FATHER', 'MOTHER'];
+
+  // Compute which unique relationships are already taken (excluding current dependent in edit mode)
+  const usedUniqueRelationships = existingDependents
+    .filter((d) => !isEditMode || d.id !== dependent?.id)
+    .filter((d) => d.active !== false && d.status !== 'TERMINATED')
+    .map((d) => d.relationship)
+    .filter((r) => UNIQUE_RELATIONSHIPS.includes(r));
 
   // Form State
   const [loading, setLoading] = useState(false);
@@ -289,11 +307,14 @@ const DependentModal = ({ open, onClose, dependent, principalId, onSave }) => {
                   <FormControl fullWidth required error={!!errors.relationship}>
                     <InputLabel>القرابة</InputLabel>
                     <Select value={formData.relationship} onChange={handleChange('relationship')} label="القرابة">
-                      {Object.keys(RELATIONSHIPS).map((key) => (
-                        <MenuItem key={key} value={key}>
-                          {RELATIONSHIP_AR[key] || key}
-                        </MenuItem>
-                      ))}
+                      {Object.keys(RELATIONSHIPS)
+                        .filter((key) => !GENDER_EXCLUDED_RELATIONSHIPS.includes(key))
+                        .filter((key) => !usedUniqueRelationships.includes(key) || key === formData.relationship)
+                        .map((key) => (
+                          <MenuItem key={key} value={key}>
+                            {RELATIONSHIP_AR[key] || key}
+                          </MenuItem>
+                        ))}
                     </Select>
                   </FormControl>
                 </Grid>
