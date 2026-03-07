@@ -137,7 +137,7 @@ const Step1UserInfoEdit = ({ form, setForm, errors, setErrors }) => {
     <TbaFormSection title="معلومات المستخدم الأساسية" icon={PersonIcon}>
       <Grid container spacing={2.5}>
         {/* Username (readonly) */}
-        <Grid item xs={12} sm={6}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <TextField
             fullWidth
             label="اسم المستخدم"
@@ -155,7 +155,7 @@ const Step1UserInfoEdit = ({ form, setForm, errors, setErrors }) => {
         </Grid>
 
         {/* Full Name */}
-        <Grid item xs={12} sm={6}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <TextField
             fullWidth
             label="الاسم الكامل"
@@ -168,7 +168,7 @@ const Step1UserInfoEdit = ({ form, setForm, errors, setErrors }) => {
         </Grid>
 
         {/* Email */}
-        <Grid item xs={12} sm={6}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <TextField
             fullWidth
             label="البريد الإلكتروني"
@@ -189,7 +189,7 @@ const Step1UserInfoEdit = ({ form, setForm, errors, setErrors }) => {
         </Grid>
 
         {/* Phone */}
-        <Grid item xs={12} sm={6}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <TextField
             fullWidth
             label="رقم الهاتف"
@@ -206,7 +206,7 @@ const Step1UserInfoEdit = ({ form, setForm, errors, setErrors }) => {
         </Grid>
 
         {/* Active Status */}
-        <Grid item xs={12}>
+        <Grid size={{ xs: 12 }}>
           <FormControlLabel
             control={<Switch checked={form.active} onChange={handleChange('active')} color="primary" />}
             label="المستخدم نشط"
@@ -278,14 +278,14 @@ const Step1ResetPassword = ({ userId, form, setForm, errors, setErrors }) => {
   return (
     <TbaFormSection title="إعادة تعيين كلمة المرور" icon={KeyIcon} sx={{ mt: 3 }}>
       <Grid container spacing={2.5} alignItems="flex-start">
-        <Grid item xs={12}>
+        <Grid size={{ xs: 12 }}>
           <Alert severity="warning" sx={{ mb: 1 }}>
             هذا القسم يُستخدم لإجبار تغيير كلمة مرور المستخدم من قِبل مدير النظام.
           </Alert>
         </Grid>
 
         {/* New Password */}
-        <Grid item xs={12} sm={5}>
+        <Grid size={{ xs: 12, sm: 5 }}>
           <TextField
             fullWidth
             label="كلمة المرور الجديدة"
@@ -307,7 +307,7 @@ const Step1ResetPassword = ({ userId, form, setForm, errors, setErrors }) => {
         </Grid>
 
         {/* Confirm Password */}
-        <Grid item xs={12} sm={5}>
+        <Grid size={{ xs: 12, sm: 5 }}>
           <TextField
             fullWidth
             label="تأكيد كلمة المرور"
@@ -329,7 +329,7 @@ const Step1ResetPassword = ({ userId, form, setForm, errors, setErrors }) => {
         </Grid>
 
         {/* Action Button */}
-        <Grid item xs={12} sm={2} sx={{ display: 'flex', mt: 1 }}>
+        <Grid size={{ xs: 12, sm: 2 }} sx={{ display: 'flex', mt: 1 }}>
           <Button
             variant="contained"
             color="warning"
@@ -405,7 +405,7 @@ const Step2Roles = ({
           const isProtected = roleName === 'SUPER_ADMIN';
 
           return (
-            <Grid item xs={12} sm={6} md={4} key={role?.id}>
+            <Grid size={{ xs: 12, sm: 6, md: 4 }} key={role?.id}>
               <Paper
                 onClick={() => !isProtected && handleToggleRole(role?.id)}
                 elevation={isSelected ? 3 : 0}
@@ -464,7 +464,7 @@ const Step2Roles = ({
             يجب اختيار مقدم خدمة عند تعيين دور <strong>PROVIDER_STAFF</strong>.
           </Alert>
           <Grid container spacing={2}>
-            <Grid item xs={12} md={8}>
+            <Grid size={{ xs: 12, md: 8 }}>
               <TextField
                 fullWidth
                 select
@@ -499,7 +499,7 @@ const Step2Roles = ({
             يجب اختيار صاحب عمل عند تعيين دور <strong>EMPLOYER_ADMIN</strong>.
           </Alert>
           <Grid container spacing={2}>
-            <Grid item xs={12} md={8}>
+            <Grid size={{ xs: 12, md: 8 }}>
               <TextField
                 fullWidth
                 select
@@ -539,7 +539,7 @@ const Step2Roles = ({
           </Alert>
 
           <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <FormControlLabel
                 control={
                   <Switch
@@ -561,7 +561,7 @@ const Step2Roles = ({
               />
             </Grid>
 
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <FormControlLabel
                 control={
                   <Switch
@@ -583,7 +583,7 @@ const Step2Roles = ({
               />
             </Grid>
 
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <FormControlLabel
                 control={
                   <Switch
@@ -605,7 +605,7 @@ const Step2Roles = ({
               />
             </Grid>
 
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <FormControlLabel
                 control={
                   <Switch
@@ -627,7 +627,7 @@ const Step2Roles = ({
               />
             </Grid>
 
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <FormControlLabel
                 control={
                   <Switch

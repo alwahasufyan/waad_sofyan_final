@@ -36,7 +36,7 @@ import unifiedMembersService from 'services/api/unified-members.service';
 import providersService from 'services/api/providers.service';
 import employersService from 'services/api/employers.service';
 import claimsService from 'services/api/claims.service';
-import backlogService from 'services/api/backlog.service';
+import visitsService from 'services/api/visits.service';
 import providerContractsService from 'services/api/provider-contracts.service';
 import benefitPoliciesService from 'services/api/benefit-policies.service';
 import { checkServiceCoverage, checkServiceUsageLimit } from 'services/api/benefit-policy-rules.service';
@@ -48,8 +48,8 @@ const MONTHS_AR = [
 ];
 
 const newLine = () => ({
-    id: Math.random(), service: null, description: '', quantity: 1,
-    serviceDate: '', unitPrice: 0, contractPrice: 0, byCompany: 0, byEmployee: 0,
+    id: Math.random(), service: null, quantity: 1,
+    unitPrice: 0, contractPrice: 0, byCompany: 0, byEmployee: 0,
     refusalTypes: '', total: 0, coveragePercent: null,
     requiresPreApproval: false, notCovered: false,
     rejected: false, rejectionReason: ''
@@ -59,14 +59,14 @@ const newLine = () => ({
 const inlineSx = {
     '& .MuiInput-root::before': { display: 'none' },
     '& .MuiInput-root::after': { borderBottomColor: '#1b5e20', borderBottomWidth: 1 },
-    '& input': { fontSize: '0.85rem' }
+    '& input': { fontSize: '0.8rem', fontWeight: 500 }
 };
 
 // رأس عمود الجدول
 const TH = ({ children, align = 'center', w, sx: sxOver = {} }) => (
     <TableCell align={align} sx={{
-        bgcolor: '#E8F5F1', color: '#0D4731', fontWeight: 700,
-        fontSize: '0.85rem', py: 1, px: 1.5, whiteSpace: 'nowrap',
+        bgcolor: '#E8F5F1', color: '#0D4731', fontWeight: 800,
+        fontSize: '0.75rem', py: 0.8, px: 1.2, whiteSpace: 'nowrap',
         borderBottom: '2px solid #c8e6c9',
         ...(w && { width: w, minWidth: w }),
         ...sxOver
@@ -97,7 +97,7 @@ export default function ClaimBatchEntry() {
     const [complaint, setComplaint] = useState('');
     const [applyBenefits, setApplyBenefits] = useState(true);
     const [notes, setNotes] = useState('');
-    const [lines, setLines] = useState([newLine(), newLine()]);
+    const [lines, setLines] = useState([newLine()]);
     const [saving, setSaving] = useState(false);
     const [isDirty, setIsDirty] = useState(false);
     const [policyId, setPolicyId] = useState(null);
@@ -113,12 +113,15 @@ export default function ClaimBatchEntry() {
     const [attachments, setAttachments] = useState([]);
     const [editingClaimId, setEditingClaimId] = useState(initialClaimId);
 
-    const memberRef = useRef(null);
-
     const defaultDate = useMemo(
-        () => (month && year) ? `${year}-${String(month).padStart(2, '0')}-01` : '',
+        () => (month && year) ? `${year}-${String(month).padStart(2, '0')}-01` : new Date().toISOString().split('T')[0],
         [month, year]
     );
+
+    const [serviceDate, setServiceDate] = useState(defaultDate);
+
+    const memberRef = useRef(null);
+
 
     // ── الاستعلامات ──────────────────────────────────────────────────────────
     const { data: employer } = useQuery({
@@ -213,20 +216,19 @@ export default function ClaimBatchEntry() {
                 const line = {
                     id: l.id || Math.random(),
                     service: { id: l.medicalServiceId, serviceCode: l.medicalServiceCode, serviceName: l.medicalServiceName },
-                    description: l.medicalServiceName,
                     quantity: l.quantity,
                     unitPrice: enteredPrice,
                     contractPrice: cp,
-                    coveragePercent: l.coveragePercentSnapshot,
+                    coveragePercent: l.coveragePercent,
                     rejected: l.rejected,
-                    rejectionReason: l.rejectionReason,
-                    serviceDate: l.serviceDate || editingClaim.serviceDate
+                    rejectionReason: l.rejectionReason
                 };
                 return recompute(line);
             }));
+            setServiceDate(editingClaim.serviceDate || defaultDate);
             setIsDirty(false);
         }
-    }, [editingClaim]);
+    }, [editingClaim, defaultDate, contractedRaw]);
 
     const memberOptions = useMemo(() => {
         const c = memberResults?.data?.content ?? memberResults?.content;
@@ -367,12 +369,13 @@ export default function ClaimBatchEntry() {
 
     const resetForm = useCallback(() => {
         setMember(null); setMemberInput(''); setDiagnosis('');
-        setComplaint(''); setNotes(''); setLines([newLine(), newLine()]);
+        setComplaint(''); setNotes(''); setLines([newLine()]);
         setApplyBenefits(true); setIsDirty(false);
+        setServiceDate(defaultDate);
         setIsClaimRejected(false); setRejectionInput('');
         setAttachments([]);
         setTimeout(() => memberRef.current?.focus(), 120);
-    }, []);
+    }, [defaultDate]);
 
     const openRejectDialog = (type, idx = null) => {
         setRejectType(type);
@@ -399,8 +402,7 @@ export default function ClaimBatchEntry() {
         }
         setSaving(true);
         try {
-            // Find a valid service date from lines, or fallback
-            const actualDate = lines.find(l => l.serviceDate)?.serviceDate || defaultDate;
+            const actualDate = serviceDate || defaultDate;
 
             const claimData = {
                 memberId: member.id,
@@ -412,18 +414,9 @@ export default function ClaimBatchEntry() {
                 status: isClaimRejected ? 'REJECTED' : 'SETTLED',
                 rejectionReason: isClaimRejected ? rejectionInput : null,
                 lines: lines.map(l => ({
-                    id: (typeof l.id === 'number' && l.id >= 1) ? l.id : null,
-                    serviceCode: l.service?.serviceCode,
-                    serviceName: l.description || l.service?.serviceName,
+                    medicalServiceId: l.service?.id || l.service?.medicalService?.id,
                     quantity: parseInt(l.quantity) || 1,
-                    grossAmount: parseFloat(l.unitPrice) || 0,
-                    coveredAmount: (parseInt(l.quantity) || 1) > 0
-                        ? parseFloat((l.byCompany / (parseInt(l.quantity) || 1)).toFixed(2))
-                        : 0,
-                    coveragePercent: l.coveragePercent,
-                    refusedAmount: parseFloat(l.refusedAmount) || 0,
-                    rejected: l.rejected,
-                    rejectionReason: l.rejectionReason
+                    unitPrice: parseFloat(l.unitPrice) || 0
                 }))
             };
 
@@ -432,8 +425,30 @@ export default function ClaimBatchEntry() {
                 await claimsService.update(editingClaimId, claimData);
                 resultClaimId = editingClaimId;
             } else {
-                const response = await backlogService.createManual(claimData);
-                resultClaimId = response?.id || response;
+                // 1. Create a Visit automatically for this manual entry (Backlog Flow)
+                const visitData = {
+                    memberId: member.id,
+                    providerId: parseInt(providerId),
+                    visitDate: actualDate,
+                    doctorName: 'طبيب مناوب', // Mandatory for visit creation
+                    visitType: 'LEGACY_BACKLOG', // Correct type for manual entry
+                    notes: 'إنشاء تلقائي لمطالبة قديمة (Backlog)'
+                };
+
+                const visitResponse = await visitsService.create(visitData);
+                const visitId = visitResponse.id; // visitResponse is already unwrapped
+
+                // 2. Link Claim to this Visit
+                claimData.visitId = visitId;
+
+                // Map frontend 'diagnosis' to backend 'diagnosisDescription'
+                if (diagnosis) {
+                    claimData.diagnosisDescription = diagnosis;
+                    delete claimData.diagnosis;
+                }
+
+                const claimResponse = await claimsService.create(claimData);
+                resultClaimId = claimResponse.id;
             }
 
             // Upload attachments if any exist
@@ -494,7 +509,7 @@ export default function ClaimBatchEntry() {
         e.stopPropagation();
         if (!window.confirm(`هل تريد إلغاء المطالبة #${claimId}؟`)) return;
         try {
-            await backlogService.deleteManual(claimId);
+            await claimsService.remove(claimId);
             enqueueSnackbar(`✅ تم إلغاء المطالبة #${claimId}`, { variant: 'success' });
             invalidateBatchData();
         } catch (err) {
@@ -540,49 +555,6 @@ export default function ClaimBatchEntry() {
                         </Stack>
                     }
                 />
-            </Box>
-
-            {/* ═══ شريط ملخص الدفعة الوهمي (محدث لحظياً) ═══ */}
-            <Box sx={{ flexShrink: 0, mb: 1.5, px: 0.5 }}>
-                <Paper variant="outlined" sx={{
-                    p: 1.2, borderRadius: 2, display: 'flex', gap: 3, alignItems: 'center',
-                    bgcolor: alpha(theme.palette.success.main, 0.03), borderStyle: 'dashed', borderColor: 'success.light'
-                }}>
-                    <Stack direction="row" spacing={1} alignItems="center">
-                        <HistoryIcon sx={{ color: 'success.main', fontSize: 20 }} />
-                        <Typography variant="subtitle2" sx={{ fontWeight: 800, color: 'success.dark' }}>
-                            ملخص الدفعة الحالي:
-                        </Typography>
-                    </Stack>
-
-                    <Stack direction="row" spacing={4}>
-                        <Box>
-                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontWeight: 600 }}>عدد الطلبات</Typography>
-                            <Typography variant="body2" sx={{ fontWeight: 900 }}>{summaryData?.claimsCount || 0}</Typography>
-                        </Box>
-                        <Divider orientation="vertical" flexItem />
-                        <Box>
-                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontWeight: 600 }}>إجمالي القيمة</Typography>
-                            <Typography variant="body2" sx={{ fontWeight: 900 }}>{summaryData?.totalClaimsAmount?.toFixed(2) || '0.00'}</Typography>
-                        </Box>
-                        <Divider orientation="vertical" flexItem />
-                        <Box>
-                            <Typography variant="caption" color="success.main" sx={{ display: 'block', fontWeight: 700 }}>المعتمد (Covered)</Typography>
-                            <Typography variant="body2" sx={{ fontWeight: 900, color: 'success.dark' }}>{summaryData?.totalApprovedAmount?.toFixed(2) || '0.00'}</Typography>
-                        </Box>
-                        <Divider orientation="vertical" flexItem />
-                        <Box>
-                            <Typography variant="caption" color="error.main" sx={{ display: 'block', fontWeight: 700 }}>المرفوض (Refuse)</Typography>
-                            <Typography variant="body2" sx={{ fontWeight: 900, color: 'error.main' }}>{summaryData?.totalRefusedAmount?.toFixed(2) || '0.00'}</Typography>
-                        </Box>
-                    </Stack>
-
-                    <Box sx={{ ml: 'auto' }}>
-                        <Typography variant="caption" sx={{ color: 'text.disabled', fontStyle: 'italic' }}>
-                            * يتم التحديث تلقائياً عند كل عملية حفظ
-                        </Typography>
-                    </Box>
-                </Paper>
             </Box>
 
             {/* ═══ المحتوى ═══ */}
@@ -783,30 +755,40 @@ export default function ClaimBatchEntry() {
                         {/* ── حقول الرأس (4 أعمدة مضغوطة) ── */}
                         <Box sx={{ flexShrink: 0, px: 2.5, py: 2.5, bgcolor: 'background.paper' }}>
                             <Grid container spacing={3.5}>
-                                <Grid item xs={12} sm={6} md={3}>
+                                <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
                                     <Stack spacing={2.5}>
                                         <Box>
-                                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700, display: 'block', mb: 0.5, fontSize: '0.8rem' }}>
+                                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700, display: 'block', mb: 0.5, fontSize: '0.75rem' }}>
                                                 {t('claimEntry.provider')}
                                             </Typography>
-                                            <Typography variant="body2" fontWeight={600} sx={{ fontSize: '0.85rem' }} color={provider?.name ? 'text.primary' : 'text.disabled'}>
+                                            <Typography variant="body2" fontWeight={600} sx={{ fontSize: '0.8rem' }} color={provider?.name ? 'text.primary' : 'text.disabled'}>
                                                 {provider?.name || '—'}
                                             </Typography>
                                         </Box>
                                         <Box>
-                                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700, display: 'block', mb: 0.5, fontSize: '0.8rem' }}>
+                                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700, display: 'block', mb: 0.5, fontSize: '0.75rem' }}>
                                                 {t('claimEntry.cardNumber')}
                                             </Typography>
-                                            <Typography variant="body2" fontWeight={600} sx={{ fontFamily: 'monospace', fontSize: '0.85rem' }}
+                                            <Typography variant="body2" fontWeight={600} sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}
                                                 color={member?.cardNumber ? 'text.primary' : 'text.disabled'}>
                                                 {member?.cardNumber || '—'}
                                             </Typography>
                                         </Box>
+                                        <Box>
+                                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700, display: 'block', mb: 0.5, fontSize: '0.75rem' }}>
+                                                تاريخ الخدمة <Typography component="span" color="error.main">*</Typography>
+                                            </Typography>
+                                            <TextField variant="standard" type="date" fullWidth
+                                                value={serviceDate}
+                                                onChange={e => { setServiceDate(e.target.value); setIsDirty(true); }}
+                                                inputProps={{ max: new Date().toISOString().split('T')[0] }}
+                                                sx={{ ...inlineSx, '& .MuiInputBase-input': { fontSize: '0.8rem' } }} />
+                                        </Box>
                                     </Stack>
                                 </Grid>
 
-                                <Grid item xs={12} sm={6} md={3}>
-                                    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700, display: 'block', mb: 0.5, fontSize: '0.8rem' }}>
+                                <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
+                                    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700, display: 'block', mb: 0.5, fontSize: '0.75rem' }}>
                                         {t('claimEntry.patient')} <Typography component="span" color="error.main">*</Typography>
                                     </Typography>
                                     <Autocomplete size="small" fullWidth options={memberOptions} loading={searchingMember}
@@ -817,43 +799,31 @@ export default function ClaimBatchEntry() {
                                         isOptionEqualToValue={(o, v) => o.id === v?.id}
                                         renderInput={params => (
                                             <TextField {...params} inputRef={memberRef} variant="standard" autoFocus
-                                                placeholder={t('claimEntry.searchPatient')} sx={inlineSx} />
+                                                placeholder={t('claimEntry.searchPatient')} sx={{ ...inlineSx, '& .MuiInputBase-input': { fontSize: '0.8rem' } }} />
                                         )}
                                     />
-                                    {policyInfo && (
-                                        <Box sx={{ mt: 1.5, p: 1, borderRadius: 1.5, bgcolor: alpha('#2e7d32', 0.06), border: '1px solid', borderColor: alpha('#2e7d32', 0.25) }}>
-                                            <Stack direction="row" spacing={1} alignItems="center">
-                                                <PolicyIcon sx={{ color: 'success.main', fontSize: 16 }} />
-                                                <Box>
-                                                    <Typography variant="caption" fontWeight={800} color="success.dark" sx={{ fontSize: '0.8rem' }}>
-                                                        {policyInfo.policyNumber || policyInfo.name}
-                                                    </Typography>
-                                                </Box>
-                                            </Stack>
-                                        </Box>
-                                    )}
                                 </Grid>
 
-                                <Grid item xs={12} sm={6} md={3}>
+                                <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
                                     <Stack spacing={2.5}>
                                         <Box>
-                                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700, display: 'block', mb: 0.5, fontSize: '0.8rem' }}>
+                                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700, display: 'block', mb: 0.5, fontSize: '0.75rem' }}>
                                                 {t('claimEntry.diagnosis')}
                                             </Typography>
                                             <TextField fullWidth size="small" variant="standard" value={diagnosis}
-                                                onChange={e => { setDiagnosis(e.target.value); setIsDirty(true); }} sx={inlineSx} />
+                                                onChange={e => { setDiagnosis(e.target.value); setIsDirty(true); }} sx={{ ...inlineSx, '& .MuiInputBase-input': { fontSize: '0.8rem' } }} />
                                         </Box>
                                         <Box>
-                                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700, display: 'block', mb: 0.5, fontSize: '0.8rem' }}>
+                                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700, display: 'block', mb: 0.5, fontSize: '0.75rem' }}>
                                                 {t('claimEntry.complaint')}
                                             </Typography>
                                             <TextField fullWidth size="small" variant="standard" value={complaint}
-                                                onChange={e => { setComplaint(e.target.value); setIsDirty(true); }} sx={inlineSx} />
+                                                onChange={e => { setComplaint(e.target.value); setIsDirty(true); }} sx={{ ...inlineSx, '& .MuiInputBase-input': { fontSize: '0.8rem' } }} />
                                         </Box>
                                     </Stack>
                                 </Grid>
 
-                                <Grid item xs={12} sm={6} md={3}>
+                                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                                     <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700, display: 'block', mb: 0.5, fontSize: '0.8rem' }}>
                                         {t('claimEntry.notes')}
                                     </Typography>
@@ -927,10 +897,9 @@ export default function ClaimBatchEntry() {
                                 <TableHead>
                                     <TableRow>
                                         <TH align="center" w={185}>الخدمة الطبية</TH>
-                                        <TH align="center" w={130}>الوصف</TH>
                                         <TH align="center" w={52}>الكمية</TH>
-                                        <TH align="center" w={110}>التاريخ</TH>
                                         <TH align="center" w={80}>سعر الوحدة</TH>
+                                        <TH align="center" w={65}>التحمل %</TH>
                                         <TH align="center" w={80}>المبلغ المرفوض</TH>
                                         <TH align="center" w={80}>حصة الشركة</TH>
                                         <TH align="center" w={80}>حصة المشترك</TH>
@@ -954,24 +923,8 @@ export default function ClaimBatchEntry() {
                                                     />
                                                 </TableCell>
                                                 <TableCell align="center">
-                                                    <TextField fullWidth variant="standard" value={line.description}
-                                                        onChange={e => updateLine(idx, { description: e.target.value })} sx={inlineSx} />
-                                                </TableCell>
-                                                <TableCell align="center">
                                                     <TextField variant="standard" type="number" value={line.quantity}
                                                         onChange={e => updateLine(idx, { quantity: e.target.value })} sx={inlineSx} />
-                                                </TableCell>
-                                                <TableCell align="center">
-                                                    <TextField variant="standard" type="date"
-                                                        value={line.serviceDate || defaultDate}
-                                                        inputProps={{ max: new Date().toISOString().split('T')[0] }}
-                                                        onChange={e => {
-                                                            if (e.target.value > new Date().toISOString().split('T')[0]) {
-                                                                enqueueSnackbar('تاريخ الخدمة لا يمكن أن يكون في المستقبل', { variant: 'warning' });
-                                                                return;
-                                                            }
-                                                            updateLine(idx, { serviceDate: e.target.value });
-                                                        }} sx={inlineSx} />
                                                 </TableCell>
                                                 <TableCell align="center">
                                                     <Tooltip title={line.contractPrice > 0 && line.unitPrice > line.contractPrice ? `السعر يتجاوز العقد (${line.contractPrice})` : ''} arrow>
@@ -987,6 +940,11 @@ export default function ClaimBatchEntry() {
                                                             }}
                                                         />
                                                     </Tooltip>
+                                                </TableCell>
+                                                <TableCell align="center">
+                                                    <Typography variant="body2" sx={{ fontSize: '0.85rem', fontWeight: 700, color: 'text.secondary' }}>
+                                                        {line.coveragePercent !== null ? `${line.coveragePercent}%` : `${policyInfo?.defaultCoveragePercent ?? 100}%`}
+                                                    </Typography>
                                                 </TableCell>
                                                 <TableCell align="center">
                                                     <Typography variant="body2" sx={{ fontSize: '0.85rem', fontWeight: 800, color: 'error.main' }}>
@@ -1022,7 +980,7 @@ export default function ClaimBatchEntry() {
                                             </TableRow>
                                             {line.rejected && (
                                                 <TableRow sx={{ bgcolor: alpha(theme.palette.error.main, 0.02) }}>
-                                                    <TableCell colSpan={11} sx={{ py: 0.5 }}>
+                                                    <TableCell colSpan={10} sx={{ py: 0.5 }}>
                                                         <Typography variant="caption" color="error" fontWeight={800} sx={{ fontSize: '0.75rem', px: 2 }}>
                                                             سبب الرفض: {line.rejectionReason}
                                                         </Typography>
@@ -1031,7 +989,7 @@ export default function ClaimBatchEntry() {
                                             )}
                                             {line.usageExceeded && !line.rejected && (
                                                 <TableRow sx={{ bgcolor: alpha(theme.palette.warning.main, 0.05) }}>
-                                                    <TableCell colSpan={11} sx={{ py: 0.5 }}>
+                                                    <TableCell colSpan={10} sx={{ py: 0.5 }}>
                                                         <Typography variant="caption" color="warning.dark" fontWeight={800} sx={{ fontSize: '0.75rem', px: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                                                             <WarningIcon sx={{ fontSize: 14 }} />
                                                             تجاوز حد المنفعة:
@@ -1044,7 +1002,7 @@ export default function ClaimBatchEntry() {
                                         </Fragment>
                                     ))}
                                     <TableRow>
-                                        <TableCell colSpan={11} sx={{ py: 1, textAlign: 'center' }}>
+                                        <TableCell colSpan={10} sx={{ py: 1, textAlign: 'center' }}>
                                             <Button size="small" startIcon={<AddIcon />} onClick={addLine} sx={{ fontWeight: 800 }}>
                                                 {t('claimEntry.addLine')}
                                             </Button>

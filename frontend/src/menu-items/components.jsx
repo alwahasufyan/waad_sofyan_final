@@ -24,7 +24,10 @@ import {
   Folder as FolderIcon,
   VerifiedUser as VerifiedUserIcon,
   AssignmentInd as AssignmentIndIcon,
-  History as HistoryIcon
+  History as HistoryIcon,
+  PriceCheck as PriceCheckIcon,
+  BarChart as BarChartIcon,
+  ErrorOutline as ErrorOutlineIcon
 } from '@mui/icons-material';
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -110,26 +113,26 @@ const menuItem = [
   // 📊 DASHBOARD
   // ═══════════════════════════════════════════════════════════════════════════
   {
-    id: 'group-dashboard',
-    title: 'لوحة المعلومات',
-    titleEn: 'Dashboard',
+    id: 'group-statistics',
+    title: 'الإحصائيات والتقارير المالية',
+    titleEn: 'Statistics & Analytics',
     type: 'group',
     children: [
       {
         id: 'dashboard',
-        title: 'لوحة المعلومات الرئيسية',
-        titleEn: 'Main Dashboard',
+        title: 'لوحة الإحصائيات',
+        titleEn: 'Statistics Dashboard',
         type: 'item',
         url: '/dashboard',
-        icon: DashboardIcon,
+        icon: AssessmentIcon,
         resource: 'dashboard',
         action: 'view',
         breadcrumbs: false,
         chip: {
-          label: '✅',
-          color: 'success',
+          label: '📊',
+          color: 'info',
           size: 'small',
-          variant: 'filled'
+          variant: 'outlined'
         }
       }
     ]
@@ -366,6 +369,21 @@ const menuItem = [
               color: 'success',
               size: 'small'
             }
+          },
+          {
+            id: 'provider-users',
+            title: 'إدارة حسابات المقدمين',
+            titleEn: 'Provider Account Managers',
+            type: 'item',
+            url: '/admin/users?role=PROVIDER_STAFF',
+            icon: PeopleAltIcon,
+            resource: 'users',
+            action: 'view',
+            chip: {
+              label: 'جديد',
+              color: 'info',
+              size: 'small'
+            }
           }
         ]
       }
@@ -393,66 +411,6 @@ const menuItem = [
           // NOTE: Claims/Pre-Auth creation happens ONLY from Provider Portal (Visit-Based Flow)
           // Admin panel has NO direct creation - only review and processing
           {
-            id: 'claims-review-list',
-            title: 'مراجعة المطالبات',
-            titleEn: 'Review Claims',
-            type: 'item',
-            url: '/claims',
-            icon: InboxIcon,
-            resource: 'claims',
-            action: 'view',
-            chip: {
-              label: '✅',
-              color: 'success',
-              size: 'small'
-            }
-          },
-          {
-            id: 'pre-approvals-inbox',
-            title: 'وارد الموافقات المسبقة',
-            titleEn: 'Pre-Approvals Inbox',
-            type: 'item',
-            url: '/pre-approvals/inbox',
-            icon: InboxIcon,
-            resource: 'pre_auth',
-            action: 'view',
-            chip: {
-              label: '✅',
-              color: 'success',
-              size: 'small'
-            }
-          },
-          {
-            id: 'unified-approvals-dashboard',
-            title: 'لوحة الموافقات الموحدة',
-            titleEn: 'Unified Approvals Dashboard',
-            type: 'item',
-            url: '/approvals/dashboard',
-            icon: DashboardIcon,
-            resource: 'approvals_dashboard',
-            action: 'view',
-            chip: {
-              label: '✅',
-              color: 'success',
-              size: 'small'
-            }
-          },
-          {
-            id: 'backlog-claims',
-            title: 'المطالبات المتراكمة',
-            titleEn: 'Backlog Claims',
-            type: 'item',
-            url: '/claims/backlog',
-            icon: HistoryIcon,
-            resource: 'claims',
-            action: 'create',
-            chip: {
-              label: 'جديد',
-              color: 'primary',
-              size: 'small'
-            }
-          },
-          {
             id: 'claims-batches',
             title: 'نظام الدفعات (Batches)',
             titleEn: 'Claims Batch System',
@@ -461,9 +419,19 @@ const menuItem = [
             icon: FolderIcon,
             resource: 'claims',
             action: 'view',
+          },
+          {
+            id: 'claims-report',
+            title: 'تقرير المطالبات (مراجعة)',
+            titleEn: 'Claims Report',
+            type: 'item',
+            url: '/reports/claims',
+            icon: AssessmentIcon,
+            resource: 'claims',
+            action: 'view',
             chip: {
-              label: 'جديد',
-              color: 'primary',
+              label: 'تقرير',
+              color: 'info',
               size: 'small'
             }
           }
@@ -525,170 +493,38 @@ const menuItem = [
             title: 'مركز الدفع',
             titleEn: 'Payment Center',
             type: 'item',
-            url: '/settlements/payments',
-            icon: PaymentIcon,
-            resource: 'settlements',
-            action: 'pay',
-            chip: {
-              label: 'موحد',
-              color: 'success',
-              size: 'small'
-            }
-          }
-        ]
-      }
-    ]
-  },
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // 📈 REPORTS
-  // ═══════════════════════════════════════════════════════════════════════════
-  {
-    id: 'group-reports',
-    title: 'التقارير',
-    titleEn: 'Reports',
-    type: 'group',
-    children: [
-      {
-        id: 'reports',
-        title: 'مركز التقارير',
-        titleEn: 'Reports Center',
-        type: 'collapse',
-        icon: AssessmentIcon,
-        // No resource/action here - show collapse if any child is visible
-        children: [
-          {
-            id: 'claims-report',
-            title: 'تقارير المطالبات',
-            titleEn: 'Claims Reports',
-            type: 'item',
-            url: '/reports/claims',
-            icon: ReceiptIcon,
-            resource: 'report_claims',
-            action: 'view',
-            chip: {
-              label: '✅',
-              color: 'success',
-              size: 'small'
-            }
+            url: '/settlement/payments',
+            icon: PriceCheckIcon,
+            resource: 'payments',
+            action: 'view'
           },
           {
-            id: 'pre-approvals-report',
-            title: 'تقارير الموافقات المسبقة',
-            titleEn: 'Pre-Approvals Reports',
+            id: 'settlement-summary-report',
+            title: 'كشف حساب المزودين (له/عليه)',
+            titleEn: 'Provider Account Summary',
             type: 'item',
-            url: '/reports/pre-approvals',
-            icon: AssignmentIcon,
-            resource: 'report_pre_approvals',
-            action: 'view',
-            chip: {
-              label: '✅',
-              color: 'success',
-              size: 'small'
-            }
-          },
-          {
-            id: 'financial-reports',
-            title: 'التقارير المالية',
-            titleEn: 'Financial Reports',
-            type: 'item',
-            url: '/reports/financial',
-            icon: PaymentIcon,
-            resource: 'report_financial',
-            action: 'view',
-            chip: {
-              label: '✅',
-              color: 'success',
-              size: 'small'
-            }
-          },
-          {
-            id: 'provider-settlement-reports',
-            title: 'تقارير تسوية مقدمي الخدمة',
-            titleEn: 'Provider Settlement Reports',
-            type: 'item',
-            url: '/reports/provider-settlement',
-            icon: LocalHospitalIcon,
+            url: '/reports/provider-settlement-summary',
+            icon: BarChartIcon,
             resource: 'report_provider_settlement',
             action: 'view',
             chip: {
-              label: '✅',
-              color: 'success',
+              label: 'محاسبة',
+              color: 'error',
               size: 'small'
             }
           },
           {
-            id: 'employer-reports',
-            title: 'تقارير الشركاء',
-            titleEn: 'Employer Reports',
+            id: 'rejections-report',
+            title: 'تقرير المرفوضات التفصيلي',
+            titleEn: 'Detailed Rejections Report',
             type: 'item',
-            url: '/reports/employer-dashboard',
-            icon: BusinessIcon,
-            resource: 'report_employers',
+            url: '/reports/rejections',
+            icon: ErrorOutlineIcon,
+            resource: 'report_provider_settlement',
             action: 'view',
             chip: {
-              label: '✅',
-              color: 'success',
-              size: 'small'
-            }
-          },
-          {
-            id: 'visits-report',
-            title: 'تقارير الزيارات',
-            titleEn: 'Visits Reports',
-            type: 'item',
-            url: '/reports/visits',
-            icon: AssignmentIcon,
-            resource: 'report_visits',
-            action: 'view',
-            chip: {
-              label: '✅',
-              color: 'success',
-              size: 'small'
-            }
-          },
-          {
-            id: 'benefit-policy-report',
-            title: 'تقارير وثائق التأمين',
-            titleEn: 'Benefit Policy Reports',
-            type: 'item',
-            url: '/reports/benefit-policy',
-            icon: PolicyIcon,
-            resource: 'report_benefit_policy',
-            action: 'view',
-            chip: {
-              label: '✅',
-              color: 'success',
-              size: 'small'
-            }
-          },
-          {
-            id: 'beneficiaries-report',
-            title: 'تقارير المستفيدين',
-            titleEn: 'Insured Reports',
-            type: 'item',
-            url: '/reports/beneficiaries',
-            icon: PeopleAltIcon,
-            resource: 'report_beneficiaries',
-            action: 'view',
-            chip: {
-              label: '✅',
-              color: 'success',
-              size: 'small'
-            }
-          },
-          {
-            id: 'export-center',
-            title: 'مركز التصدير (PDF / Excel)',
-            titleEn: 'Export Center (PDF / Excel)',
-            type: 'item',
-            url: '/under-development',
-            icon: DescriptionIcon,
-            resource: 'report_export_center',
-            action: 'view',
-            chip: {
-              label: '⏳',
-              color: 'warning',
+              label: 'مهم',
+              color: 'error',
               size: 'small'
             }
           }

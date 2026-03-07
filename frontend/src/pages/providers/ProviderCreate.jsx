@@ -166,20 +166,10 @@ const ProviderCreate = () => {
       if (providerErrors.licenseNumber) count++;
       if (providerErrors.providerType) count++;
       if (providerErrors.taxNumber) count++;
-    } else if (tabIndex === 1) {
-      if (providerErrors.city) count++;
-      if (providerErrors.address) count++;
-      if (providerErrors.phone) count++;
-      if (providerErrors.email) count++;
     } else if (tabIndex === 2) {
       if (providerErrors.contractStartDate) count++;
       if (providerErrors.contractEndDate) count++;
       if (providerErrors.defaultDiscountRate) count++;
-    } else if (tabIndex === 4 && accountMode === 'CREATE') {
-      if (accountErrors.username) count++;
-      if (accountErrors.password) count++;
-      if (accountErrors.confirmPassword) count++;
-      if (accountErrors.fullName) count++;
     }
     return count;
   };
@@ -227,11 +217,9 @@ const ProviderCreate = () => {
   };
 
   useEffect(() => {
-    if (accountMode === 'LINK' && activeTab === 4) {
-      loadUnassignedUsers();
-    }
+    // Account Manager isolation - tab 4 removed
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accountMode, activeTab]);
+  }, [activeTab]);
 
   // Auto-populate account fullName and username from provider name
   useEffect(() => {
@@ -292,16 +280,6 @@ const ProviderCreate = () => {
       enqueueSnackbar('يرجى تصحيح الأخطاء في معلومات العقد', { variant: 'error' });
       return;
     }
-
-    // Check account errors if in CREATE mode
-    // specific checking since accountErrors is separate
-    if (
-      accountMode === 'CREATE' &&
-      (accountErrors.username || accountErrors.password || accountErrors.confirmPassword || accountErrors.fullName)
-    ) {
-      setActiveTab(4); // Account tab
-      enqueueSnackbar('يرجى تصحيح الأخطاء في بيانات الحساب', { variant: 'error' });
-    }
   };
 
   const renderFooterActions = (currentTab) => (
@@ -314,7 +292,7 @@ const ProviderCreate = () => {
         <div />
       )}
 
-      {currentTab < 4 ? (
+      {currentTab < 3 ? (
         <Button variant="contained" onClick={handleNext} endIcon={<ArrowBack sx={{ transform: 'rotate(0deg)' }} />}>
           التالي
         </Button>
@@ -340,45 +318,7 @@ const ProviderCreate = () => {
     setSubmitting(true);
     setSavingStep('التحقق من البيانات...');
 
-    // Validate account mode specific requirements
-    if (accountMode === 'CREATE') {
-      // Get account form data and validate
-      const accountData = watchAccount();
-
-      try {
-        await accountCreationSchema.validate(accountData);
-      } catch {
-        enqueueSnackbar('يرجى إكمال بيانات حساب المسؤول الجديد بشكل صحيح', { variant: 'error' });
-        setActiveTab(4);
-        setSearchParams({ tab: '4' });
-        setSubmitting(false);
-        setSavingStep('');
-        return;
-      }
-
-      // ✅ Check for duplicate username
-      try {
-        const allUsers = await usersService.getAllUsers();
-        const duplicateUser = allUsers?.find((u) => u.username === accountData.username);
-        if (duplicateUser) {
-          enqueueSnackbar(`اسم المستخدم "${accountData.username}" مستخدم بالفعل. يرجى اختيار اسم آخر.`, { variant: 'error' });
-          setActiveTab(4);
-          setSearchParams({ tab: '4' });
-          setSubmitting(false);
-          setSavingStep('');
-          return;
-        }
-      } catch (error) {
-        console.warn('Could not check duplicate username:', error);
-      }
-    } else if (accountMode === 'LINK' && !selectedUserToLink) {
-      enqueueSnackbar('يرجى اختيار مستخدم لربطه كمسؤول', { variant: 'error' });
-      setActiveTab(4);
-      setSearchParams({ tab: '4' });
-      setSubmitting(false);
-      setSavingStep('');
-      return;
-    }
+    // ✅ Simplified Entry: Account creation isolated from main wizard
 
     // Sanitize payload (convert empty strings to null, ensure numeric types)
     const payload = sanitizeProviderPayload(providerData);
@@ -402,14 +342,7 @@ const ProviderCreate = () => {
             }
           }
 
-          // Step 2: Create/Link Account
-          setSavingStep('إنشاء حساب المسؤول...');
-          if (accountMode === 'CREATE') {
-            const accountData = watchAccount();
-            await createNewAccount(newProviderId, accountData, providerData.name);
-          } else if (accountMode === 'LINK' && selectedUserToLink) {
-            await linkExistingAccount(newProviderId, selectedUserToLink.id);
-          }
+          // Account creation isolated - skipped in create wizard
         }
 
         setSavingStep('اكتمل!');
@@ -1103,15 +1036,6 @@ const ProviderCreate = () => {
               iconPosition="start"
             />
             <Tab icon={<Handshake />} label="الشركاء" iconPosition="start" />
-            <Tab
-              icon={
-                <Badge badgeContent={getTabErrors(4)} color="error">
-                  <People />
-                </Badge>
-              }
-              label="مدير الحساب"
-              iconPosition="start"
-            />
           </Tabs>
         </Box>
 
@@ -1127,9 +1051,6 @@ const ProviderCreate = () => {
           </Box>
           <Box role="tabpanel" hidden={activeTab !== 3}>
             {activeTab === 3 && renderPartners()}
-          </Box>
-          <Box role="tabpanel" hidden={activeTab !== 4}>
-            {activeTab === 4 && renderAccountManager()}
           </Box>
         </Box>
 

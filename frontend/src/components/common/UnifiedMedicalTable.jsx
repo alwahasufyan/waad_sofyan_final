@@ -127,6 +127,7 @@ const UnifiedMedicalTable = ({
   // Row Rendering
   renderCell,
   getRowKey = (row, index) => row.id || index,
+  getRowSx,
 
   // Empty State - accept both individual props and emptyStateConfig object
   emptyMessage = 'لا توجد بيانات',
@@ -307,7 +308,8 @@ const UnifiedMedicalTable = ({
                       bgcolor: `${rowHover} !important`
                     },
                     transition: 'background-color 0.2s',
-                    borderBottom: `1px solid ${alpha(theme.palette.divider, 0.8)}`
+                    borderBottom: `1px solid ${alpha(theme.palette.divider, 0.8)}`,
+                    ...(getRowSx ? getRowSx(row, rowIndex) : {})
                   }}
                 >
                   {columns.map((column) => (

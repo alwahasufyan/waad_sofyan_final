@@ -23,6 +23,7 @@ import visitsService from 'services/api/visits.service';
 
 // Insurance UX Components - Phase B3
 import { NetworkBadge, CardStatusBadge } from 'components/insurance';
+import { projectSettings } from 'config';
 
 // ============ VISIT CONFIGURATION ============
 // Visit Type Labels (Arabic) - Synced with Backend VisitType Enum
@@ -410,40 +411,44 @@ const VisitsList = () => {
       case 'actions':
         return (
           <Stack direction="row" spacing={0.5} justifyContent="center" alignItems="center">
-            <Button
-              size="small"
-              variant="contained"
-              onClick={() => handleCreateClaim(visitId)}
-              sx={{
-                bgcolor: '#2e7d32',
-                color: 'white',
-                minWidth: '80px',
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                '&:hover': {
-                  bgcolor: '#1b5e20'
-                }
-              }}
-            >
-              مطالبة
-            </Button>
-            <Button
-              size="small"
-              variant="contained"
-              onClick={() => handleCreatePreAuth(visitId)}
-              sx={{
-                bgcolor: '#2e7d32',
-                color: 'white',
-                minWidth: '110px',
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                '&:hover': {
-                  bgcolor: '#1b5e20'
-                }
-              }}
-            >
-              موافقة مسبقة
-            </Button>
+            {projectSettings.features.directClaimSubmissionEnabled && (
+              <Button
+                size="small"
+                variant="contained"
+                onClick={() => handleCreateClaim(visitId)}
+                sx={{
+                  bgcolor: '#2e7d32',
+                  color: 'white',
+                  minWidth: '80px',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  '&:hover': {
+                    bgcolor: '#1b5e20'
+                  }
+                }}
+              >
+                مطالبة
+              </Button>
+            )}
+            {projectSettings.features.directClaimSubmissionEnabled && (
+              <Button
+                size="small"
+                variant="contained"
+                onClick={() => handleCreatePreAuth(visitId)}
+                sx={{
+                  bgcolor: '#2e7d32',
+                  color: 'white',
+                  minWidth: '110px',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  '&:hover': {
+                    bgcolor: '#1b5e20'
+                  }
+                }}
+              >
+                موافقة مسبقة
+              </Button>
+            )}
             <Tooltip title="تعديل">
               <IconButton size="small" color="primary" onClick={() => handleEdit(visitId)}>
                 <EditIcon fontSize="small" />

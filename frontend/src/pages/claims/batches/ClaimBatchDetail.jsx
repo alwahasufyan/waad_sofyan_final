@@ -19,7 +19,8 @@ import {
     Avatar,
     Divider,
     MenuItem,
-    FormControl
+    FormControl,
+    alpha
 } from '@mui/material';
 
 import {
@@ -44,6 +45,7 @@ import ExcelJS from 'exceljs';
 import MainCard from 'components/MainCard';
 import { ModernPageHeader } from 'components/tba';
 import { UnifiedMedicalTable } from 'components/common';
+import BatchPrintReport from './components/BatchPrintReport';
 
 // services
 import claimsService from 'services/api/claims.service';
@@ -204,8 +206,7 @@ export default function ClaimBatchDetail() {
     };
 
     const handleExportPDF = () => {
-        // Since Arabic font support in jsPDF is complex, 
-        // we'll trigger the browser print which the user prefers for PDF tables
+        // Triggers the @media print CSS rules from BatchPrintReport component
         window.print();
     };
 
@@ -311,7 +312,7 @@ export default function ClaimBatchDetail() {
                             </IconButton>
                         </Tooltip>
                         <Tooltip title="طباعة">
-                            <IconButton>
+                            <IconButton onClick={handleExportPDF}>
                                 <PrintIcon fontSize="small" sx={{ fontSize: '1.2rem' }} />
                             </IconButton>
                         </Tooltip>
@@ -324,6 +325,17 @@ export default function ClaimBatchDetail() {
 
     return (
         <Box sx={{ height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column', px: { xs: 2, sm: 3 } }}>
+
+            {/* INVISIBLE PRINT COMPONENT */}
+            <BatchPrintReport
+                claims={claims}
+                batchCode={batchCode}
+                employer={employer}
+                provider={provider}
+                month={month}
+                year={year}
+            />
+
             <ModernPageHeader
                 title={<span dir="ltr">{batchCode}</span>}
                 subtitle={`دفعة لشهر ${MONTHS_AR[month - 1]} ${year} - ${provider?.name || '...'}`}

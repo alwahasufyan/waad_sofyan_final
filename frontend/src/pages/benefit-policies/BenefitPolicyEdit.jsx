@@ -306,7 +306,7 @@ const BenefitPolicyEdit = () => {
 
                 <Grid container spacing={4}>
                   {/* === Section 1: Basic Information === */}
-                  <Grid item xs={12}>
+                  <Grid size={{ xs: 12 }}>
                     <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
                       <BusinessIcon color="primary" fontSize="small" />
                       <Typography variant="h6" color="primary">
@@ -316,7 +316,7 @@ const BenefitPolicyEdit = () => {
                     <Divider />
                   </Grid>
 
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <TextField
                       fullWidth
                       label="اسم الوثيقة"
@@ -337,7 +337,7 @@ const BenefitPolicyEdit = () => {
                     />
                   </Grid>
 
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <TextField
                       fullWidth
                       select
@@ -368,7 +368,7 @@ const BenefitPolicyEdit = () => {
                     </TextField>
                   </Grid>
 
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <TextField
                       fullWidth
                       label="رمز الوثيقة"
@@ -384,7 +384,7 @@ const BenefitPolicyEdit = () => {
                     />
                   </Grid>
 
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <TextField
                       fullWidth
                       select
@@ -414,7 +414,7 @@ const BenefitPolicyEdit = () => {
                     <Divider />
                   </Grid>
 
-                  <Grid item xs={12} md={6} lg={3}>
+                  <Grid size={{ xs: 12, md: 6, lg: 3 }}>
                     <TextField
                       fullWidth
                       label="السقف السنوي"
@@ -431,7 +431,7 @@ const BenefitPolicyEdit = () => {
                     />
                   </Grid>
 
-                  <Grid item xs={12} md={6} lg={3}>
+                  <Grid size={{ xs: 12, md: 6, lg: 3 }}>
                     <TextField
                       fullWidth
                       label="نسبة التغطية"
@@ -448,7 +448,7 @@ const BenefitPolicyEdit = () => {
                     />
                   </Grid>
 
-                  <Grid item xs={12} md={6} lg={3}>
+                  <Grid size={{ xs: 12, md: 6, lg: 3 }}>
                     <TextField
                       fullWidth
                       label="الحد للفرد"
@@ -465,7 +465,7 @@ const BenefitPolicyEdit = () => {
                     />
                   </Grid>
 
-                  <Grid item xs={12} md={6} lg={3}>
+                  <Grid size={{ xs: 12, md: 6, lg: 3 }}>
                     <TextField
                       fullWidth
                       label="الحد للعائلة"
@@ -493,7 +493,7 @@ const BenefitPolicyEdit = () => {
                     <Divider />
                   </Grid>
 
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <DatePicker
                       label="تاريخ البدء *"
                       value={values.startDate}
@@ -508,7 +508,7 @@ const BenefitPolicyEdit = () => {
                     />
                   </Grid>
 
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <DatePicker
                       label="تاريخ الانتهاء *"
                       value={values.endDate}
@@ -535,7 +535,7 @@ const BenefitPolicyEdit = () => {
                     <Divider />
                   </Grid>
 
-                  <Grid item xs={12}>
+                  <Grid size={{ xs: 12 }}>
                     <TextField
                       fullWidth
                       multiline
@@ -550,7 +550,7 @@ const BenefitPolicyEdit = () => {
                   </Grid>
 
                   {/* === Actions === */}
-                  <Grid item xs={12}>
+                  <Grid size={{ xs: 12 }}>
                     <Stack
                       direction="row"
                       justifyContent="flex-end"

@@ -168,7 +168,13 @@ public class CreateClaimRequest {
          */
         private String serviceCategoryName;
 
-        // ❌ NO unitPrice - Auto-resolved from Provider Contract
+        /**
+         * Optional: Unit Price (REQUIRED for LEGACY_BACKLOG claims)
+         * ARCHITECTURAL LAW: For regular claims, this is ignored and resolved from contract.
+         * For backlog claims, this is used as the source of truth.
+         */
+        private java.math.BigDecimal unitPrice;
+
         // ❌ NO totalPrice - Calculated as quantity * unitPrice
         // ❌ NO approvedPrice - Calculated during approval
     }

@@ -14,16 +14,16 @@ import {
     Stack,
     Autocomplete,
     TextField,
-    Chip,
     Avatar,
     IconButton,
-    Tooltip,
     Divider,
     CircularProgress,
-    Badge,
     Select,
     MenuItem,
-    FormControl
+    FormControl,
+    Collapse,
+    LinearProgress,
+    alpha
 } from '@mui/material';
 
 import {
@@ -31,15 +31,17 @@ import {
     LocalHospital as LocalHospitalIcon,
     Folder as FolderIcon,
     Search as SearchIcon,
-    Add as AddIcon,
-    Timeline as TimelineIcon,
     Receipt as ReceiptIcon,
-    ArrowForward as ArrowForwardIcon,
-    CalendarMonth as CalendarIcon,
     ViewList as ViewListIcon,
     CheckCircle as CheckCircleIcon,
     Cancel as CancelIcon,
-    CalendarToday as CalendarTodayIcon
+    Assessment as AssessmentIcon,
+    ExpandMore as ExpandMoreIcon,
+    ExpandLess as ExpandLessIcon,
+    TrendingUp as TrendingUpIcon,
+    People as PeopleIcon,
+    AttachMoney as AttachMoneyIcon,
+    Pending as PendingIcon
 } from '@mui/icons-material';
 
 import { useQuery } from '@tanstack/react-query';
@@ -53,6 +55,7 @@ import employersService from 'services/api/employers.service';
 import providersService from 'services/api/providers.service';
 import providerContractsService from 'services/api/provider-contracts.service';
 import claimsService from 'services/api/claims.service';
+import useAuth from 'hooks/useAuth';
 
 // ===========================================
 // CONSTANTS
@@ -63,10 +66,10 @@ const MONTHS_AR = [
     'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
 ];
 
-const MONTHS_EN = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
-];
+const formatLYD = (amount) => {
+    if (!amount && amount !== 0) return '0.00 د.ل';
+    return `${parseFloat(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ل`;
+};
 
 // ===========================================
 // HELPERS
@@ -162,7 +165,7 @@ const ProviderBatchCard = ({ provider, selectedEmployer, onSelectBatch, filterMo
                 {/* 1. Header Row (Month | Code) */}
                 <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
                     <Typography variant="caption" sx={{ color: '#888', fontWeight: 600 }}>
-                        {MONTHS_EN[filterMonth - 1]} {filterYear}
+                        {MONTHS_AR[filterMonth - 1]} {filterYear}
                     </Typography>
                     <Typography
                         variant="caption"
@@ -179,17 +182,17 @@ const ProviderBatchCard = ({ provider, selectedEmployer, onSelectBatch, filterMo
                         direction="row"
                         alignItems="center"
                         justifyContent="center"
-                        spacing={1.5}
+                        spacing={2}
                         sx={{ mb: 1.5 }}
                     >
-                        <BusinessIcon sx={{ color: '#d0d0d0', fontSize: '1rem' }} />
+                        <BusinessIcon sx={{ color: '#d0d0d0', fontSize: '0.9rem' }} />
                         <Typography
                             variant="subtitle1"
                             sx={{
                                 fontWeight: 700,
                                 color: '#444',
                                 textAlign: 'center',
-                                fontSize: '1rem',
+                                fontSize: '0.88rem',
                                 lineHeight: 1.2
                             }}
                         >
@@ -214,10 +217,10 @@ const ProviderBatchCard = ({ provider, selectedEmployer, onSelectBatch, filterMo
                     mx: 'auto',
                     minHeight: 50
                 }}>
-                    <Stack direction="row" spacing={1.5} alignItems="center" sx={{ whiteSpace: 'nowrap' }}>
-                        <ViewListIcon sx={{ color: '#7cb983', fontSize: '2rem' }} />
-                        <Typography variant="h5" sx={{ color: '#7cb983', fontWeight: 700 }}>
-                            {stats.requestsCount} Requests
+                    <Stack direction="row" spacing={2} alignItems="center" sx={{ whiteSpace: 'nowrap' }}>
+                        <ViewListIcon sx={{ color: '#7cb983', fontSize: '1.6rem' }} />
+                        <Typography variant="h6" sx={{ color: '#7cb983', fontWeight: 700, fontSize: '1.1rem' }}>
+                            {stats.requestsCount} مطالبة
                         </Typography>
                     </Stack>
                 </Box>
@@ -237,8 +240,8 @@ const ProviderBatchCard = ({ provider, selectedEmployer, onSelectBatch, filterMo
                         py: 0.6,
                         boxShadow: '0 2px 4px rgba(0,0,0,0.03)'
                     }}>
-                        <Typography variant="body2" sx={{ fontWeight: 600 }}>Amount</Typography>
-                        <Typography variant="body2" sx={{ fontWeight: 800 }}>{stats.amount.toFixed(2)}</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.78rem' }}>المبلغ المطلوب</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 800, fontSize: '0.85rem' }}>{stats.amount.toFixed(2)}</Typography>
                     </Box>
 
                     {/* Covered Block */}
@@ -253,11 +256,11 @@ const ProviderBatchCard = ({ provider, selectedEmployer, onSelectBatch, filterMo
                         py: 0.6,
                         boxShadow: '0 2px 4px rgba(0,0,0,0.03)'
                     }}>
-                        <Stack direction="row" alignItems="center" spacing={1}>
-                            <CheckCircleIcon sx={{ fontSize: '1.2rem' }} />
-                            <Typography variant="body2" sx={{ fontWeight: 600 }}>Covered</Typography>
+                        <Stack direction="row" alignItems="center" spacing={1.5}>
+                            <CheckCircleIcon sx={{ fontSize: '1.1rem' }} />
+                            <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.78rem' }}>المعتمد</Typography>
                         </Stack>
-                        <Typography variant="body2" sx={{ fontWeight: 800 }}>{stats.covered.toFixed(2)}</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 800, fontSize: '0.85rem' }}>{stats.covered.toFixed(2)}</Typography>
                     </Box>
 
                     {/* Refused Block */}
@@ -272,11 +275,11 @@ const ProviderBatchCard = ({ provider, selectedEmployer, onSelectBatch, filterMo
                         py: 0.6,
                         boxShadow: '0 2px 4px rgba(0,0,0,0.03)'
                     }}>
-                        <Stack direction="row" alignItems="center" spacing={1}>
-                            <CancelIcon sx={{ fontSize: '1.2rem' }} />
-                            <Typography variant="body2" sx={{ fontWeight: 600 }}>Refused</Typography>
+                        <Stack direction="row" alignItems="center" spacing={1.5}>
+                            <CancelIcon sx={{ fontSize: '1.1rem' }} />
+                            <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.78rem' }}>المرفوض</Typography>
                         </Stack>
-                        <Typography variant="body2" sx={{ fontWeight: 800 }}>{stats.refused.toFixed(2)}</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 800, fontSize: '0.85rem' }}>{stats.refused.toFixed(2)}</Typography>
                     </Box>
 
                 </Stack>
@@ -284,6 +287,38 @@ const ProviderBatchCard = ({ provider, selectedEmployer, onSelectBatch, filterMo
         </Card>
     );
 };
+
+// ===========================================
+// STATISTICS PANEL
+// ===========================================
+
+const StatKpiCard = ({ title, value, subtitle, gradient, icon: Icon }) => (
+    <Card sx={{
+        height: '100%',
+        background: gradient,
+        color: '#fff',
+        borderRadius: 2,
+        overflow: 'hidden',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+        transition: 'transform 0.2s ease',
+        '&:hover': { transform: 'translateY(-2px)' }
+    }}>
+        <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
+            <Stack spacing={0.5}>
+                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Typography variant="caption" sx={{ opacity: 0.9, fontWeight: 700, textTransform: 'uppercase', fontSize: '0.65rem' }}>
+                        {title}
+                    </Typography>
+                    <Box sx={{ p: 0.5, borderRadius: 1, bgcolor: 'rgba(255,255,255,0.2)', display: 'flex' }}>
+                        <Icon sx={{ fontSize: 16 }} />
+                    </Box>
+                </Stack>
+                <Typography variant="h5" fontWeight={800}>{value}</Typography>
+                {subtitle && <Typography variant="caption" sx={{ opacity: 0.8, fontSize: '0.65rem' }}>{subtitle}</Typography>}
+            </Stack>
+        </CardContent>
+    </Card>
+);
 
 // ===========================================
 // MAIN COMPONENT
@@ -296,6 +331,7 @@ export default function ClaimBatchManagement() {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterMonth, setFilterMonth] = useState(new Date().getMonth() + 1);
     const [filterYear, setFilterYear] = useState(new Date().getFullYear());
+    const [showStats, setShowStats] = useState(false);
 
     // 1. Fetch Employers for Selector
     const { data: employers, isLoading: isLoadingEmployers } = useQuery({
@@ -323,6 +359,21 @@ export default function ClaimBatchManagement() {
         enabled: !!selectedEmployer
     });
 
+    // 4. Fetch Global Financial Stats (lazy - only when showStats=true)
+    const { data: globalStats, isLoading: isLoadingStats } = useQuery({
+        queryKey: ['batch-global-stats', selectedEmployer?.id, filterMonth, filterYear],
+        queryFn: () => claimsService.getFinancialSummary({
+            employerId: selectedEmployer?.id,
+            dateFrom: `${filterYear}-${String(filterMonth).padStart(2, '0')}-01`,
+            dateTo: `${filterYear}-${String(filterMonth).padStart(2, '0')}-31`
+        }),
+        enabled: !!selectedEmployer && showStats
+    });
+
+    const { user } = useAuth();
+    const isProviderUser = user?.userType === 'PROVIDER_STAFF';
+    const userProviderId = user?.providerId;
+
     const filteredProviders = useMemo(() => {
         if (!allowedProviders || !selectedEmployer) return [];
 
@@ -336,13 +387,18 @@ export default function ClaimBatchManagement() {
         }
 
         // Final enriched list
-        const list = allowedProviders.map((p) => ({
+        let list = allowedProviders.map((p) => ({
             id: p.id,
             name: p.name,
             code: p.licenseNumber || p.code || p.id,
             city: p.city || 'المنطقة',
             contractId: contractByProviderId.get(p.id) || null
         }));
+
+        // ROLE ISOLATION: If provider user, filter to ONLY their provider ID
+        if (isProviderUser && userProviderId) {
+            list = list.filter(p => p.id === userProviderId);
+        }
 
         if (searchTerm) {
             return list.filter(p =>
@@ -352,7 +408,7 @@ export default function ClaimBatchManagement() {
         }
 
         return list;
-    }, [allowedProviders, providerContracts, selectedEmployer, searchTerm]);
+    }, [allowedProviders, providerContracts, selectedEmployer, searchTerm, isProviderUser, userProviderId]);
 
     const handleSelectBatch = (provider, month, year) => {
         // Navigate to batch detail view (the list shown in your reference image)
@@ -373,6 +429,19 @@ export default function ClaimBatchManagement() {
                 ]}
                 actions={
                     <Stack direction="row" spacing={2} alignItems="center">
+                        {selectedEmployer && (
+                            <Button
+                                variant={showStats ? 'contained' : 'outlined'}
+                                color="secondary"
+                                size="small"
+                                startIcon={<AssessmentIcon />}
+                                endIcon={showStats ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                                onClick={() => setShowStats(v => !v)}
+                                sx={{ borderRadius: 2, fontWeight: 700 }}
+                            >
+                                {showStats ? 'إخفاء الإحصائيات' : 'عرض الإحصائيات'}
+                            </Button>
+                        )}
                         {/* Employer Selector Directly in Header for context */}
                         <Autocomplete
                             size="small"
@@ -402,6 +471,54 @@ export default function ClaimBatchManagement() {
                     </Stack>
                 }
             />
+
+            {/* 🔹 STATISTICS PANEL (Collapsible) 🔹 */}
+            <Collapse in={showStats && !!selectedEmployer} timeout="auto">
+                <Box sx={{ mb: 2, mt: -1 }}>
+                    {isLoadingStats ? (
+                        <Box sx={{ py: 2 }}><LinearProgress /></Box>
+                    ) : (
+                        <Grid container spacing={2}>
+                            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                                <StatKpiCard
+                                    title="إجمالي المطالبات"
+                                    value={globalStats?.claimsCount || 0}
+                                    subtitle={`لشهر ${MONTHS_AR[filterMonth - 1]} ${filterYear}`}
+                                    gradient="linear-gradient(135deg, #0d9488 0%, #14b8a6 100%)"
+                                    icon={ReceiptIcon}
+                                />
+                            </Grid>
+                            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                                <StatKpiCard
+                                    title="المبلغ المطلوب"
+                                    value={formatLYD(globalStats?.totalClaimsAmount)}
+                                    subtitle="إجمالي مبالغ المطالبات"
+                                    gradient="linear-gradient(135deg, #0891b2 0%, #38bdf8 100%)"
+                                    icon={AttachMoneyIcon}
+                                />
+                            </Grid>
+                            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                                <StatKpiCard
+                                    title="المعتمد"
+                                    value={formatLYD(globalStats?.totalApprovedAmount)}
+                                    subtitle="إجمالي المبالغ المعتمدة"
+                                    gradient="linear-gradient(135deg, #059669 0%, #10b981 100%)"
+                                    icon={CheckCircleIcon}
+                                />
+                            </Grid>
+                            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                                <StatKpiCard
+                                    title="المرفوض"
+                                    value={formatLYD(globalStats?.totalRefusedAmount)}
+                                    subtitle="إجمالي المبالغ المرفوضة"
+                                    gradient="linear-gradient(135deg, #e11d48 0%, #fb7185 100%)"
+                                    icon={CancelIcon}
+                                />
+                            </Grid>
+                        </Grid>
+                    )}
+                </Box>
+            </Collapse>
 
             {/* 🔹 MAIN CONTENT 🔹 */}
             <Box sx={{ flex: 1, pt: 0, pb: 2, mt: -2 }}>
@@ -445,7 +562,7 @@ export default function ClaimBatchManagement() {
                                             displayEmpty
                                             sx={{ bgcolor: 'background.default' }}
                                         >
-                                            {MONTHS_EN.map((m, idx) => (
+                                            {MONTHS_AR.map((m, idx) => (
                                                 <MenuItem key={idx} value={idx + 1}>{m}</MenuItem>
                                             ))}
                                         </Select>
@@ -492,7 +609,7 @@ export default function ClaimBatchManagement() {
                         ) : filteredProviders.length > 0 ? (
                             <Grid container spacing={3}>
                                 {filteredProviders.map((provider) => (
-                                    <Grid item xs={12} sm={12} md={6} lg={4} key={provider.id}>
+                                    <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={provider.id}>
                                         <ProviderBatchCard
                                             provider={provider}
                                             selectedEmployer={selectedEmployer}

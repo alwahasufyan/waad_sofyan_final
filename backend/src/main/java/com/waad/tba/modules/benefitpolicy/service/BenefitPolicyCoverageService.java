@@ -16,6 +16,8 @@ import com.waad.tba.modules.medicaltaxonomy.entity.MedicalCategory;
 import com.waad.tba.modules.medicaltaxonomy.entity.MedicalService;
 import com.waad.tba.modules.medicaltaxonomy.repository.MedicalServiceCategoryRepository;
 import com.waad.tba.modules.medicaltaxonomy.repository.MedicalServiceRepository;
+import com.waad.tba.security.AuthorizationService;
+import com.waad.tba.modules.rbac.entity.User;
 import lombok.Builder;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -74,6 +76,7 @@ public class BenefitPolicyCoverageService {
     private final MedicalServiceCategoryRepository serviceCategoryRepository;
     private final ClaimRepository claimRepository;
     private final MemberRepository memberRepository;
+    private final AuthorizationService authorizationService;
 
     // ═══════════════════════════════════════════════════════════════════════════
     // ARCHITECTURAL CONSTANTS
@@ -119,8 +122,24 @@ public class BenefitPolicyCoverageService {
             var resolvedOpt = policyRepository
                     .findActiveEffectivePolicyForEmployer(member.getEmployer().getId(), serviceDate);
 
-            if (resolvedOpt.isPresent()) {
+            // Fallback for internal staff: Try finding ANY active policy regardless of date for backlog entry
+            if (resolvedOpt.isEmpty()) {
+                User currentUser = authorizationService.getCurrentUser();
+                if (currentUser != null && authorizationService.isInternalStaff(currentUser)) {
+                    log.info("🔍 No date-matched policy found for backlog. Searching for any active policy for employer...");
+                    List<BenefitPolicy> allActive = policyRepository.findByEmployerIdAndStatusAndActiveTrue(
+                        member.getEmployer().getId(), BenefitPolicyStatus.ACTIVE);
+                    if (!allActive.isEmpty()) {
+                        // Pick the latest created one
+                        policy = allActive.get(allActive.size() - 1);
+                        log.info("✅ Best-effort resolution: using latest active policy '{}' for backlog entry", policy.getName());
+                    }
+                }
+            } else {
                 policy = resolvedOpt.get();
+            }
+
+            if (policy != null) {
                 member.setBenefitPolicy(policy);
                 memberRepository.save(member);
                 log.info("✅ Auto-resolved and saved policy '{}' for member '{}'",
@@ -130,8 +149,9 @@ public class BenefitPolicyCoverageService {
 
         if (policy == null) {
             throw new BusinessRuleException(
-                    String.format("Member %s has no assigned Benefit Policy. Cannot process claim.",
-                            member.getFullName()));
+                    String.format("Member %s has no assigned Benefit Policy. Cannot process claim. (Employer: %s)",
+                            member.getFullName(), 
+                            member.getEmployer() != null ? member.getEmployer().getName() : "None"));
         }
 
         if (!policy.isActive()) {
@@ -148,9 +168,15 @@ public class BenefitPolicyCoverageService {
         }
 
         if (!policy.isEffectiveOn(serviceDate)) {
-            throw new BusinessRuleException(
-                    String.format("Member's Benefit Policy '%s' is not effective on %s. Policy period: %s to %s",
-                            policy.getName(), serviceDate, policy.getStartDate(), policy.getEndDate()));
+            User currentUser = authorizationService.getCurrentUser();
+            if (currentUser != null && authorizationService.isInternalStaff(currentUser)) {
+                log.warn("⚠️ Backlog Entry: Date {} is outside policy '{}' period [{} to {}]. Staff bypass allowed.",
+                        serviceDate, policy.getName(), policy.getStartDate(), policy.getEndDate());
+            } else {
+                throw new BusinessRuleException(
+                        String.format("Member's Benefit Policy '%s' is not effective on %s. Policy period: %s to %s",
+                                policy.getName(), serviceDate, policy.getStartDate(), policy.getEndDate()));
+            }
         }
 
         log.debug("✅ Member {} has valid policy '{}' for date {}",

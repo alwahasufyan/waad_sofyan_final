@@ -8,7 +8,6 @@ export { default as dashboardService } from './dashboard.service';
 export { default as employersService } from './employers.service';
 export { default as membersService } from './members.service';
 export { default as visitsService } from './visits.service';
-export { default as backlogService } from './backlog.service';
 export { default as preApprovalsService } from './pre-approvals.service';
 export * as medicalServicesService from './medical-services.service';
 export * as medicalCategoriesService from './medical-categories.service';

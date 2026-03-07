@@ -55,14 +55,17 @@ import PaidIcon from '@mui/icons-material/Paid';
 import AddIcon from '@mui/icons-material/Add';
 import ReceiptIcon from '@mui/icons-material/Receipt';
 import LockIcon from '@mui/icons-material/Lock';
+import PrintIcon from '@mui/icons-material/Print';
 
 // MUI DataGrid
+
 import { DataGrid } from '@mui/x-data-grid';
 
 // Project Components
 import MainCard from 'components/MainCard';
 import UnifiedPageHeader from 'components/UnifiedPageHeader';
 import PermissionGuard from 'components/PermissionGuard';
+import SettlementPrintReport from './components/SettlementPrintReport';
 
 // Services
 import { settlementBatchesService } from 'services/api/settlement.service';
@@ -419,6 +422,10 @@ const SettlementBatchView = () => {
     navigate(`/settlement/batches/${batchId}/add-claims`);
   }, [navigate, batchId]);
 
+  const handlePrint = useCallback(() => {
+    window.print();
+  }, []);
+
   // ========================================
   // TABLE COLUMNS
   // ========================================
@@ -537,6 +544,11 @@ const SettlementBatchView = () => {
         </PermissionGuard>
       )}
 
+      <Tooltip title="طباعة التسوية">
+        <IconButton onClick={handlePrint} color="secondary">
+          <PrintIcon />
+        </IconButton>
+      </Tooltip>
       <Tooltip title="تحديث">
         <IconButton onClick={handleRefresh} color="primary">
           <RefreshIcon />
@@ -575,6 +587,9 @@ const SettlementBatchView = () => {
   return (
     <PermissionGuard resource="settlements" action="view" fallback={<Alert severity="error">ليس لديك صلاحية لعرض هذه الصفحة</Alert>}>
       <Box>
+        {/* INVISIBLE PRINT COMPONENT */}
+        <SettlementPrintReport batch={batchData} items={processedItems} />
+
         {/* Page Header */}
         <UnifiedPageHeader
           title="تفاصيل دفعة التسوية"

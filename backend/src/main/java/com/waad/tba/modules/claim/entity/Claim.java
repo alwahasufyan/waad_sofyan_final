@@ -314,15 +314,15 @@ public class Claim {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
         validateArchitecturalRules();
-        validateBusinessRules();
         calculateFields();
+        validateBusinessRules();
     }
 
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
-        validateBusinessRules();
         calculateFields();
+        validateBusinessRules();
     }
 
     /**
@@ -389,14 +389,29 @@ public class Claim {
         // Calculate requested amount from lines (SUM of all line totals)
         if (lines != null && !lines.isEmpty()) {
             requestedAmount = lines.stream()
-                    .map(ClaimLine::getTotalPrice)
+                    .map(line -> {
+                        // Extra safety: Recalculate if totalPrice is missing in memory
+                        if (line.getTotalPrice() == null || line.getTotalPrice().compareTo(BigDecimal.ZERO) == 0) {
+                            if (line.getUnitPrice() != null && line.getQuantity() != null) {
+                                return line.getUnitPrice().multiply(BigDecimal.valueOf(line.getQuantity()));
+                            }
+                        }
+                        return line.getTotalPrice();
+                    })
                     .filter(java.util.Objects::nonNull)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             
             // Calculate refused amount from rejected lines (Phase: Partial Rejection)
             refusedAmount = lines.stream()
                     .filter(line -> Boolean.TRUE.equals(line.getRejected()))
-                    .map(ClaimLine::getTotalPrice)
+                    .map(line -> {
+                        if (line.getTotalPrice() == null || line.getTotalPrice().compareTo(BigDecimal.ZERO) == 0) {
+                            if (line.getUnitPrice() != null && line.getQuantity() != null) {
+                                return line.getUnitPrice().multiply(BigDecimal.valueOf(line.getQuantity()));
+                            }
+                        }
+                        return line.getTotalPrice();
+                    })
                     .filter(java.util.Objects::nonNull)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
         } else {
@@ -506,11 +521,7 @@ public class Claim {
         return attachments != null ? attachments.size() : 0;
     }
 
-    /**
-     * Legacy backlog check (Always false for unified workflow)
-     */
-    @Transient
-    public Boolean getIsBacklog() {
-        return false;
-    }
+    @Column(name = "is_backlog")
+    @Builder.Default
+    private Boolean isBacklog = false;
 }

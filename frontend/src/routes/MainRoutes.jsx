@@ -36,9 +36,7 @@ const EmployerView = Loadable(lazy(() => import('pages/employers/EmployerView'))
 // NOTE: Claims creation happens ONLY from Provider Portal (visit-based flow)
 // Medical Review and Review List are kept for reviewers to process claims
 
-const ClaimsReviewList = Loadable(lazy(() => import('pages/claims/ClaimsReviewList')));
 const ClaimViewMedicalReview = Loadable(lazy(() => import('pages/claims/ClaimViewMedicalReview')));
-const BacklogClaims = Loadable(lazy(() => import('pages/claims/BacklogClaims')));
 const ClaimBatchManagement = Loadable(lazy(() => import('pages/claims/batches/ClaimBatchManagement')));
 const ClaimBatchEntry = Loadable(lazy(() => import('pages/claims/batches/ClaimBatchEntry')));
 const ClaimBatchDetail = Loadable(lazy(() => import('pages/claims/batches/ClaimBatchDetail')));
@@ -86,16 +84,12 @@ const ProviderPreAuthInbox = Loadable(lazy(() => import('pages/provider/PreAuthI
 
 const PreApprovalsList = Loadable(lazy(() => import('pages/pre-approvals/PreApprovalsList')));
 const PreApprovalView = Loadable(lazy(() => import('pages/pre-approvals/PreApprovalView')));
-// Professional Pre-Approvals Inbox with advanced filters and statistics
-const PreApprovalsInbox = Loadable(lazy(() => import('pages/pre-approvals/PreApprovalsInboxPro')));
 const PreAuthAuditPage = Loadable(lazy(() => import('pages/pre-approvals/PreAuthAuditPage')));
 const PreAuthDashboard = Loadable(lazy(() => import('pages/pre-approvals/PreAuthDashboard')));
 
 // ==============================|| LAZY LOADING - APPROVALS DASHBOARD ||============================== //
 
 // Unified Approvals Dashboard (Restored & Corrected)
-const ApprovalsDashboard = Loadable(lazy(() => import('pages/approvals/ApprovalsDashboard')));
-
 // ==============================|| LAZY LOADING - BENEFIT PACKAGES ||============================== //
 
 const BenefitPackagesList = Loadable(lazy(() => import('pages/benefit-packages/BenefitPackagesList')));
@@ -190,6 +184,8 @@ const BenefitPolicyReport = Loadable(lazy(() => import('pages/reports/benefit-po
 const BeneficiariesReports = Loadable(lazy(() => import('pages/reports/BeneficiariesReports')));
 const FinancialReports = Loadable(lazy(() => import('pages/reports/FinancialReports')));
 const ProviderSettlementReport = Loadable(lazy(() => import('pages/reports/ProviderSettlementReport')));
+const ProviderAccountSummary = Loadable(lazy(() => import('pages/reports/ProviderAccountSummary')));
+const RejectionsReport = Loadable(lazy(() => import('pages/reports/RejectionsReport')));
 
 // ==============================|| LAZY LOADING - ERROR PAGES ||============================== //
 
@@ -327,21 +323,6 @@ const MainRoutes = {
       ]
     },
 
-    // Approvals Dashboard (Unified)
-    {
-      path: 'approvals',
-      children: [
-        {
-          path: 'dashboard',
-          element: (
-            <PermissionGuard isRouteGuard>
-              <ApprovalsDashboard />
-            </PermissionGuard>
-          )
-        }
-      ]
-    },
-
     // ═══════════════════════════════════════════════════════════════════════════
     // Claims Module - Medical Review Only (2026-02-07)
     // ⚠️ ARCHITECTURAL LAW: Claims/Pre-Auth creation happens ONLY from Provider Portal
@@ -351,29 +332,12 @@ const MainRoutes = {
     {
       path: 'claims',
       children: [
-        // Claims Review List - For reviewers to see all pending claims
-        {
-          path: '',
-          element: (
-            <PermissionGuard isRouteGuard>
-              <ClaimsReviewList />
-            </PermissionGuard>
-          )
-        },
         // Medical Review Page - For reviewers to process claims
         {
           path: ':id/medical-review',
           element: (
             <PermissionGuard isRouteGuard>
               <ClaimViewMedicalReview />
-            </PermissionGuard>
-          )
-        },
-        {
-          path: 'backlog',
-          element: (
-            <PermissionGuard isRouteGuard>
-              <BacklogClaims />
             </PermissionGuard>
           )
         },
@@ -608,14 +572,6 @@ const MainRoutes = {
           element: (
             <PermissionGuard isRouteGuard>
               <PreAuthDashboard />
-            </PermissionGuard>
-          )
-        },
-        {
-          path: 'inbox',
-          element: (
-            <PermissionGuard isRouteGuard>
-              <PreApprovalsInbox />
             </PermissionGuard>
           )
         },
@@ -1094,77 +1050,44 @@ const MainRoutes = {
       ]
     },
 
-    // Reports Module - Updated to use Resource+Action (2026-02-05)
+    // Reports Module - Unified Reviewer/Accountant View
     {
       path: 'reports',
       children: [
         {
           path: '',
           element: (
-            <PermissionGuard resource="report_claims" action="view" isRouteGuard>
-              <ReportsPage />
+            <PermissionGuard resource="report_provider_settlement" action="view" isRouteGuard>
+              <ProviderSettlementReport />
             </PermissionGuard>
           )
         },
-        {
-          path: 'employer-dashboard',
-          element: (
-            <PermissionGuard resource="report_employers" action="view" isRouteGuard>
-              <EmployerDashboard />
-            </PermissionGuard>
-          )
-        },
-        // provider-dashboard REMOVED (2026-01-14) - No business value
         {
           path: 'claims',
           element: (
-            <PermissionGuard resource="report_claims" action="view" isRouteGuard>
+            <PermissionGuard resource="claims" action="view" isRouteGuard>
               <ClaimsReport />
             </PermissionGuard>
           )
         },
         {
-          path: 'pre-approvals',
+          path: 'provider-settlement-summary',
           element: (
-            <PermissionGuard resource="report_pre_approvals" action="view" isRouteGuard>
-              <PreApprovalsReport />
+            <PermissionGuard resource="report_provider_settlement" action="view" isRouteGuard>
+              <ProviderAccountSummary />
             </PermissionGuard>
           )
         },
         {
-          path: 'visits',
+          path: 'rejections',
           element: (
-            <PermissionGuard resource="report_visits" action="view" isRouteGuard>
-              <VisitsReport />
+            <PermissionGuard resource="report_provider_settlement" action="view" isRouteGuard>
+              <RejectionsReport />
             </PermissionGuard>
           )
         },
         {
-          path: 'benefit-policy',
-          element: (
-            <PermissionGuard resource="report_benefit_policy" action="view" isRouteGuard>
-              <BenefitPolicyReport />
-            </PermissionGuard>
-          )
-        },
-        {
-          path: 'beneficiaries',
-          element: (
-            <PermissionGuard resource="report_beneficiaries" action="view" isRouteGuard>
-              <BeneficiariesReports />
-            </PermissionGuard>
-          )
-        },
-        {
-          path: 'financial',
-          element: (
-            <PermissionGuard resource="report_financial" action="view" isRouteGuard>
-              <FinancialReports />
-            </PermissionGuard>
-          )
-        },
-        {
-          path: 'provider-settlement',
+          path: 'unified',
           element: (
             <PermissionGuard resource="report_provider_settlement" action="view" isRouteGuard>
               <ProviderSettlementReport />

@@ -10,6 +10,7 @@ import com.waad.tba.modules.benefitpolicy.repository.BenefitPolicyRuleRepository
 import com.waad.tba.modules.medicaltaxonomy.entity.MedicalCategory;
 import com.waad.tba.modules.medicaltaxonomy.repository.MedicalCategoryRepository;
 import com.waad.tba.modules.medicaltaxonomy.entity.MedicalService;
+import com.waad.tba.modules.medicaltaxonomy.repository.MedicalServiceCategoryRepository;
 import com.waad.tba.modules.medicaltaxonomy.repository.MedicalServiceRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,6 +38,7 @@ public class BenefitPolicyRuleService {
     private final BenefitPolicyRepository policyRepository;
     private final MedicalCategoryRepository categoryRepository;
     private final MedicalServiceRepository serviceRepository;
+    private final MedicalServiceCategoryRepository serviceCategoryRepository;
     private final jakarta.persistence.EntityManager em;
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -148,8 +150,8 @@ public class BenefitPolicyRuleService {
         MedicalService service = serviceRepository.findById(serviceId)
                 .orElseThrow(() -> new ResourceNotFoundException("MedicalService", "id", serviceId));
         
-        // MedicalService has categoryId, not category entity
-        Long categoryId = service.getCategoryId();
+        // Resolve the effective category ID (prefers primary mapping from unified catalog)
+        Long categoryId = resolveCategoryIdForCoverage(service);
 
         // Find best matching rule (service > category priority)
         return ruleRepository.findBestRuleForService(policyId, serviceId, categoryId)
@@ -157,11 +159,20 @@ public class BenefitPolicyRuleService {
     }
 
     /**
-     * Check if a service is covered under a policy
+     * Check if a service is covered under a policy.
+     * A service is covered if:
+     * 1. There is an explicit rule for it (at service or category level)
+     * 2. OR the policy has a default coverage > 0
      */
     @Transactional(readOnly = true)
     public boolean isServiceCovered(Long policyId, Long serviceId) {
-        return findCoverageForService(policyId, serviceId).isPresent();
+        if (findCoverageForService(policyId, serviceId).isPresent()) {
+            return true;
+        }
+        // Fallback: if no rule, is it covered by default? (Check if defaultCoverage > 0)
+        return policyRepository.findById(policyId)
+                .map(p -> p.getDefaultCoveragePercent() > 0)
+                .orElse(false);
     }
 
     /**
@@ -175,14 +186,19 @@ public class BenefitPolicyRuleService {
     }
 
     /**
-     * Get coverage percentage for a service under a policy
-     * Returns 0 if not covered
+     * Get coverage percentage for a service under a policy.
+     * Returns policy default if no specific rule exists.
      */
     @Transactional(readOnly = true)
     public int getCoveragePercent(Long policyId, Long serviceId) {
         return findCoverageForService(policyId, serviceId)
                 .map(BenefitPolicyRuleResponseDto::getEffectiveCoveragePercent)
-                .orElse(0);
+                .orElseGet(() -> {
+                    // Fallback to policy-level default coverage
+                    return policyRepository.findById(policyId)
+                            .map(BenefitPolicy::getDefaultCoveragePercent)
+                            .orElse(0); // Only return 0 if policy doesn't exist at all
+                });
     }
 
     /**
@@ -453,5 +469,21 @@ public class BenefitPolicyRuleService {
     @Transactional(readOnly = true)
     public long countActiveByPolicy(Long policyId) {
         return ruleRepository.countByBenefitPolicyIdAndActiveTrue(policyId);
+    }
+
+    /**
+     * Resolve the effective category ID for a service.
+     * Prefers the primary category link from the junction table, 
+     * falling back to the legacy categoryId column.
+     */
+    private Long resolveCategoryIdForCoverage(MedicalService service) {
+        if (service == null || service.getId() == null) {
+            return null;
+        }
+
+        return serviceCategoryRepository
+                .findFirstByServiceIdAndActiveTrueOrderByIsPrimaryDescIdAsc(service.getId())
+                .map(link -> link.getCategoryId())
+                .orElse(service.getCategoryId());
     }
 }

@@ -157,12 +157,12 @@ const EmployerView = () => {
 
   const InfoRow = ({ label, value, fullWidth = false }) => (
     <Grid container spacing={2} sx={{ py: 1.5 }}>
-      <Grid item xs={12} sm={fullWidth ? 12 : 4}>
+      <Grid size={{ xs: 12, sm: fullWidth ? 12 : 4 }}>
         <Typography variant="body2" color="text.secondary" fontWeight={600}>
           {label}
         </Typography>
       </Grid>
-      <Grid item xs={12} sm={fullWidth ? 12 : 8}>
+      <Grid size={{ xs: 12, sm: fullWidth ? 12 : 8 }}>
         <Typography variant="body2">{value || '-'}</Typography>
       </Grid>
     </Grid>
@@ -245,7 +245,7 @@ const EmployerView = () => {
           <SectionCard title={LABELS.statistics}>
             <Grid container spacing={3}>
               {employer.totalMembers !== undefined && (
-                <Grid item xs={12} sm={6} md={4}>
+                <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                   <Card variant="outlined">
                     <CardContent sx={{ textAlign: 'center' }}>
                       <Typography variant="h3" color="primary.main">
@@ -259,7 +259,7 @@ const EmployerView = () => {
                 </Grid>
               )}
               {employer.activePolicies !== undefined && (
-                <Grid item xs={12} sm={6} md={4}>
+                <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                   <Card variant="outlined">
                     <CardContent sx={{ textAlign: 'center' }}>
                       <Typography variant="h3" color="success.main">
@@ -273,7 +273,7 @@ const EmployerView = () => {
                 </Grid>
               )}
               {employer.totalClaims !== undefined && (
-                <Grid item xs={12} sm={6} md={4}>
+                <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                   <Card variant="outlined">
                     <CardContent sx={{ textAlign: 'center' }}>
                       <Typography variant="h3" color="info.main">

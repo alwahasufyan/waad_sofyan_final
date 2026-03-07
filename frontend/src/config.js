@@ -120,5 +120,16 @@ export const projectSettings = {
   showAdministration: true,
 
   // TBA modules are always visible
-  showTBAManagement: true
+  showTBAManagement: true,
+
+  // ═══════════════════════════════════════════════════════════
+  // WAAD FEATURE FLAGS (Phase 10)
+  // Re-enable these to activate direct claim submission portal
+  // ═══════════════════════════════════════════════════════════
+  features: {
+    // fasle = Hide all Provider Portal direct entry points
+    providerPortalEnabled: false,
+    // false = Hide "Claim" and "Pre-Auth" buttons in Visit List
+    directClaimSubmissionEnabled: false
+  }
 };

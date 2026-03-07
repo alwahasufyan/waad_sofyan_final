@@ -247,7 +247,7 @@ const UserCreate = () => {
         <TbaFormSection title="معلومات المستخدم" icon={PersonIcon}>
           <Grid container spacing={2.5}>
             {/* Username */}
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
                 label="اسم المستخدم"
@@ -267,7 +267,7 @@ const UserCreate = () => {
             </Grid>
 
             {/* Full Name */}
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
                 label="الاسم الكامل"
@@ -280,7 +280,7 @@ const UserCreate = () => {
             </Grid>
 
             {/* Email */}
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
                 label="البريد الإلكتروني"
@@ -301,7 +301,7 @@ const UserCreate = () => {
             </Grid>
 
             {/* Phone */}
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
                 label="رقم الهاتف"
@@ -318,7 +318,7 @@ const UserCreate = () => {
             </Grid>
 
             {/* Password */}
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
                 label="كلمة المرور"
@@ -346,7 +346,7 @@ const UserCreate = () => {
             </Grid>
 
             {/* Confirm Password */}
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
                 label="تأكيد كلمة المرور"
@@ -374,7 +374,7 @@ const UserCreate = () => {
             </Grid>
 
             {/* User Type – Single Select Dropdown */}
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 select
                 fullWidth
@@ -402,7 +402,7 @@ const UserCreate = () => {
 
             {/* Employer Selection – Conditional for EMPLOYER_ADMIN */}
             {form.userType === SystemRole.EMPLOYER_ADMIN && (
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   select
                   fullWidth

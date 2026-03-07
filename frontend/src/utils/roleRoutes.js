@@ -38,15 +38,14 @@ export const getDefaultRouteForRole = (role) => {
   const normalizedRole = normalizeRole(role);
 
   const roleRoutes = {
-    SUPER_ADMIN: '/dashboard',
+    SUPER_ADMIN: '/claims/batches',
     ACCOUNTANT: '/settlement/batches',
-    MEDICAL_REVIEWER: '/approvals/dashboard',
-    PROVIDER: '/provider/eligibility-check',
-    PROVIDER_STAFF: '/provider/eligibility-check',
-    EMPLOYER_ADMIN: '/',
-    EMPLOYER: '/',
-    DATA_ENTRY: '/dashboard',
-    FINANCE_VIEWER: '/dashboard'
+    MEDICAL_REVIEWER: '/claims/batches',
+    PROVIDER: '/claims/batches',
+    PROVIDER_STAFF: '/claims/batches',
+    EMPLOYER_ADMIN: '/member-portal/family',
+    DATA_ENTRY: '/claims/batches',
+    ACCOUNT_MANAGER: '/claims/batches',
   };
 
   return roleRoutes[normalizedRole] || '/dashboard';

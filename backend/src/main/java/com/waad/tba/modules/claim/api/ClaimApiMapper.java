@@ -68,7 +68,7 @@ public class ClaimApiMapper {
                 .serviceCategoryId(lineRequest.getServiceCategoryId())
                 .serviceCategoryName(lineRequest.getServiceCategoryName())
                 .quantity(lineRequest.getQuantity())
-                // ✅ NO price fields - calculated by backend
+                .unitPrice(lineRequest.getUnitPrice())
                 // ✅ NO notes field - ClaimLineDto doesn't have notes
                 .build();
     }
@@ -104,7 +104,7 @@ public class ClaimApiMapper {
                                 .quantity(line.getQuantity())
                                 .serviceCategoryId(line.getServiceCategoryId())
                                 .serviceCategoryName(line.getServiceCategoryName())
-                                .unitPrice(line.getGrossAmount())
+                                .unitPrice(line.getUnitPrice() != null ? line.getUnitPrice() : line.getGrossAmount())
                                 .refusedAmount(line.getRefusedAmount())
                                 .rejected(line.getRejected())
                                 .rejectionReason(line.getRejectionReason())

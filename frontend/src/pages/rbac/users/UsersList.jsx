@@ -9,7 +9,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Box,
   Button,
@@ -104,20 +104,28 @@ const UsersList = () => {
   const [toggling, setToggling] = useState(false);
 
   // Fetch users
+  const [searchParams] = useSearchParams();
+  const roleFilter = searchParams.get('role');
+
   useEffect(() => {
     fetchUsers();
-  }, [page, rowsPerPage]);
+  }, [page, rowsPerPage, roleFilter]);
 
   const fetchUsers = async () => {
     setLoading(true);
     try {
       const users = await usersService.getAllUsers();
 
-      // Client-side filtering by search term
+      // Filter by role if provided in URL
       let filtered = users;
+      if (roleFilter) {
+        filtered = users.filter((u) => u.roles?.some((r) => r.name === roleFilter));
+      }
+
+      // Client-side filtering by search term
       if (searchTerm) {
         const term = searchTerm.toLowerCase();
-        filtered = users.filter(
+        filtered = filtered.filter(
           (u) =>
             u.username?.toLowerCase().includes(term) || u.fullName?.toLowerCase().includes(term) || u.email?.toLowerCase().includes(term)
         );

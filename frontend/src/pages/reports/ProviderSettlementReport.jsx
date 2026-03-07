@@ -225,16 +225,53 @@ const ProviderSettlementReport = () => {
     documentTitle: `تقرير_تسوية_${reportData?.providerName || 'مقدم_الخدمة'}_${new Date().toISOString().split('T')[0]}`,
     pageStyle: `
       @page {
-        size: A4 landscape;
+        size: A4 portrait;
         margin: 10mm;
       }
       @media print {
-        body { -webkit-print-color-adjust: exact; font-size: 10px; }
+        body { 
+          direction: rtl;
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+          -webkit-print-color-adjust: exact !important; 
+          print-color-adjust: exact !important; 
+        }
         .no-print { display: none !important; }
-        table { page-break-inside: auto; font-size: 9px; }
-        tr { page-break-inside: avoid; }
-        thead { display: table-header-group; }
-        .MuiChip-root { font-size: 8px; }
+        
+        /* Strict B&W for report */
+        .print-only { display: block !important; }
+        .print-header { text-align: center; margin-bottom: 20px; }
+        .print-title { font-size: 18px; font-weight: bold; }
+        
+        table { 
+          width: 100%;
+          border-collapse: collapse; 
+          font-size: 9px;
+          border: 1px solid #000 !important;
+        }
+        th, td { 
+          border: 1px solid #000 !important;
+          padding: 4px !important;
+          color: #000 !important;
+        }
+        th { background: #eee !important; -webkit-print-color-adjust: exact; }
+        
+        .summary-box {
+          border: 2px solid #000;
+          padding: 10px;
+          margin-bottom: 20px;
+        }
+        
+        .kpi-row {
+          display: flex;
+          justify-content: space-around;
+          margin-bottom: 15px;
+        }
+        .kpi-item {
+          text-align: center;
+          border: 1px solid #000;
+          padding: 10px;
+          flex: 1;
+        }
       }
     `
   });
@@ -386,11 +423,13 @@ const ProviderSettlementReport = () => {
   const formatDate = (dateStr) => {
     if (!dateStr) return '-';
     try {
-      return new Date(dateStr).toLocaleDateString('en-US');
+      return new Date(dateStr).toLocaleDateString('en-GB');
     } catch {
       return dateStr;
     }
   };
+
+  const formatLYD = (val) => `${(val || 0).toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} د.ل`;
 
   // Get status chip color
   const getStatusChipProps = (status) => {
@@ -412,9 +451,9 @@ const ProviderSettlementReport = () => {
     <MainCard>
       {/* Header */}
       <ModernPageHeader
-        titleKey="تقارير تسوية مقدمي الخدمة"
+        titleKey="تقرير التسوية الموحد (كشف حساب)"
         titleIcon={<ProviderIcon />}
-        subtitleKey="تقرير مفصل على مستوى الخدمة/السطر يطابق التقارير الورقية"
+        subtitleKey="تقرير مراجعة مالية شامل يطابق المستندات الورقية الرسمية"
         actions={
           <Stack direction="row" spacing={1} className="no-print">
             <Tooltip title="تحديث">
@@ -432,7 +471,6 @@ const ProviderSettlementReport = () => {
                 <ExcelIcon />
               </IconButton>
             </Tooltip>
-            {/* PDF export disabled - Excel is the official reporting format */}
           </Stack>
         }
       />
@@ -496,7 +534,7 @@ const ProviderSettlementReport = () => {
                   onChange={handleStatusesChange}
                   input={<OutlinedInput label="الحالة" />}
                   renderValue={(selected) =>
-                    selected.length === 0 ? 'جميع الحالات (بما فيها المدفوعة)' : selected.map((status) => getStatusLabel(status)).join('، ')
+                    selected.length === 0 ? 'جميع الحالات' : selected.map((status) => getStatusLabel(status)).join('، ')
                   }
                 >
                   <MenuItem value="__ALL__">جميع الحالات</MenuItem>
@@ -509,51 +547,24 @@ const ProviderSettlementReport = () => {
               </FormControl>
             </Grid>
 
-            {/* Claim Number Filter */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                fullWidth
-                size="small"
-                label="رقم المطالبة"
-                value={claimNumberFilter}
-                onChange={(e) => setClaimNumberFilter(e.target.value)}
-              />
-            </Grid>
-
-            {/* PreAuth Number Filter */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                fullWidth
-                size="small"
-                label="رقم الموافقة"
-                value={preAuthNumberFilter}
-                onChange={(e) => setPreAuthNumberFilter(e.target.value)}
-              />
-            </Grid>
-
-            {/* Actions */}
-            <Grid item xs={12} md={2}>
+            {/* Search Actions */}
+            <Grid item xs={12} md={3}>
               <Stack direction="row" spacing={1}>
-                <Tooltip title="بحث">
-                  <IconButton color="primary" onClick={fetchReport} disabled={loading || !selectedProviderId}>
-                    <FilterIcon />
-                  </IconButton>
-                </Tooltip>
-                <Tooltip title="مسح الفلاتر">
-                  <IconButton onClick={handleResetFilters}>
-                    <ClearAllIcon />
-                  </IconButton>
-                </Tooltip>
+                <Button variant="contained" startIcon={<FilterIcon />} onClick={fetchReport} disabled={loading || !selectedProviderId}>
+                  بحث وتحديث
+                </Button>
+                <Button variant="outlined" startIcon={<ClearAllIcon />} onClick={handleResetFilters}>
+                  مسح
+                </Button>
               </Stack>
             </Grid>
 
             {/* Quick Date Presets */}
             <Grid item xs={12}>
               <Stack direction="row" spacing={1} flexWrap="wrap">
-                <Chip label="هذا الشهر" variant="outlined" clickable onClick={() => setQuickDateRange('THIS_MONTH')} />
-                <Chip label="الشهر السابق" variant="outlined" clickable onClick={() => setQuickDateRange('PREVIOUS_MONTH')} />
-                <Chip label="من بداية السنة" variant="outlined" clickable onClick={() => setQuickDateRange('THIS_YEAR')} />
-                <Chip label="كل الفترات" variant="outlined" clickable onClick={() => setQuickDateRange('ALL_TIME')} />
+                <Chip label="هذا الشهر" variant="outlined" size="small" clickable onClick={() => setQuickDateRange('THIS_MONTH')} />
+                <Chip label="الشهر السابق" variant="outlined" size="small" clickable onClick={() => setQuickDateRange('PREVIOUS_MONTH')} />
+                <Chip label="السنة الحالية" variant="outlined" size="small" clickable onClick={() => setQuickDateRange('THIS_YEAR')} />
               </Stack>
             </Grid>
           </Grid>
@@ -568,277 +579,150 @@ const ProviderSettlementReport = () => {
       )}
 
       {/* Report Content */}
-      <Box ref={printRef}>
+      <Box ref={printRef} className="report-root">
         {loading ? (
-          <Box>
+          <Box className="no-print">
             <Skeleton variant="rectangular" height={100} sx={{ mb: 2 }} />
             <Skeleton variant="rectangular" height={400} />
           </Box>
         ) : reportData ? (
           <>
-            {/* Report Header */}
-            <Card sx={{ mb: 3, bgcolor: 'primary.light', color: 'primary.contrastText' }}>
-              <CardContent>
-                <Grid container spacing={2} alignItems="center">
-                  <Grid item xs={12} md={4}>
-                    <Typography variant="h5" fontWeight="bold">
-                      {companyName || 'شركة وعد لإدارة النفقات الطبية'}
-                    </Typography>
-                    <Typography variant="body2">رقم التقرير: {reportData.reportNumber}</Typography>
-                    <Typography variant="body2">التاريخ: {formatDate(reportData.reportDate)}</Typography>
-                  </Grid>
-                  <Grid item xs={12} md={4} textAlign="center">
-                    <Typography variant="h6">تقرير تسوية مقدم الخدمة</Typography>
-                    <Typography variant="body1" fontWeight="bold">
-                      {reportData.providerName}
-                    </Typography>
-                    <Typography variant="body2">
-                      الفترة: {formatDate(reportData.fromDate)} - {formatDate(reportData.toDate)}
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={12} md={4}>
-                    <Typography variant="body2">عدد المطالبات: {reportData.totalClaimsCount}</Typography>
-                  </Grid>
-                </Grid>
-              </CardContent>
-            </Card>
-
-            {/* Summary KPIs */}
-            <Grid container spacing={2} sx={{ mb: 3 }}>
-              <Grid item xs={6} md={2}>
-                <Card sx={{ bgcolor: 'info.lighter', textAlign: 'center', p: 1 }}>
-                  <Typography variant="caption" color="info.main">
-                    إجمالي المطلوب (Gross)
-                  </Typography>
-                  <Typography variant="h6" fontWeight="bold" color="info.dark">
-                    {formatCurrency(reportData.totalRequestedAmount)}
-                  </Typography>
+            {/* Screen-Only Summary (Dashboard Style) */}
+            <Grid container spacing={2} sx={{ mb: 3 }} className="no-print">
+              <Grid item xs={12} sm={6} md={3}>
+                <Card sx={{ bgcolor: 'info.lighter', textAlign: 'center', p: 2 }}>
+                  <Typography variant="caption" color="info.main" fontWeight="bold">إجمالي المطالب (له)</Typography>
+                  <Typography variant="h5" fontWeight="bold">{formatLYD(reportData.totalRequestedAmount)}</Typography>
                 </Card>
               </Grid>
-              <Grid item xs={6} md={2}>
-                <Card sx={{ bgcolor: 'success.lighter', textAlign: 'center', p: 1 }}>
-                  <Typography variant="caption" color="success.main">
-                    إجمالي المعتمد (Net)
-                  </Typography>
-                  <Typography variant="h6" fontWeight="bold" color="success.dark">
-                    {formatCurrency(reportData.totalApprovedAmount)}
-                  </Typography>
-                </Card>
-              </Grid>
-              <Grid item xs={6} md={2}>
-                <Card sx={{ bgcolor: 'error.lighter', textAlign: 'center', p: 1 }}>
-                  <Typography variant="caption" color="error.main">
-                    إجمالي المرفوض
-                  </Typography>
-                  <Typography variant="h6" fontWeight="bold" color="error.dark">
-                    {formatCurrency(reportData.totalRejectedAmount)}
-                  </Typography>
-                </Card>
-              </Grid>
-              <Grid item xs={6} md={2}>
-                <Card sx={{ bgcolor: 'warning.lighter', textAlign: 'center', p: 1 }}>
-                  <Typography variant="caption" color="warning.main">
-                    حصة المنتفع
-                  </Typography>
-                  <Typography variant="h6" fontWeight="bold" color="warning.dark">
-                    {formatCurrency(reportData.totalPatientShare)}
-                  </Typography>
-                </Card>
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <Card sx={{ bgcolor: 'primary.main', textAlign: 'center', p: 1, color: 'white' }}>
-                  <Typography variant="caption">صافي المستحق للمرفق</Typography>
+              <Grid item xs={12} sm={6} md={3}>
+                <Card sx={{ bgcolor: 'error.lighter', textAlign: 'center', p: 2 }}>
+                  <Typography variant="caption" color="error.main" fontWeight="bold">استقطاعات ورفض (عليه)</Typography>
                   <Typography variant="h5" fontWeight="bold">
-                    {formatCurrency(reportData.netProviderAmount)}
+                    {formatLYD((reportData.totalRejectedAmount || 0) + (reportData.totalPatientShare || 0))}
                   </Typography>
+                </Card>
+              </Grid>
+              <Grid item xs={12} sm={6} md={3}>
+                <Card sx={{ bgcolor: 'warning.lighter', textAlign: 'center', p: 2 }}>
+                  <Typography variant="caption" color="warning.main" fontWeight="bold">نسبة الخصم</Typography>
+                  <Typography variant="h5" fontWeight="bold">
+                    {reportData.totalRequestedAmount > 0
+                      ? ((reportData.totalRejectedAmount / reportData.totalRequestedAmount) * 100).toFixed(2)
+                      : 0}%
+                  </Typography>
+                </Card>
+              </Grid>
+              <Grid item xs={12} sm={6} md={3}>
+                <Card sx={{ bgcolor: 'primary.main', textAlign: 'center', p: 2, color: 'white' }}>
+                  <Typography variant="caption" sx={{ opacity: 0.9, fontWeight: 'bold' }}>صافي المستحق للمرفق</Typography>
+                  <Typography variant="h5" fontWeight="bold">{formatLYD(reportData.netProviderAmount)}</Typography>
                 </Card>
               </Grid>
             </Grid>
 
-            {/* Claims Table with Line Details */}
-            <TableContainer component={Paper}>
-              <Table size="small" sx={{ minWidth: 1200 }}>
-                <TableHead>
-                  <TableRow sx={{ bgcolor: 'grey.200' }}>
-                    <TableCell width={40}></TableCell>
-                    <TableCell>رقم المطالبة</TableCell>
-                    <TableCell>رقم الموافقة</TableCell>
-                    <TableCell>اسم المنتفع</TableCell>
-                    <TableCell>رقم التأمين</TableCell>
-                    <TableCell>تاريخ الخدمة</TableCell>
-                    <TableCell align="right">Gross</TableCell>
-                    <TableCell align="right">Net</TableCell>
-                    <TableCell align="right" sx={{ color: 'error.main' }}>
-                      مرفوض
-                    </TableCell>
-                    <TableCell align="right" sx={{ color: 'warning.main' }}>
-                      حصة المؤمن
-                    </TableCell>
-                    <TableCell align="right" sx={{ color: 'success.main' }}>
-                      مستحق للمرفق
-                    </TableCell>
-                    <TableCell>الحالة</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {reportData.claims?.map((claim) => (
-                    <React.Fragment key={`claim-${claim.claimId}`}>
-                      {/* Claim Row */}
-                      <TableRow
-                        sx={{
-                          bgcolor: 'grey.50',
-                          '&:hover': { bgcolor: 'action.hover' },
-                          cursor: 'pointer'
-                        }}
-                        onClick={() => toggleClaimExpansion(claim.claimId)}
-                      >
-                        <TableCell>
-                          <IconButton size="small">{expandedClaims[claim.claimId] ? <ExpandLessIcon /> : <ExpandMoreIcon />}</IconButton>
-                        </TableCell>
-                        <TableCell>
-                          <Stack direction="row" alignItems="center" spacing={1}>
-                            <ClaimIcon fontSize="small" color="primary" />
-                            <Typography fontWeight="bold">{claim.claimNumber}</Typography>
-                          </Stack>
-                        </TableCell>
-                        <TableCell>{claim.preAuthNumber || '-'}</TableCell>
-                        <TableCell>{claim.patientNameArabic || claim.patientName}</TableCell>
-                        <TableCell>{claim.insuranceNumber || '-'}</TableCell>
-                        <TableCell>{formatDate(claim.serviceDate)}</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>
-                          {formatCurrency(claim.grossAmount)}
-                        </TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 'bold', color: 'success.main' }}>
-                          {formatCurrency(claim.netAmount)}
-                        </TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 'bold', color: 'error.main' }}>
-                          {formatCurrency(claim.rejectedAmount)}
-                        </TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 'bold', color: 'warning.main' }}>
-                          {formatCurrency(claim.patientShare)}
-                        </TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 'bold', color: 'success.dark' }}>
-                          {formatCurrency((claim.netAmount || 0) - (claim.patientShare || 0))}
-                        </TableCell>
-                        <TableCell>
-                          <Chip size="small" label={claim.statusArabic || claim.status} {...getStatusChipProps(claim.status)} />
-                        </TableCell>
-                      </TableRow>
+            {/* PRINT & SCREEN: THE CLEAN PAPER FORMAT */}
+            <Box className="paper-printable-content">
+              <style type="text/css">
+                {`
+                        @media screen {
+                            .paper-printable-content { padding: 20px; background: #fff; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+                        }
+                        .report-header-box { text-align: center; margin-bottom: 25px; }
+                        .report-title-main { font-size: 20px; font-weight: bold; margin-bottom: 4px; }
+                        .patient-info-block { border: 1px solid #000; margin-bottom: 15px; font-size: 11px; }
+                        .pi-row { display: flex; border-bottom: 1px solid #000; }
+                        .pi-row:last-child { border-bottom: none; }
+                        .pi-col { flex: 1; padding: 6px 12px; border-left: 1px solid #000; }
+                        .pi-col:last-child { border-left: none; }
+                        
+                        table.report-table { width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 5px; }
+                        table.report-table th, table.report-table td { border: 1px solid #000; padding: 6px; text-align: center; color: #000; }
+                        table.report-table th { background: #f2f2f2 !important; font-weight: bold; -webkit-print-color-adjust: exact; }
+                        table.report-table .subtotal-row { font-weight: bold; background: #fafafa; }
+                        
+                        .global-report-footer { display: flex; border: 2px solid #000; margin-top: 20px; font-weight: bold; }
+                        .footer-col { flex: 1; padding: 10px; text-align: center; border-left: 1px solid #000; }
+                        .footer-col:last-child { border-left: none; }
+                    `}
+              </style>
 
-                      {/* Service Lines (Collapsible) */}
-                      <TableRow>
-                        <TableCell colSpan={12} sx={{ p: 0 }}>
-                          <Collapse in={expandedClaims[claim.claimId]} timeout="auto" unmountOnExit>
-                            <Box sx={{ pl: 6, pr: 2, py: 1, bgcolor: 'background.default' }}>
-                              <Table size="small">
-                                <TableHead>
-                                  <TableRow>
-                                    <TableCell>الخدمة الطبية</TableCell>
-                                    <TableCell align="center">الكمية</TableCell>
-                                    <TableCell align="right">سعر الوحدة</TableCell>
-                                    <TableCell align="right">Gross</TableCell>
-                                    <TableCell align="right">Net</TableCell>
-                                    <TableCell align="right" sx={{ color: 'error.main' }}>
-                                      مرفوض
-                                    </TableCell>
-                                    <TableCell>سبب الرفض</TableCell>
-                                    <TableCell>الحالة</TableCell>
-                                  </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                  {claim.lines?.map((line) => (
-                                    <TableRow key={`line-${line.lineId}`}>
-                                      <TableCell>
-                                        <Stack direction="row" alignItems="center" spacing={1}>
-                                          <ServiceIcon fontSize="small" color="secondary" />
-                                          <Typography variant="body2">{line.serviceNameArabic || line.serviceName}</Typography>
-                                        </Stack>
-                                      </TableCell>
-                                      <TableCell align="center">{line.quantity}</TableCell>
-                                      <TableCell align="right">{formatCurrency(line.unitPrice)}</TableCell>
-                                      <TableCell align="right">{formatCurrency(line.grossAmount)}</TableCell>
-                                      <TableCell align="right" sx={{ color: 'success.main' }}>
-                                        {formatCurrency(line.approvedAmount)}
-                                      </TableCell>
-                                      <TableCell align="right" sx={{ color: 'error.main' }}>
-                                        {formatCurrency(line.rejectedAmount)}
-                                      </TableCell>
-                                      <TableCell>
-                                        <Typography variant="body2" color="error.main">
-                                          {line.rejectionReason || '-'}
-                                        </Typography>
-                                      </TableCell>
-                                      <TableCell>
-                                        <Chip
-                                          size="small"
-                                          label={line.lineStatusArabic || line.lineStatus}
-                                          {...getStatusChipProps(line.lineStatus)}
-                                        />
-                                      </TableCell>
-                                    </TableRow>
-                                  ))}
-                                </TableBody>
-                              </Table>
-                            </Box>
-                          </Collapse>
-                        </TableCell>
-                      </TableRow>
-                    </React.Fragment>
-                  ))}
+              {/* Report Top Meta with Logo */}
+              <Box className="report-header-box">
+                  <Stack direction="row" justifyContent="center" sx={{ mb: 2 }}>
+                       {/* Professional Logo Placeholder */}
+                       <Box sx={{ width: 80, height: 50, border: '3px solid #000', borderRadius: '40%', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Typography variant="caption" fontWeight="bold" sx={{ color: '#000', fontSize: '10px' }}>WAAD TPA</Typography>
+                       </Box>
+                  </Stack>
+                  <Typography className="report-title-main">شركة وعد لإدارة النفقات الطبية</Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 'bold' }}>تقرير التسوية المالية الموحد (كشف حساب)</Typography>
+                  <Typography variant="body1" fontWeight="bold" sx={{ mt: 1 }}>{reportData.providerName}</Typography>
+                  <Typography variant="body2">الفترة: من {formatDate(reportData.fromDate)} إلى {formatDate(reportData.toDate)}</Typography>
+              </Box>
 
-                  {/* Grand Total Row */}
-                  {reportData.claims?.length > 0 && (
-                    <TableRow sx={{ bgcolor: 'primary.lighter' }}>
-                      <TableCell colSpan={6}>
-                        <Typography variant="subtitle1" fontWeight="bold">
-                          الإجمالي الكلي ({reportData.totalClaimsCount} مطالبة)
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="right">
-                        <Typography variant="subtitle1" fontWeight="bold">
-                          {formatCurrency(reportData.totalRequestedAmount)}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="right">
-                        <Typography variant="subtitle1" fontWeight="bold" color="success.main">
-                          {formatCurrency(reportData.totalApprovedAmount)}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="right">
-                        <Typography variant="subtitle1" fontWeight="bold" color="error.main">
-                          {formatCurrency(reportData.totalRejectedAmount)}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="right">
-                        <Typography variant="subtitle1" fontWeight="bold" color="warning.main">
-                          {formatCurrency(reportData.totalPatientShare)}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="right">
-                        <Typography variant="subtitle1" fontWeight="bold" color="success.dark">
-                          {formatCurrency(reportData.netProviderAmount)}
-                        </Typography>
-                      </TableCell>
-                      <TableCell></TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
+              {reportData.claims?.map((claim, idx) => (
+                <Box key={claim.claimId} sx={{ mb: 4, pageBreakInside: 'avoid' }}>
+                  <div className="patient-info-block">
+                    <div className="pi-row">
+                      <div className="pi-col" style={{ flex: 0.4 }}><strong>No.:</strong> {idx + 1}</div>
+                      <div className="pi-col"><strong>Originator No.:</strong> {claim.claimNumber}</div>
+                    </div>
+                    <div className="pi-row">
+                      <div className="pi-col"><strong>Insurance No:</strong> {claim.insuranceNumber || '-'}</div>
+                      <div className="pi-col"><strong>Patient Name:</strong> {claim.patientNameArabic || claim.patientName}</div>
+                    </div>
+                  </div>
 
-            {/* Footer Note */}
-            <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.100', borderRadius: 1 }}>
-              <Typography variant="body2" textAlign="center">
-                عليه، يرجى من سيادتكم تسوية الملاحظات والنواقص خلال مدة أقصاها أسبوعين من تاريخ الاستلام لتسوية القيمة المستحقة نهائياً.
-              </Typography>
-              <Divider sx={{ my: 1 }} />
-              <Typography variant="caption" textAlign="center" display="block">
-                والسلام عليكم - قسم المراجعة والتدقيق
-              </Typography>
+                  <table className="report-table">
+                    <thead>
+                      <tr>
+                        <th style={{ width: '35%' }}>Medical Service (الخدمة الطبية)</th>
+                        <th style={{ width: '12%' }}>Date</th>
+                        <th style={{ width: '10%' }}>Gross</th>
+                        <th style={{ width: '10%' }}>Net</th>
+                        <th style={{ width: '10%' }}>Rejected</th>
+                        <th style={{ width: '23%' }}>Rejection Reason</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {claim.lines?.map((line, lIdx) => (
+                        <tr key={lIdx}>
+                          <td style={{ textAlign: 'right' }}>{line.serviceNameArabic || line.serviceName}</td>
+                          <td>{formatDate(line.serviceDate)}</td>
+                          <td>{formatLYD(line.grossAmount)}</td>
+                          <td>{formatLYD(line.approvedAmount)}</td>
+                          <td>{formatLYD(line.rejectedAmount)}</td>
+                          <td style={{ textAlign: 'right', fontSize: '9px' }}>{line.rejectionReason || '-'}</td>
+                        </tr>
+                      ))}
+                      <tr className="subtotal-row">
+                        <td colSpan={2} style={{ textAlign: 'left' }}>SUBTOTAL (الإجمالي الفرعي)</td>
+                        <td>{formatLYD(claim.grossAmount)}</td>
+                        <td>{formatLYD(claim.netAmount)}</td>
+                        <td>{formatLYD(claim.rejectedAmount)}</td>
+                        <td></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </Box>
+              ))}
+
+              <div className="global-report-footer">
+                <div className="footer-col">GRAND TOTAL (الإجمالي الكلي)</div>
+                <div className="footer-col">GROSS: {formatLYD(reportData.totalRequestedAmount)}</div>
+                <div className="footer-col">NET: {formatLYD(reportData.totalApprovedAmount)}</div>
+                <div className="footer-col" style={{ color: 'red' }}>REJECTED: {formatLYD(reportData.totalRejectedAmount)}</div>
+              </div>
+
+              <Box sx={{ mt: 3, pt: 2, borderTop: '1px dashed #000', textAlign: 'center', fontSize: '11px' }}>
+                <Typography variant="body2">حرر هذا التقرير بتاريخ {formatDate(new Date())} بواسطة قسم المراجعة والتدقيق المالي</Typography>
+                <Typography variant="caption">شركة وعد لإدارة النفقات الطبية - جميع الحقوق محفوظة ©</Typography>
+              </Box>
             </Box>
           </>
         ) : (
-          <Alert severity="info">يرجى اختيار مقدم الخدمة والنقر على بحث لعرض التقرير</Alert>
+          <Alert severity="info" className="no-print">يرجى اختيار مقدم الخدمة والنقر على "بحث وتحديث" لعرض التقرير الموحد</Alert>
         )}
       </Box>
     </MainCard>

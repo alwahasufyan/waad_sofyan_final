@@ -82,4 +82,10 @@ public class ClaimLineDto {
     private Boolean rejected;
     private String rejectionReason;
     private BigDecimal refusedAmount;
+    
+    // Financial Split (READ-ONLY)
+    private Integer coveragePercent;
+    private Integer patientSharePercent;
+    private BigDecimal companyShare;
+    private BigDecimal patientShare;
 }
