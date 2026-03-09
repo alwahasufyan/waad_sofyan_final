@@ -35,6 +35,7 @@ def final_hard_reset():
             ('ROOT-MAT', 'الأمومة والولادة', 'Maternity'),
             ('ROOT-CHR', 'الأمراض المزمنة', 'Chronic Diseases'),
             ('ROOT-EMER', 'الطوارئ والإسعاف', 'Emergency & Ambulance'),
+            ('ROOT-PHYSIO', 'العلاج الطبيعي', 'Physiotherapy'),
             ('ROOT-OTH', 'منافع أخرى ومستلزمات', 'Other Benefits & Supplies')
         ]
         
@@ -58,7 +59,7 @@ def final_hard_reset():
             ('الإقامة والتمريض (غرفة خاصة)', 'SUB-STAY', ['ROOT-IP', 'ROOT-MAT']),
             ('العمليات الجراحية والتخدير', 'SUB-SURGERY', ['ROOT-IP', 'ROOT-MAT']),
             ('العناية الفائقة ICU/CCU', 'SUB-ICU', ['ROOT-IP']),
-            ('العلاج الطبيعي', 'SUB-PHYSIO', ['ROOT-OP', 'ROOT-IP']),
+            ('العلاج الطبيعي', 'SUB-PHYSIO', ['ROOT-PHYSIO', 'ROOT-OP', 'ROOT-IP']),
             ('الأسنان - وقائي وعلاجي', 'SUB-DENT-REG', ['ROOT-DENT']),
             ('الأسنان - تجميلي وتركيبات', 'SUB-DENT-COS', ['ROOT-DENT']),
             ('النظارات الطبية والعدسات', 'SUB-VISION', ['ROOT-VIS']),

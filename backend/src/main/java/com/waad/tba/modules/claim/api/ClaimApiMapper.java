@@ -68,6 +68,9 @@ public class ClaimApiMapper {
         private ClaimLineDto toClaimLineDto(CreateClaimRequest.ClaimLineRequest lineRequest) {
                 return ClaimLineDto.builder()
                                 .medicalServiceId(lineRequest.getMedicalServiceId())
+                                .pricingItemId(lineRequest.getPricingItemId())
+                                .serviceCode(lineRequest.getServiceCode())
+                                .serviceName(lineRequest.getServiceName())
                                 .serviceCategoryId(lineRequest.getServiceCategoryId())
                                 .serviceCategoryName(lineRequest.getServiceCategoryName())
                                 .quantity(lineRequest.getQuantity())
@@ -107,6 +110,9 @@ public class ClaimApiMapper {
                                 .lines(request.getLines() != null ? request.getLines().stream()
                                                 .map(line -> ClaimLineDto.builder()
                                                                 .medicalServiceId(line.getMedicalServiceId())
+                                                                .pricingItemId(line.getPricingItemId())
+                                                                .serviceCode(line.getServiceCode())
+                                                                .serviceName(line.getServiceName())
                                                                 .quantity(line.getQuantity())
                                                                 .serviceCategoryId(line.getServiceCategoryId())
                                                                 .serviceCategoryName(line.getServiceCategoryName())
@@ -304,9 +310,13 @@ public class ClaimApiMapper {
                                 .rejectionReason(dto.getRejectionReason())
                                 .coveragePercent(dto.getCoveragePercent())
                                 .patientSharePercent(dto.getPatientSharePercent())
+                                .benefitLimit(dto.getBenefitLimit())
+                                .usedAmount(dto.getUsedAmount())
+                                .remainingAmount(dto.getRemainingAmount())
                                 .rejectionReasonCode(dto.getRejectionReasonCode())
                                 .reviewerNotes(dto.getReviewerNotes())
                                 .notes(dto.getReviewerNotes()) // Map reviewerNotes to legacy notes field
+                                .pricingItemId(dto.getPricingItemId())
                                 .active(true)
                                 .build();
         }

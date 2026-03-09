@@ -83,6 +83,18 @@ public interface ProviderContractPricingItemRepository extends JpaRepository<Pro
            @Param("serviceName") String serviceName);
 
     /**
+     * Find active unmapped pricing item by service code in a contract.
+     */
+    @Query("SELECT p FROM ProviderContractPricingItem p " +
+          "WHERE p.contract.id = :contractId " +
+          "AND p.active = true " +
+          "AND p.medicalService IS NULL " +
+          "AND p.serviceCode = :serviceCode")
+    Optional<ProviderContractPricingItem> findActiveUnmappedByContractAndServiceCode(
+           @Param("contractId") Long contractId,
+           @Param("serviceCode") String serviceCode);
+
+    /**
      * Check if pricing exists for service in contract
      */
     boolean existsByContractIdAndMedicalServiceIdAndActiveTrue(Long contractId, Long medicalServiceId);
@@ -128,6 +140,24 @@ public interface ProviderContractPricingItemRepository extends JpaRepository<Pro
     Optional<ProviderContractPricingItem> findEffectivePricing(
             @Param("providerId") Long providerId,
             @Param("serviceId") Long serviceId,
+            @Param("date") LocalDate date);
+
+    /**
+     * Find effective pricing for a service code (mapped or unmapped)
+     */
+    @Query("SELECT p FROM ProviderContractPricingItem p " +
+           "WHERE p.contract.provider.id = :providerId " +
+           "AND p.active = true " +
+           "AND p.contract.active = true " +
+           "AND p.contract.status = 'ACTIVE' " +
+           "AND (p.serviceCode = :serviceCode OR (p.medicalService IS NOT NULL AND p.medicalService.code = :serviceCode)) " +
+           "AND p.contract.startDate <= :date " +
+           "AND (p.contract.endDate IS NULL OR p.contract.endDate >= :date) " +
+           "AND (p.effectiveFrom IS NULL OR p.effectiveFrom <= :date) " +
+           "AND (p.effectiveTo IS NULL OR p.effectiveTo >= :date)")
+    Optional<ProviderContractPricingItem> findEffectivePricingByCode(
+            @Param("providerId") Long providerId,
+            @Param("serviceCode") String serviceCode,
             @Param("date") LocalDate date);
 
     /**

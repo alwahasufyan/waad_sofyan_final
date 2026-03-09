@@ -272,6 +272,16 @@ public class ClaimAuditService {
         return auditLogRepository.findLatestByClaimId(claimId);
     }
 
+    /**
+     * Delete all audit entries for a claim.
+     * WARNING: Use only when deleting a claim entirely to maintain data integrity.
+     */
+    @Transactional
+    public void deleteAuditLog(Long claimId) {
+        log.warn("🗑️ Deleting audit logs for claim {}", claimId);
+        auditLogRepository.deleteByClaimId(claimId);
+    }
+
     // ==================== Helper Methods ====================
 
     /**

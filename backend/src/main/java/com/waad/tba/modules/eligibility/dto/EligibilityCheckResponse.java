@@ -117,6 +117,12 @@ public class EligibilityCheckResponse {
         private Integer coveragePercent;  // From BenefitPolicyRule
         private Integer patientCopayPercent;  // From BenefitPolicyRule
         private Boolean requiresPreApproval;  // From BenefitPolicyRule
+        
+        // Financial Usage Data
+        private Double benefitLimit;
+        private Double usedAmount;
+        private Double remainingAmount;
+        private Long matchingCategoryId;
 
         public static SnapshotDto from(EligibilityResult.EligibilitySnapshot snapshot) {
             if (snapshot == null) return null;
@@ -146,6 +152,10 @@ public class EligibilityCheckResponse {
                     .coveragePercent(snapshot.getCoveragePercent())
                     .patientCopayPercent(snapshot.getPatientCopayPercent())
                     .requiresPreApproval(snapshot.getRequiresPreApproval())
+                    .benefitLimit(snapshot.getBenefitLimit())
+                    .usedAmount(snapshot.getUsedAmount())
+                    .remainingAmount(snapshot.getRemainingAmount())
+                    .matchingCategoryId(snapshot.getMatchingCategoryId())
                     .build();
         }
     }

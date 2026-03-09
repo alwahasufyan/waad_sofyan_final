@@ -599,6 +599,8 @@ public class ProviderContractPricingItemService {
 
                     return ContractServiceDto.builder()
                         .id(msId != null ? msId : p.getId())
+                        .medicalServiceId(msId)
+                        .pricingItemId(p.getId())
                         .code(hasMS ? p.getMedicalService().getCode() : p.getServiceCode())
                         .name(hasMS ? p.getMedicalService().getName() : p.getServiceName())
                         .categoryId(resolvedCategoryId)
@@ -728,6 +730,8 @@ public class ProviderContractPricingItemService {
     @lombok.AllArgsConstructor
     public static class ContractServiceDto {
         private Long id;
+        private Long medicalServiceId;
+        private Long pricingItemId;
         private String code;
         private String name;
         private Long categoryId;

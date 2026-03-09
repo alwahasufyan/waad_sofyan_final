@@ -244,7 +244,7 @@ public class BenefitPolicyCoverageService {
         }
 
         Optional<BenefitPolicyRule> ruleOpt = ruleRepository.findBestRuleForService(
-                policy.getId(), serviceId, categoryId, parentCategoryId);
+                policy.getId(), serviceId, categoryId, null, parentCategoryId);
 
         if (ruleOpt.isEmpty()) {
             log.debug("⚠️ No specific rule found for service {} in policy {}. Falling back to default: {}%", 
@@ -387,9 +387,8 @@ public class BenefitPolicyCoverageService {
         }
 
         Long categoryId = resolveCategoryIdForCoverage(service);
-
         Optional<BenefitPolicyRule> ruleOpt = ruleRepository.findBestRuleForService(
-                policy.getId(), serviceId, categoryId, null);
+                policy.getId(), serviceId, categoryId, null, null);
 
         if (ruleOpt.isEmpty()) {
             return ServiceCoverageResult.builder()
@@ -619,7 +618,7 @@ public class BenefitPolicyCoverageService {
         Long categoryId = resolveCategoryIdForCoverage(service);
 
         Optional<BenefitPolicyRule> ruleOpt = ruleRepository.findBestRuleForService(
-                benefitPolicy.getId(), service.getId(), categoryId, null);
+                benefitPolicy.getId(), service.getId(), categoryId, null, null);
 
         if (ruleOpt.isPresent()) {
             BenefitPolicyRule rule = ruleOpt.get();
@@ -656,7 +655,7 @@ public class BenefitPolicyCoverageService {
         Long categoryId = resolveCategoryIdForCoverage(service);
 
         Optional<BenefitPolicyRule> ruleOpt = ruleRepository.findBestRuleForService(
-                benefitPolicy.getId(), serviceId, categoryId, null);
+                benefitPolicy.getId(), serviceId, categoryId, null, null);
 
         if (ruleOpt.isEmpty()) {
             String serviceName = service.getName() != null ? service.getName() : service.getName();
@@ -826,35 +825,60 @@ public class BenefitPolicyCoverageService {
      * @param policyId   The benefit policy ID
      * @param serviceId  The medical service ID
      * @param categoryId The medical category ID (from service)
-     * @return Resolved coverage rule or null if not found
+     * Priority: SERVICE_RULE > CATEGORY_RULE > POLICY_DEFAULT
      */
-    public ResolvedCoverage resolveCoverage(Long policyId, Long serviceId, Long categoryId) {
-        log.debug("🔍 Resolving coverage: policyId={}, serviceId={}, categoryId={}",
-                policyId, serviceId, categoryId);
+    public ResolvedCoverage resolveCoverage(
+            Long policyId, 
+            Long serviceId, 
+            Long serviceCategoryId, 
+            Long overrideCategoryId, 
+            Long memberId, 
+            LocalDate serviceDate,
+            Long claimIdToExclude) {
+            
+        log.debug("🔍 Resolving coverage: policyId={}, serviceId={}, serviceCat={}, overrideCat={}, memberId={}, date={}",
+                policyId, serviceId, serviceCategoryId, overrideCategoryId, memberId, serviceDate);
 
-        // Step 1: Try to find SERVICE_RULE
-        Optional<BenefitPolicyRule> serviceRuleOpt = ruleRepository
-                .findByBenefitPolicyIdAndMedicalServiceIdAndActiveTrue(policyId, serviceId);
-
-        if (serviceRuleOpt.isPresent()) {
-            BenefitPolicyRule rule = serviceRuleOpt.get();
-            log.debug("✅ Found SERVICE_RULE: ruleId={}", rule.getId());
-            return ResolvedCoverage.fromRule(rule, CoverageSource.SERVICE_RULE);
+        // Resolve parent category for hierarchical rule lookup
+        Long parentCategoryId = null;
+        if (serviceCategoryId != null) {
+            parentCategoryId = categoryRepository.findById(serviceCategoryId)
+                    .map(MedicalCategory::getParentId)
+                    .orElse(null);
+        } else if (overrideCategoryId != null) {
+            parentCategoryId = categoryRepository.findById(overrideCategoryId)
+                    .map(MedicalCategory::getParentId)
+                    .orElse(null);
         }
 
-        // Step 2: Try to find CATEGORY_RULE
-        if (categoryId != null) {
-            Optional<BenefitPolicyRule> categoryRuleOpt = ruleRepository
-                    .findActiveCategoryRule(policyId, categoryId);
+        // Use the smart repository method that already implements priorities:
+        // 1. Service
+        // 2. Service Category
+        // 3. Override Category
+        // 4. Parent Category
+        Optional<BenefitPolicyRule> ruleOpt = ruleRepository.findBestRuleForService(
+                policyId, serviceId, serviceCategoryId, overrideCategoryId, parentCategoryId);
 
-            if (categoryRuleOpt.isPresent()) {
-                BenefitPolicyRule rule = categoryRuleOpt.get();
-                log.debug("✅ Found CATEGORY_RULE: ruleId={}", rule.getId());
-                return ResolvedCoverage.fromRule(rule, CoverageSource.CATEGORY_RULE);
+        if (ruleOpt.isPresent()) {
+            BenefitPolicyRule rule = ruleOpt.get();
+            log.debug("✅ Found matching rule: ruleId={}, level={}", rule.getId(), rule.isServiceRule() ? "SERVICE" : "CATEGORY");
+            
+            // Determine the category ID that actually matched (for usage tracking)
+            Long matchingCategoryId = rule.getMedicalCategory() != null ? rule.getMedicalCategory().getId() : serviceCategoryId;
+            
+            ResolvedCoverage res = ResolvedCoverage.fromRule(rule, 
+                rule.isServiceRule() ? CoverageSource.SERVICE_RULE : CoverageSource.CATEGORY_RULE, 
+                matchingCategoryId);
+                
+            // Add consumption data if member and date provided
+            if (memberId != null && serviceDate != null && rule.getAmountLimit() != null) {
+                res.setUsedAmount(calculateCategoryUsedAmount(memberId, matchingCategoryId, serviceDate, claimIdToExclude));
+                res.setRemainingAmount(rule.getAmountLimit().subtract(res.getUsedAmount()).max(BigDecimal.ZERO));
             }
+            return res;
         }
 
-        // Step 3: Return POLICY_DEFAULT
+        // Step 2: Return POLICY_DEFAULT
         BenefitPolicy policy = policyRepository.findById(policyId).orElse(null);
         if (policy != null) {
             log.debug("⚠️ No specific rule found, using POLICY_DEFAULT");
@@ -862,8 +886,8 @@ public class BenefitPolicyCoverageService {
                     .covered(true)
                     .coveragePercent(policy.getDefaultCoveragePercent() != null
                             ? policy.getDefaultCoveragePercent()
-                            : SYSTEM_DEFAULT_COVERAGE_PERCENT)
-                    .requiresPreApproval(DEFAULT_REQUIRES_PA)
+                            : 60) // Default fallback
+                    .requiresPreApproval(false)
                     .source(CoverageSource.POLICY_DEFAULT)
                     .build();
         }
@@ -893,7 +917,7 @@ public class BenefitPolicyCoverageService {
             return DEFAULT_REQUIRES_PA;
         }
 
-        ResolvedCoverage coverage = resolveCoverage(policy.getId(), serviceId, resolveCategoryIdForCoverage(service));
+        ResolvedCoverage coverage = resolveCoverage(policy.getId(), serviceId, resolveCategoryIdForCoverage(service), null, member.getId(), LocalDate.now(), null);
         if (coverage == null) {
             return DEFAULT_REQUIRES_PA;
         }
@@ -916,7 +940,7 @@ public class BenefitPolicyCoverageService {
             return 0;
         }
 
-        ResolvedCoverage coverage = resolveCoverage(policy.getId(), serviceId, resolveCategoryIdForCoverage(service));
+        ResolvedCoverage coverage = resolveCoverage(policy.getId(), serviceId, resolveCategoryIdForCoverage(service), null, member.getId(), LocalDate.now(), null);
         if (coverage == null || !coverage.isCovered()) {
             return 0;
         }
@@ -1024,13 +1048,16 @@ public class BenefitPolicyCoverageService {
         private boolean covered;
         private int coveragePercent;
         private BigDecimal amountLimit;
+        private Long matchingCategoryId; // Category that matched the rule
+        private BigDecimal usedAmount; 
+        private BigDecimal remainingAmount;
         private Integer timesLimit;
         private boolean requiresPreApproval;
         private Integer waitingPeriodDays;
         private Long ruleId;
         private CoverageSource source;
 
-        public static ResolvedCoverage fromRule(BenefitPolicyRule rule, CoverageSource source) {
+        public static ResolvedCoverage fromRule(BenefitPolicyRule rule, CoverageSource source, Long matchingCategoryId) {
             return ResolvedCoverage.builder()
                     .covered(true)
                     .coveragePercent(rule.getEffectiveCoveragePercent())
@@ -1039,6 +1066,7 @@ public class BenefitPolicyCoverageService {
                     .requiresPreApproval(rule.isRequiresPreApproval())
                     .waitingPeriodDays(rule.getWaitingPeriodDays())
                     .ruleId(rule.getId())
+                    .matchingCategoryId(matchingCategoryId)
                     .source(source)
                     .build();
         }
@@ -1106,5 +1134,32 @@ public class BenefitPolicyCoverageService {
                 .findFirstByServiceIdAndActiveTrueOrderByIsPrimaryDescIdAsc(service.getId())
                 .map(link -> link.getCategoryId())
                 .orElse(service.getCategoryId());
+    }
+
+    /**
+     * Calculate used amount for a specific category in the benefit year of the service date.
+     */
+    private BigDecimal calculateCategoryUsedAmount(Long memberId, Long categoryId, LocalDate serviceDate, Long claimIdToExclude) {
+        if (categoryId == null) return BigDecimal.ZERO;
+        
+        int year = serviceDate.getYear();
+        LocalDate yearStart = LocalDate.of(year, 1, 1);
+        LocalDate yearEnd = LocalDate.of(year, 12, 31);
+        
+        List<Long> allCategoryIds = new ArrayList<>();
+        allCategoryIds.add(categoryId);
+        collectAllChildCategoryIds(categoryId, allCategoryIds);
+        
+        return claimRepository.sumApprovedAmountsByMemberAndCategoriesAndYear(memberId, allCategoryIds, yearStart, yearEnd, claimIdToExclude);
+    }
+
+    private void collectAllChildCategoryIds(Long parentId, List<Long> result) {
+        List<MedicalCategory> children = categoryRepository.findByParentId(parentId);
+        for (MedicalCategory child : children) {
+            if (!result.contains(child.getId())) {
+                result.add(child.getId());
+                collectAllChildCategoryIds(child.getId(), result);
+            }
+        }
     }
 }

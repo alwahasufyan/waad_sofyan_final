@@ -14,86 +14,77 @@ except Exception as e:
     print(f"Error: {e}")
     sys.exit(1)
 
-CATEGORIES = {
-    'CAT-OUTPAT': 'خارج المستشفى (OP)',
-    'CAT-INPAT': 'داخل المستشفى (IP)',
-    'CAT-DENTAL': 'الأسنان',
-    'CAT-VISION': 'العيون',
-    'CAT-MATERNITY': 'الأمومة',
-    'CAT-CHRONIC': 'الأمراض المزمنة',
-    'CAT-EMERGENCY': 'الحالات الطارئة',
-    'CAT-OTHER': 'أخرى'
-}
+# Classification logic using ROOT and SUB codes
+CAT_MAPPING = [
+    # (Keywords, Root Code, Sub Code)
+    (['أسنان وقائي', 'خلع', 'حشو'], 'ROOT-DENT', 'SUB-DENT-REG'),
+    (['أسنان تجميلي', 'تقويم', 'زراعة', 'تركيبات'], 'ROOT-DENT', 'SUB-DENT-COS'),
+    (['عيون', 'نظار', 'رمد', 'بصريات'], 'ROOT-VIS', 'SUB-VISION'),
+    (['ولادة', 'قيصرية', 'حمل', 'توليد'], 'ROOT-MAT', 'SUB-MATERNITY'),
+    (['طوارئ', 'إسعاف'], 'ROOT-EMER', 'SUB-EMERGENCY'),
+    (['عمليات', 'عملية', 'جراحة', 'تخدير'], 'ROOT-IP', 'SUB-SURGERY'),
+    (['إيواء', 'إقامة', 'عناية', 'غرفة', 'اقامة'], 'ROOT-IP', 'SUB-STAY'),
+    (['تحاليل', 'تحليل', 'فحص دم', 'مختبر', 'بول', 'مخبرية'], 'ROOT-OP', 'SUB-LAB'),
+    (['اشعة', 'أشعة', 'رنين', 'مقطعية', 'إيكو', 'صور'], 'ROOT-OP', 'SUB-RAD'),
+    (['عيادات خارجية', 'كشف', 'استشارة', 'مراجعة', 'عيادة'], 'ROOT-OP', 'SUB-CONSULT'),
+    (['علاج طبيعي', 'تمارين'], 'ROOT-PHYSIO', 'SUB-PHYSIO'),
+    (['أورام', 'كيماوي'], 'ROOT-CHR', 'SUB-ONCOLOGY'),
+    (['كلى', 'غسيل'], 'ROOT-CHR', 'SUB-DIALYSIS'),
+]
 
-def classify(name, specialty, raw_cat):
-    n = str(name).lower()
-    s = str(specialty).lower()
-    r = str(raw_cat).lower()
+# Code counter for SV-0001 format
+svc_counter = 1
+
+def classify_detailed(name, specialty, raw_cat):
+    text = f"{name} {specialty} {raw_cat}".lower()
     
-    # Check DENTAL
-    if any(k in n or k in s for k in ['أسنان', 'خلع', 'حشو', 'تقويم']):
-        return CATEGORIES['CAT-DENTAL'], 'CAT-DENTAL'
-        
-    # Check VISION
-    if any(k in n or k in s for k in ['عيون', 'نظارات', 'رمد', 'بصريات']):
-        return CATEGORIES['CAT-VISION'], 'CAT-VISION'
-        
-    # Check MATERNITY
-    if any(k in n or k in s for k in ['ولادة', 'قيصرية', 'حمل', 'توليد', 'جنين', 'أطفال أنابيب']):
-        return CATEGORIES['CAT-MATERNITY'], 'CAT-MATERNITY'
-        
-    # Check EMERGENCY
-    if any(k in n or k in s or k in r for k in ['طوارئ', 'إسعاف']):
-        return CATEGORIES['CAT-EMERGENCY'], 'CAT-EMERGENCY'
-        
-    # Check INPATIENT (Surgery, Operations, Anesthesia, Inpatient)
-    if any(k in n or k in s or k in r for k in ['عملية', 'تخدير', 'إقامة', 'عناية', 'جراحة', 'متابعة داخلية', 'إيواء']):
-        return CATEGORIES['CAT-INPAT'], 'CAT-INPAT'
-        
-    # Check LAB/Imaging -> usually OUTPATIENT (OP) 
-    # but we can call them "خارج المستشفى" as requested
-    if any(k in n or k in s for k in ['تحليل', 'فحص دم', 'بول', 'سائل', 'كيمياء', 'دم', 'مختبر', 'أشعة', 'رنين', 'مقطعية', 'إيكو']):
-        return CATEGORIES['CAT-OUTPAT'], 'CAT-OUTPAT'
-        
-    # Check Consultancy
-    if any(k in n or k in s for k in ['كشف', 'استشارة', 'مراجعة', 'عيادة']):
-        return CATEGORIES['CAT-OUTPAT'], 'CAT-OUTPAT'
-    
-    return CATEGORIES['CAT-OUTPAT'], 'CAT-OUTPAT' # Default
+    # 1. First try checking exact raw_cat if exists
+    for keywords, root, sub in CAT_MAPPING:
+        if raw_cat and any(k in str(raw_cat).lower() for k in keywords):
+            return root, sub
+
+    # 2. Then check name and specialty
+    for keywords, root, sub in CAT_MAPPING:
+        if any(k in text for k in keywords):
+            return root, sub
+            
+    return 'ROOT-OTH', 'SUB-SUPPLIES' # Default
 
 import_data = []
 
 for idx, row in df_raw.iterrows():
     # Price: Index 2, Name: Index 3, Specialty: Index 4, RawCat: Index 5
     raw_name_cell = str(row[3]) if pd.notnull(row[3]) else ""
-    if not raw_name_cell.strip() or any(h in raw_name_cell for h in ['اسم الخدمة', 'الكود', 'البيان']):
+    if not raw_name_cell.strip() or any(h in raw_name_cell for h in ['اسم الخدمة', 'الكود', 'البيان', 'الخدمة']):
         continue
     
     try:
         p_val = str(row[2])
-        price_val = float(re.sub(r'[^0-9.]', '', p_val))
+        # Extract digits and decimal point
+        clean_p = "".join([c for c in p_val if c.isdigit() or c == '.'])
+        price_val = float(clean_p)
     except:
         continue
         
-    svc_code = ""
-    svc_name = raw_name_cell
-    m = re.match(r'^([A-Z0-9-]+)\s+(.+)$', raw_name_cell)
-    if m:
-        svc_code = m.group(1)
-        svc_name = m.group(2)
+    svc_name = raw_name_cell.strip()
+    
+    # Generate Sequential Code: SV-0001, SV-0002...
+    current_svc_code = f"SV-{svc_counter:04d}"
+    svc_counter += 1
         
     raw_specialty = str(row[4]) if pd.notnull(row[4]) else ""
     raw_cat = str(row[5]) if pd.notnull(row[5]) else ""
     
-    cat_name, cat_code = classify(svc_name, raw_specialty, raw_cat)
+    root_code, sub_code = classify_detailed(svc_name, raw_specialty, raw_cat)
     
     import_data.append({
+        'service_code / الكود': current_svc_code,
         'service_name / اسم الخدمة ★': svc_name,
-        'service_code / الكود': svc_code,
+        'main_category / التصنيف الرئيسي': root_code,
+        'sub_category / البند (التصنيف الفرعي)': sub_code,
         'unit_price / السعر': price_val,
-        'category / التصنيف': cat_name,
         'specialty / التخصص': raw_specialty,
-        'notes / ملاحظات': f"Root Mapping: {cat_code}"
+        'notes / ملاحظات': "Dar Al Shifa Imported"
     })
 
 df_output = pd.DataFrame(import_data)
@@ -101,5 +92,7 @@ try:
     df_output.to_excel(output_file, index=False)
     print(f"Created file: {output_file}")
     print(f"Processed {len(df_output)} services.")
+    print(f"Code Sample: {df_output.head(5)['service_code / الكود'].tolist()}")
 except Exception as e:
     print(f"Error saving: {e}")
+

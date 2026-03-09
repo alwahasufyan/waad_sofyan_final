@@ -280,7 +280,12 @@ const ClaimViewMedicalReview = () => {
         serviceCode: service.medicalServiceCode || service.serviceCode || service.code || service.procedureCode || '-',
         quantity: service.quantity || 1,
         unitPrice: service.unitPrice ?? service.price ?? service.netPrice ?? 0,
-        totalAmount: service.totalPrice ?? service.totalAmount ?? service.claimedAmount ?? 0
+        totalAmount: service.totalPrice ?? service.totalAmount ?? service.claimedAmount ?? 0,
+        medicalServiceId: service.medicalServiceId,
+        pricingItemId: service.pricingItemId,
+        benefitLimit: service.benefitLimit,
+        usedAmount: service.usedAmount,
+        remainingAmount: service.remainingAmount
       }))
       : claim.serviceName
         ? [
@@ -886,6 +891,8 @@ const ClaimViewMedicalReview = () => {
                   <TableHead>
                     <TableRow sx={{ bgcolor: 'grey.100' }}>
                       <TableCell sx={{ fontWeight: 700 }}>الخدمة</TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>سقف المنفعة</TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>الرصيد المتبقي</TableCell>
                       <TableCell sx={{ fontWeight: 700 }}>الحالة السريعة</TableCell>
                       <TableCell align="right" sx={{ fontWeight: 700 }}>الكمية × السعر</TableCell>
                       <TableCell align="right" sx={{ fontWeight: 700 }}>الإجمالي</TableCell>
@@ -902,13 +909,33 @@ const ClaimViewMedicalReview = () => {
                       >
                         <TableCell sx={{ py: 1 }}>
                           <Box>
-                            <Typography variant="body2" fontWeight={600}>
-                              {service.serviceName}
-                            </Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.25 }}>
+                              <Typography variant="body2" fontWeight={600}>
+                                {service.serviceName}
+                              </Typography>
+                              {!service.medicalServiceId && service.pricingItemId && (
+                                <Chip label="عقد مباشر" size="small" color="info" variant="outlined" sx={{ height: 18, fontSize: '0.65rem', fontWeight: 700 }} />
+                              )}
+                            </Box>
                             <Typography variant="caption" color="text.secondary">
                               كود: {service.serviceCode}
                             </Typography>
                           </Box>
+                        </TableCell>
+                        <TableCell sx={{ py: 1 }}>
+                          <Typography variant="body2" fontWeight={600} color={service.benefitLimit > 0 ? "primary.main" : "text.secondary"}>
+                            {service.benefitLimit > 0 ? formatCurrency(service.benefitLimit) : '-'}
+                          </Typography>
+                        </TableCell>
+                        <TableCell sx={{ py: 1 }}>
+                          <Typography variant="body2" fontWeight={700} color={service.remainingAmount > 0 ? "success.main" : (service.benefitLimit > 0 ? "error.main" : "text.secondary")}>
+                            {service.benefitLimit > 0 ? formatCurrency(service.remainingAmount ?? 0) : '-'}
+                          </Typography>
+                          {service.benefitLimit > 0 && (
+                            <Typography variant="caption" display="block" color="text.secondary">
+                              مستهلك: {formatCurrency(service.usedAmount ?? 0)}
+                            </Typography>
+                          )}
                         </TableCell>
                         <TableCell sx={{ py: 1 }} onClick={(event) => event.stopPropagation()}>
                           <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mb: serviceDecisions[service.serviceKey]?.decision === SERVICE_DECISION.REJECT ? 0.75 : 0 }}>

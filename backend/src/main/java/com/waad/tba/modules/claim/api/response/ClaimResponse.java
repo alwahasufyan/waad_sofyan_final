@@ -378,6 +378,9 @@ public class ClaimResponse {
         // Coverage snapshot
         private Integer coveragePercent;
         private Integer patientSharePercent;
+        private BigDecimal benefitLimit; // Added for UI display
+        private BigDecimal usedAmount;   // Added for UI display
+        private BigDecimal remainingAmount; // Added for UI display
 
         // Detailed Audit Fields
         private BigDecimal requestedUnitPrice;
@@ -387,6 +390,7 @@ public class ClaimResponse {
         private String rejectionReasonCode;
         private String reviewerNotes;
 
+        private Long pricingItemId;
         private Boolean active;
     }
 

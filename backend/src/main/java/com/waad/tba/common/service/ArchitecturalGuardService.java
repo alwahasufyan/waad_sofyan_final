@@ -90,7 +90,7 @@ public class ArchitecturalGuardService {
      */
     public void guardServiceHasCategory(Long serviceId) {
         if (serviceId == null) {
-            return; // Skip null service IDs
+            return; // Skip null service IDs - allowed for unmapped services
         }
         medicalServiceRepository.findById(serviceId).ifPresent(service -> {
             boolean hasCategory = service.getCategoryId() != null
@@ -99,7 +99,9 @@ public class ArchitecturalGuardService {
                     .isPresent();
 
             if (!hasCategory) {
-                throw ArchitecturalViolationException.serviceWithoutCategory(service.getCode());
+                // For now, we allow services without categories to support simplified import,
+                // but we log it.
+                log.warn("⚠️ Service {} has no category assigned.", service.getCode());
             }
         });
     }
@@ -144,13 +146,16 @@ public class ArchitecturalGuardService {
             throw ArchitecturalViolationException.claimWithoutService(claim.getId());
         }
         
-        // Validate each line has a service
+        // Validate each line has a service or service identification
         for (ClaimLine line : lines) {
-            if (line.getMedicalService() == null && (line.getServiceCode() == null || line.getServiceCode().isBlank())) {
+            if (line.getMedicalService() == null && 
+                (line.getServiceCode() == null || line.getServiceCode().isBlank()) &&
+                (line.getServiceName() == null || line.getServiceName().isBlank())) {
+                
                 throw new ArchitecturalViolationException(
                     "INVALID_CLAIM_LINE",
                     "ClaimLine",
-                    String.format("Claim %d line %d must reference a MedicalService. Free-text services are not allowed.",
+                    String.format("Claim %d line %d must have a service reference (ID, Code, or Name).",
                         claim.getId(), line.getId())
                 );
             }
@@ -240,19 +245,22 @@ public class ArchitecturalGuardService {
     // ═══════════════════════════════════════════════════════════════════════════
 
     /**
-     * Validate pricing item has a service.
-     * RULE: Free-text pricing is not allowed
+     * Validate pricing item has identification.
+     * RULE: Pricing must have at least a Name or Code
      */
     public void guardPricingHasService(ProviderContractPricingItem item) {
         if (item == null) {
             throw new ArchitecturalViolationException("ProviderContractPricingItem", "Pricing item cannot be null");
         }
-        if (item.getMedicalService() == null) {
+        if (item.getMedicalService() == null && 
+            (item.getServiceName() == null || item.getServiceName().isBlank()) &&
+            (item.getServiceCode() == null || item.getServiceCode().isBlank())) {
+            
             throw ArchitecturalViolationException.pricingWithoutService(
                 item.getContract() != null ? item.getContract().getId() : null
             );
         }
-        log.trace("✅ Guard passed: Pricing item has service {}", item.getMedicalService().getCode());
+        log.trace("✅ Guard passed: Pricing item has identification");
     }
 
     // ═══════════════════════════════════════════════════════════════════════════

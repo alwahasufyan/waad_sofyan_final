@@ -50,8 +50,8 @@ const MONTHS_AR = [
 ];
 
 const newLine = () => ({
-    id: Math.random(), service: null, quantity: 1,
-    unitPrice: 0, contractPrice: 0, byCompany: 0, byEmployee: 0,
+    id: Math.random(), service: null, serviceName: '', serviceCode: '',
+    quantity: 1, unitPrice: 0, contractPrice: 0, byCompany: 0, byEmployee: 0,
     refusalTypes: '', total: 0, coveragePercent: null,
     requiresPreApproval: false, notCovered: false,
     rejected: false, rejectionReason: ''
@@ -298,19 +298,15 @@ export default function ClaimBatchEntry() {
 
     const serviceOptions = useMemo(() => {
         const items = Array.isArray(contractedRaw) ? contractedRaw : (contractedRaw?.items || []);
-        console.log('[serviceOptions] total contracted items:', items.length, '| sample:', items[0]);
-        return items.map(s => {
-            const label = `${s.code ? '[' + s.code + '] ' : ''}${s.name || ''}`;
-            // s.mapped = true  → s.id is the MedicalService ID
-            // s.mapped = false → s.id is the PricingItem ID (unmapped)
-            const msId = s.medicalService?.id || (s.mapped ? s.id : 0);
-            return {
-                ...s,
-                label,
-                id: s.id,
-                medicalServiceId: msId
-            };
-        });
+        return items.map(s => ({
+            ...s,
+            label: `${s.code ? '[' + s.code + '] ' : (s.serviceCode ? '[' + s.serviceCode + '] ' : '')}${s.name || s.serviceName || ''}`,
+            serviceName: s.serviceName || s.name || '',
+            serviceCode: s.serviceCode || s.code || '',
+            medicalServiceId: s.medicalServiceId,
+            pricingItemId: s.pricingItemId,
+            price: s.contractPrice || 0
+        }));
     }, [contractedRaw]);
 
     const batchContent = useMemo(() =>
@@ -413,12 +409,14 @@ export default function ClaimBatchEntry() {
         let usageExceeded = false;
         const usage = line.usageDetails;
 
+        let batchUsedTimes = 0;
+        let batchUsedAmount = 0;
+        let totalUsedCount = 0;
+        let totalUsedAmount = 0;
+
         if (usage && usage.hasLimit) {
             // New logic: Check other lines in the same batch that share the same rule
-            let batchUsedTimes = 0;
-            let batchUsedAmount = 0;
             const currentRuleId = usage.ruleId;
-
             if (currentRuleId && currentBatch && idx !== null) {
                 currentBatch.forEach((l, i) => {
                     // Only count lines BEFORE this one
@@ -431,8 +429,8 @@ export default function ClaimBatchEntry() {
                 });
             }
 
-            const totalUsedCount = (usage.usedCount || 0) + batchUsedTimes;
-            const totalUsedAmount = (usage.usedAmount || 0) + batchUsedAmount;
+            totalUsedCount = (usage?.usedCount || 0) + batchUsedTimes;
+            totalUsedAmount = (usage?.usedAmount || 0) + batchUsedAmount;
 
             if (usage.timesLimit > 0 && totalUsedCount >= usage.timesLimit) {
                 limitRefused = effectiveTotal;
@@ -466,7 +464,13 @@ export default function ClaimBatchEntry() {
             byEmployee,
             refusedAmount: parseFloat((priceRefused + limitRefused).toFixed(2)),
             usageExceeded: usageExceeded || (usage && usage.exceeded),
-            usageExhausted: limitRefused >= effectiveTotal && effectiveTotal > 0
+            usageExhausted: limitRefused >= effectiveTotal && effectiveTotal > 0,
+            usageDetails: usage ? {
+                ...usage,
+                totalUsedCount,
+                totalUsedAmount,
+                remainingAmount: usage.amountLimit > 0 ? Math.max(0, usage.amountLimit - totalUsedAmount - approvedTotalForCoverage) : null
+            } : null
         };
     }, [applyBenefits, policyInfo?.defaultCoveragePercent]);
 
@@ -480,45 +484,59 @@ export default function ClaimBatchEntry() {
         setIsDirty(true);
     }, [recompute]);
 
-    const handleServiceChange = useCallback(async (idx, svc) => {
-        if (!svc) {
-            updateLine(idx, { service: null, description: '', unitPrice: 0, contractPrice: 0 });
+    const handleServiceChange = useCallback(async (idx, val) => {
+        if (!val) {
+            updateLine(idx, { service: null, serviceName: '', serviceCode: '', unitPrice: 0, contractPrice: 0 });
             return;
         }
 
-        // Check for duplicates using medicalServiceId (the actual service FK)
-        const newMsId = svc.medicalServiceId || svc.medicalService?.id;
-        const isDuplicate = lines.some((l, i) => {
-            if (i === idx) return false;
-            const existingMsId = l.service?.medicalServiceId || l.service?.medicalService?.id;
-            return newMsId && existingMsId && existingMsId === newMsId;
-        });
-        if (isDuplicate) {
-            enqueueSnackbar('هذه الخدمة مضافة بالفعل في بند آخر', { variant: 'warning' });
+        let svc = val;
+        let isFreeText = false;
+        if (typeof val === 'string') {
+            svc = { serviceName: val, label: val, mapped: false, isFreeText: true };
+            isFreeText = true;
         }
 
-        const cov = await fetchCoverage(svc, primaryCategoryCode);
-        // contractPrice is already set correctly in serviceOptions mapping
-        const price = svc?.contractPrice ?? svc?.basePrice ?? 0;
+        const newName = svc.serviceName || svc.name;
+        
+        const isDuplicate = lines.some((l, i) => {
+            if (i === idx) return false;
+            const existingName = l.serviceName || l.service?.serviceName || l.service?.name;
+            return newName && existingName && existingName === newName;
+        });
+
+        if (isDuplicate) {
+            enqueueSnackbar('هذه الخدمة مضافة بالفعل في بند آخر', { variant: 'error' });
+            return;
+        }
+
+        let cov = { coveragePercent: policyInfo?.defaultCoveragePercent ?? 100, requiresPreApproval: false, notCovered: false };
+        if (!isFreeText) {
+            cov = await fetchCoverage(svc, primaryCategoryCode);
+        }
+
+        const hasContractPrice = svc.hasContract !== false && svc.price !== undefined && svc.price !== null;
+        const price = svc?.contractPrice ?? svc?.basePrice ?? svc?.price ?? 0;
         updateLine(idx, {
             service: svc,
-            description: svc?.serviceName || '',
+            serviceName: svc.serviceName || svc.name || (typeof val === 'string' ? val : ''),
+            serviceCode: svc.serviceCode || svc.code || '',
             unitPrice: price,
             contractPrice: price,
             ...cov
         });
-    }, [fetchCoverage, updateLine, lines, enqueueSnackbar, primaryCategoryCode]);
+    }, [fetchCoverage, updateLine, lines, enqueueSnackbar, primaryCategoryCode, policyInfo]);
 
     useEffect(() => {
-        if (!policyId) return;
+        if (!policyId || !member?.id) return;
         lines.forEach((line, idx) => {
-            if (!line.service) return;
+            if (!line.service || line.usageDetails) return;
             fetchCoverage(line.service, primaryCategoryCode).then(cov =>
                 updateLine(idx, cov)
             );
         });
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [policyId, applyBenefits, primaryCategoryCode]);
+    }, [policyId, applyBenefits, primaryCategoryCode, member?.id, lines.length]);
 
     const addLine = useCallback(() => { setLines(p => [...p, newLine()]); setIsDirty(true); }, []);
     const removeLine = useCallback((idx) => {
@@ -565,7 +583,7 @@ export default function ClaimBatchEntry() {
 
     const handleSave = async () => {
         if (!member) { enqueueSnackbar(t('claimEntry.validationMember'), { variant: 'error' }); return; }
-        if (lines.some(l => !l.service)) { enqueueSnackbar(t('claimEntry.validationService'), { variant: 'error' }); return; }
+        if (lines.some(l => !l.service && !l.serviceName)) { enqueueSnackbar(t('claimEntry.validationService'), { variant: 'error' }); return; }
         if (!isClaimRejected && lines.some(l => !l.rejected && (parseFloat(l.unitPrice) || 0) <= 0)) {
             enqueueSnackbar('يجب أن يكون سعر الوحدة أكبر من صفر لكل بند غير مرفوض', { variant: 'error' }); return;
         }
@@ -586,7 +604,10 @@ export default function ClaimBatchEntry() {
                 manualCategoryEnabled,
                 primaryCategoryCode: manualCategoryEnabled ? primaryCategoryCode : null,
                 lines: lines.map(l => ({
-                    medicalServiceId: l.service?.medicalService?.id || l.service?.id,
+                    medicalServiceId: l.service?.medicalServiceId || null,
+                    pricingItemId: l.service?.pricingItemId || null,
+                    serviceName: l.serviceName || l.service?.serviceName || l.service?.name || '',
+                    serviceCode: l.serviceCode || l.service?.serviceCode || l.service?.code || '',
                     quantity: parseInt(l.quantity) || 1,
                     unitPrice: parseFloat(l.unitPrice) || 0,
                     refusedAmount: parseFloat(l.refusedAmount) || 0,
@@ -931,7 +952,7 @@ export default function ClaimBatchEntry() {
                         <Box sx={{ flexShrink: 0, px: 2.5, py: 1.5, bgcolor: 'background.paper' }}>
                             <Grid container spacing={2}>
                                 {/* Row 1: Patient, Diagnosis, Context */}
-                                <Grid size={{ xs: 12, sm: 4 }}>
+                                <Grid size={{ xs: 12, sm: 3 }}>
                                     <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700, display: 'block', mb: 0.5, fontSize: '0.7rem' }}>
                                         {t('claimEntry.patient')} <Typography component="span" color="error.main">*</Typography>
                                     </Typography>
@@ -948,7 +969,7 @@ export default function ClaimBatchEntry() {
                                     />
                                 </Grid>
 
-                                <Grid size={{ xs: 12, sm: 4 }}>
+                                <Grid size={{ xs: 12, sm: 3 }}>
                                     <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700, display: 'block', mb: 0.5, fontSize: '0.7rem' }}>
                                         {t('claimEntry.diagnosis')}
                                     </Typography>
@@ -956,7 +977,7 @@ export default function ClaimBatchEntry() {
                                         onChange={e => { setDiagnosis(e.target.value); setIsDirty(true); }} sx={{ ...inlineSx, '& .MuiInputBase-input': { fontSize: '0.8rem' } }} />
                                 </Grid>
 
-                                <Grid size={{ xs: 12, sm: 4 }}>
+                                <Grid size={{ xs: 12, sm: 6 }}>
                                     <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 900, display: 'block', mb: 0.5, fontSize: '0.7rem' }}>
                                         سياق التغطية (Context)
                                     </Typography>
@@ -974,7 +995,7 @@ export default function ClaimBatchEntry() {
                                                     }}
                                                 />
                                             }
-                                            label={<Typography sx={{ fontSize: '0.75rem', fontWeight: 900 }}>عيادات خارجية</Typography>}
+                                            label={<Typography sx={{ fontSize: '0.75rem', fontWeight: 900, whiteSpace: 'nowrap' }}>عيادات خارجية</Typography>}
                                         />
                                         {primaryCategoryCode !== 'CAT-OUTPAT' && (
                                             <Autocomplete
@@ -1092,7 +1113,8 @@ export default function ClaimBatchEntry() {
                                         <TH align="center" w={45}>الكمية</TH>
                                         <TH align="center" w={70}>سعر الوحدة</TH>
                                         <TH align="center" w={60}>التحمل %</TH>
-                                        <TH align="center" w={130}>سقف المنفعة</TH>
+                                        <TH align="center" w={110}>سقف المنفعة</TH>
+                                        <TH align="center" w={110}>الرصيد المتبقي</TH>
                                         <TH align="center" w={75}>المرفوض</TH>
                                         <TH align="center" w={100}>شركة / مشترك</TH>
                                         <TH align="center" w={80}>الإجمالي</TH>
@@ -1107,31 +1129,44 @@ export default function ClaimBatchEntry() {
                                                 ...(line.rejected && { bgcolor: alpha(theme.palette.error.main, 0.05) })
                                             }}>
                                                 <TableCell align="right">
-                                                    <Autocomplete
-                                                        size="small"
-                                                        options={serviceOptions}
-                                                        loading={loadingServices}
-                                                        value={line.service}
-                                                        onChange={(_, v) => handleServiceChange(idx, v)}
-                                                        groupBy={(option) => option?.categoryName || 'أخرى'}
-                                                        getOptionLabel={o => o?.label || o?.serviceName || ''}
-                                                        isOptionEqualToValue={(option, value) => {
-                                                            if (!option || !value) return false;
-                                                            const optId = option?.medicalServiceId || option?.id;
-                                                            const valId = value?.medicalServiceId || value?.id;
-                                                            return optId === valId;
-                                                        }}
-                                                        renderInput={params => (
-                                                            <TextField
-                                                                {...params}
-                                                                variant="standard"
-                                                                sx={{ ...inlineSx, '& input': { textAlign: 'right', fontSize: '0.8rem', fontWeight: 500 } }}
-                                                                placeholder={loadingServices ? "جاري التحميل..." : "ابحث عن خدمة..."}
-                                                                inputProps={{ ...params.inputProps, style: { textAlign: 'right' } }}
-                                                            />
+                                                    <Stack spacing={0.5} alignItems="flex-start">
+                                                        <Autocomplete
+                                                            size="small"
+                                                            freeSolo
+                                                            fullWidth
+                                                            options={serviceOptions}
+                                                            loading={loadingServices}
+                                                            value={line.service}
+                                                            onInputChange={(_, v) => {
+                                                                if (typeof v === 'string') {
+                                                                    handleServiceChange(idx, v);
+                                                                }
+                                                            }}
+                                                            onChange={(_, v) => handleServiceChange(idx, v)}
+                                                            groupBy={(option) => option?.categoryName || 'أخرى'}
+                                                            getOptionLabel={o => typeof o === 'string' ? o : (o?.label || o?.serviceName || '')}
+                                                            isOptionEqualToValue={(option, value) => {
+                                                                if (!option || !value) return false;
+                                                                if (typeof value === 'string') return option.serviceName === value;
+                                                                const optId = option?.medicalServiceId || option?.pricingItemId || option?.id;
+                                                                const valId = value?.medicalServiceId || value?.pricingItemId || value?.id;
+                                                                return optId && valId && optId === valId;
+                                                            }}
+                                                            renderInput={params => (
+                                                                <TextField
+                                                                    {...params}
+                                                                    variant="standard"
+                                                                    sx={{ ...inlineSx, '& input': { textAlign: 'right', fontSize: '0.8rem', fontWeight: 500 } }}
+                                                                    placeholder={loadingServices ? "جاري التحميل..." : "ابحث عن خدمة..."}
+                                                                    inputProps={{ ...params.inputProps, style: { textAlign: 'right' } }}
+                                                                />
+                                                            )}
+                                                            noOptionsText={loadingServices ? "جاري تحميل خدمات العقد..." : "لم يتم العثور على خدمات في العقد"}
+                                                        />
+                                                        {line.service && !line.service.medicalServiceId && line.service.pricingItemId && (
+                                                            <Chip label="عقد مباشر" size="small" color="info" variant="outlined" sx={{ height: 16, fontSize: '0.65rem', fontWeight: 700 }} />
                                                         )}
-                                                        noOptionsText={loadingServices ? "جاري تحميل خدمات العقد..." : "لم يتم العثور على خدمات في العقد"}
-                                                    />
+                                                    </Stack>
                                                 </TableCell>
                                                 <TableCell align="center">
                                                     <TextField variant="standard" type="number" value={line.quantity}
@@ -1161,13 +1196,13 @@ export default function ClaimBatchEntry() {
                                                     {line.usageDetails && (
                                                         <Stack spacing={0.3} alignItems="center" justifyContent="center">
                                                             {line.usageDetails.timesLimit > 0 && (
-                                                                <Typography variant="caption" sx={{ fontSize: '0.75rem', color: line.usageDetails.timesExceeded ? 'error.main' : 'text.secondary', fontWeight: 900, whiteSpace: 'nowrap' }}>
-                                                                    مرات: {line.usageDetails.usedCount}/{line.usageDetails.timesLimit}
+                                                                <Typography variant="caption" sx={{ fontSize: '0.75rem', color: line.usageDetails.timesExceeded || line.usageDetails.totalUsedCount > line.usageDetails.timesLimit ? 'error.main' : 'text.secondary', fontWeight: 900, whiteSpace: 'nowrap' }}>
+                                                                    مرات: {line.usageDetails.totalUsedCount}/{line.usageDetails.timesLimit}
                                                                 </Typography>
                                                             )}
                                                             {line.usageDetails.amountLimit > 0 && (
-                                                                <Typography variant="caption" sx={{ fontSize: '0.75rem', color: line.usageDetails.amountExceeded ? 'error.main' : 'text.secondary', fontWeight: 900, whiteSpace: 'nowrap' }}>
-                                                                    د.ل: {line.usageDetails.usedAmount}/{line.usageDetails.amountLimit}
+                                                                <Typography variant="caption" sx={{ fontSize: '0.75rem', color: line.usageDetails.amountExceeded || line.usageDetails.totalUsedAmount > line.usageDetails.amountLimit ? 'error.main' : 'text.secondary', fontWeight: 900, whiteSpace: 'nowrap' }}>
+                                                                    د.ل: {line.usageDetails.totalUsedAmount?.toFixed(2)}/{line.usageDetails.amountLimit}
                                                                 </Typography>
                                                             )}
                                                         </Stack>

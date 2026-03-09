@@ -71,6 +71,13 @@ public class ClaimLine {
     private MedicalService medicalService;
 
     /**
+     * Pricing Item ID (from provider_contract_pricing_items)
+     * Links this line directly to a specific contract price entry.
+     */
+    @Column(name = "pricing_item_id")
+    private Long pricingItemId;
+
+    /**
      * Service code (denormalized snapshot for reports/queries)
      */
     @Column(name = "service_code", length = 50, nullable = false)
@@ -112,6 +119,23 @@ public class ClaimLine {
      */
     @Column(name = "applied_category_name", length = 200)
     private String appliedCategoryName;
+
+    /**
+     * Benefit limit for this service/category at the time of claim creation.
+     * Denormalized from BenefitPolicyRule for audit trail and faster display.
+     */
+    @Column(name = "benefit_limit", precision = 15, scale = 2)
+    private BigDecimal benefitLimit;
+
+    /**
+     * Used amount from the benefit limit at the time of claim creation.
+     * Snapshot for historical accuracy.
+     */
+    @Column(name = "used_amount_snapshot", precision = 15, scale = 2)
+    private BigDecimal usedAmountSnapshot;
+
+    @Column(name = "remaining_amount_snapshot", precision = 15, scale = 2)
+    private BigDecimal remainingAmountSnapshot;
 
     // ==================== QUANTITY & PRICING ====================
 
@@ -258,6 +282,11 @@ public class ClaimLine {
             }
 
             this.requiresPA = this.medicalService.isRequiresPA();
+        } else {
+            // If no service link, ensure we don't crash. 
+            // name/code would have been set by Mapper from DTO.
+            if (this.serviceCode == null) this.serviceCode = "N/A";
+            if (this.serviceName == null) this.serviceName = "Unknown Service";
         }
     }
 
@@ -276,31 +305,30 @@ public class ClaimLine {
             return;
         }
 
-        // RULE: MedicalService is MANDATORY
-        if (medicalService == null) {
-            throw new IllegalStateException("ARCHITECTURAL VIOLATION: ClaimLine MUST reference a MedicalService");
+        // RULE: Either MedicalService OR (ServiceCode + ServiceName) must be present
+        if (medicalService == null && (serviceCode == null || serviceName == null)) {
+            throw new IllegalStateException("ARCHITECTURAL VIOLATION: ClaimLine must have a MedicalService reference OR a ServiceCode/Name pair");
         }
 
-        // RULE: Category is MANDATORY (must come from service)
-        if (serviceCategoryId == null) {
+        // RULE: Category is MANDATORY if medicalService is present
+        if (medicalService != null && serviceCategoryId == null) {
             throw new IllegalStateException(
-                    "ARCHITECTURAL VIOLATION: ClaimLine MUST have a medical category. " +
-                            "Service selection without category is not allowed.");
+                    "ARCHITECTURAL VIOLATION: ClaimLine with MedicalService MUST have a medical category.");
         }
 
-        // RULE: Service must belong to the selected category
-        if (medicalService.getCategoryId() != null &&
-                !medicalService.getCategoryId().equals(serviceCategoryId)) {
+        // RULE: Service must belong to the selected category (if both present)
+        if (medicalService != null && medicalService.getCategoryId() != null &&
+                serviceCategoryId != null && !medicalService.getCategoryId().equals(serviceCategoryId)) {
             throw new IllegalStateException(
                     "ARCHITECTURAL VIOLATION: Medical service does not belong to the selected category. " +
                             "Service categoryId=" + medicalService.getCategoryId() +
                             ", selected categoryId=" + serviceCategoryId);
         }
 
-        // RULE: Unit price must be set (from contract)
-        if (unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) {
+        // RULE: Unit price must be set
+        if (unitPrice == null) {
             throw new IllegalStateException(
-                    "ARCHITECTURAL VIOLATION: Unit price must be resolved from Provider Contract");
+                    "ARCHITECTURAL VIOLATION: Unit price must be resolved");
         }
 
         // RULE: Quantity must be positive

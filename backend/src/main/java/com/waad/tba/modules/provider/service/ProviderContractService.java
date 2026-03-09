@@ -365,20 +365,15 @@ public class ProviderContractService {
                 "Provider not found with ID: " + providerId
             ));
 
-        // Fetch service
-        MedicalService service = medicalServiceRepository.findByCode(serviceCode)
-            .orElseThrow(() -> new ResourceNotFoundException(
-                "Medical service not found with code: " + serviceCode
-            ));
+        // Attempt to find service (NOT strictly required anymore for price lookup)
+        MedicalService service = medicalServiceRepository.findByCode(serviceCode).orElse(null);
 
         // ═══════════════════════════════════════════════════════════════════════════
-        // Use NORMALIZED table (provider_contract_pricing_items) ONLY
+        // Use NORMALIZED table (provider_contract_pricing_items)
         // ═══════════════════════════════════════════════════════════════════════════
-        Optional<ProviderContractPricingItem> pricingOpt = pricingItemRepository.findEffectivePricing(
-            providerId, 
-            service.getId(),  // Uses service ID, not code
-            effectiveDate
-        );
+        Optional<ProviderContractPricingItem> pricingOpt = (service != null)
+            ? pricingItemRepository.findEffectivePricing(providerId, service.getId(), effectiveDate)
+            : pricingItemRepository.findEffectivePricingByCode(providerId, serviceCode, effectiveDate);
 
         if (pricingOpt.isPresent()) {
             ProviderContractPricingItem pricing = pricingOpt.get();
@@ -389,13 +384,14 @@ public class ProviderContractService {
                 .providerId(providerId)
                 .providerName(provider.getName())
                 .serviceCode(serviceCode)
-                .serviceName(service.getName())
+                .serviceName(pricing.getServiceName() != null ? pricing.getServiceName() : (service != null ? service.getName() : "Unknown"))
                 .contractPrice(pricing.getContractPrice())
                 .currency(pricing.getCurrency())
                 .effectiveDate(effectiveDate)
                 .contractId(pricing.getContract().getId())
                 .effectiveFrom(pricing.getEffectiveFrom() != null ? pricing.getEffectiveFrom() : pricing.getContract().getStartDate())
                 .effectiveTo(pricing.getEffectiveTo() != null ? pricing.getEffectiveTo() : pricing.getContract().getEndDate())
+                .pricingItemId(pricing.getId())
                 .hasContract(true)
                 .message("Contract found")
                 .build();

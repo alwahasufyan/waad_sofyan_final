@@ -12,6 +12,7 @@ import com.waad.tba.modules.provider.repository.ProviderRepository;
 import com.waad.tba.modules.rbac.entity.User;
 import com.waad.tba.security.AuthorizationService;
 
+import com.waad.tba.modules.benefitpolicy.service.BenefitPolicyCoverageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -49,6 +50,7 @@ public class EligibilityEngineServiceImpl implements EligibilityEngineService {
     private final MemberRepository memberRepository;
     private final ProviderRepository providerRepository;
     private final EligibilityCheckRepository eligibilityCheckRepository;
+    private final BenefitPolicyCoverageService coverageService;
 
     // Security
     private final AuthorizationService authorizationService;
@@ -82,18 +84,16 @@ public class EligibilityEngineServiceImpl implements EligibilityEngineService {
 
         } catch (Exception e) {
             log.error("[Eligibility] Error during check - RequestID: {}, Error: {}", requestId, e.getMessage(), e);
-            
+
             // Return system error result
             return EligibilityResult.notEligible(
                     requestId,
                     null,
                     List.of(EligibilityResult.ReasonDetail.from(
                             EligibilityReason.SYSTEM_ERROR,
-                            e.getMessage()
-                    )),
+                            e.getMessage())),
                     System.currentTimeMillis() - startTime,
-                    0
-            );
+                    0);
         }
     }
 
@@ -101,12 +101,12 @@ public class EligibilityEngineServiceImpl implements EligibilityEngineService {
     @Transactional(readOnly = true)
     public EligibilityResult checkEligibility(EligibilityContext context) {
         long startTime = System.currentTimeMillis();
-        
+
         log.info("[Eligibility] Internal check - RequestID: {}, MemberID: {}",
                 context.getRequestId(), context.getMemberId());
 
         EligibilityResult result = evaluateRules(context, startTime);
-        
+
         // Log to audit
         saveAuditLog(context, result);
 
@@ -134,7 +134,7 @@ public class EligibilityEngineServiceImpl implements EligibilityEngineService {
         if (request.getMemberId() != null) {
             member = memberRepository.findById(request.getMemberId()).orElse(null);
         }
-        
+
         // Resolve BenefitPolicy from member (CANONICAL - only policy model)
         BenefitPolicy benefitPolicy = null;
         Long benefitPolicyId = null;
@@ -168,6 +168,8 @@ public class EligibilityEngineServiceImpl implements EligibilityEngineService {
                 .providerId(request.getProviderId())
                 .serviceDate(request.getServiceDate())
                 .serviceCode(request.getServiceCode())
+                .medicalCategoryId(request.getMedicalCategoryId())
+                .medicalServiceId(request.getMedicalServiceId())
                 .member(member)
                 .benefitPolicy(benefitPolicy)
                 .provider(provider)
@@ -203,7 +205,7 @@ public class EligibilityEngineServiceImpl implements EligibilityEngineService {
             }
 
             rulesEvaluated++;
-            log.debug("[Eligibility] Evaluating rule: {} (priority: {})", 
+            log.debug("[Eligibility] Evaluating rule: {} (priority: {})",
                     rule.getRuleCode(), rule.getPriority());
 
             try {
@@ -211,19 +213,19 @@ public class EligibilityEngineServiceImpl implements EligibilityEngineService {
 
                 if (!result.isPassed()) {
                     EligibilityResult.ReasonDetail detail = EligibilityResult.ReasonDetail.from(result);
-                    
+
                     if (rule.isHardRule() && result.getReason() != null && result.getReason().isHardFailure()) {
                         // Hard failure - stop evaluation
                         failures.add(detail);
-                        log.info("[Eligibility] Hard failure at rule {}: {}", 
+                        log.info("[Eligibility] Hard failure at rule {}: {}",
                                 rule.getRuleCode(), result.getReasonCode());
-                        
-                        return buildResult(context, false, failures, warnings, 
+
+                        return buildResult(context, false, failures, warnings,
                                 startTime, rulesEvaluated);
                     } else {
                         // Soft failure - add warning and continue
                         warnings.add(detail);
-                        log.info("[Eligibility] Warning at rule {}: {}", 
+                        log.info("[Eligibility] Warning at rule {}: {}",
                                 rule.getRuleCode(), result.getReasonCode());
                     }
                 } else {
@@ -235,8 +237,7 @@ public class EligibilityEngineServiceImpl implements EligibilityEngineService {
                 // Treat rule exception as hard failure
                 failures.add(EligibilityResult.ReasonDetail.from(
                         EligibilityReason.SYSTEM_ERROR,
-                        "Rule " + rule.getRuleCode() + " error: " + e.getMessage()
-                ));
+                        "Rule " + rule.getRuleCode() + " error: " + e.getMessage()));
                 return buildResult(context, false, failures, warnings, startTime, rulesEvaluated);
             }
         }
@@ -249,9 +250,9 @@ public class EligibilityEngineServiceImpl implements EligibilityEngineService {
      * Build the final result
      */
     private EligibilityResult buildResult(EligibilityContext context, boolean eligible,
-                                           List<EligibilityResult.ReasonDetail> failures,
-                                           List<EligibilityResult.ReasonDetail> warnings,
-                                           long startTime, int rulesEvaluated) {
+            List<EligibilityResult.ReasonDetail> failures,
+            List<EligibilityResult.ReasonDetail> warnings,
+            long startTime, int rulesEvaluated) {
         long processingTime = System.currentTimeMillis() - startTime;
         EligibilityResult.EligibilitySnapshot snapshot = buildSnapshot(context);
 
@@ -263,8 +264,7 @@ public class EligibilityEngineServiceImpl implements EligibilityEngineService {
                     snapshot,
                     allReasons,
                     processingTime,
-                    rulesEvaluated
-            );
+                    rulesEvaluated);
         }
 
         if (!warnings.isEmpty()) {
@@ -273,16 +273,14 @@ public class EligibilityEngineServiceImpl implements EligibilityEngineService {
                     snapshot,
                     warnings,
                     processingTime,
-                    rulesEvaluated
-            );
+                    rulesEvaluated);
         }
 
         return EligibilityResult.eligible(
                 context.getRequestId(),
                 snapshot,
                 processingTime,
-                rulesEvaluated
-        );
+                rulesEvaluated);
     }
 
     /**
@@ -293,31 +291,68 @@ public class EligibilityEngineServiceImpl implements EligibilityEngineService {
         BenefitPolicy benefitPolicy = context.getBenefitPolicy();
         Provider provider = context.getProvider();
 
-        return EligibilityResult.EligibilitySnapshot.builder()
+        EligibilityResult.EligibilitySnapshot.EligibilitySnapshotBuilder builder = EligibilityResult.EligibilitySnapshot
+                .builder()
                 // Member
                 .memberId(member != null ? member.getId() : context.getMemberId())
                 .memberName(member != null ? member.getFullName() : null)
-                .memberCivilId(member != null ? member.getNationalNumber() : null)
+                .memberCivilId(member != null ? member.getNationalNumber()
+                        : context.getMemberId() != null ? context.getMemberId().toString() : null)
                 .memberStatus(member != null && member.getStatus() != null ? member.getStatus().name() : null)
                 .memberCardNumber(member != null ? member.getCardNumber() : null)
                 // Policy (BenefitPolicy)
                 .policyId(benefitPolicy != null ? benefitPolicy.getId() : context.getBenefitPolicyId())
                 .policyNumber(benefitPolicy != null ? benefitPolicy.getPolicyCode() : null)
-                .policyStatus(benefitPolicy != null && benefitPolicy.getStatus() != null ? benefitPolicy.getStatus().name() : null)
+                .policyStatus(
+                        benefitPolicy != null && benefitPolicy.getStatus() != null ? benefitPolicy.getStatus().name()
+                                : null)
                 .coverageStart(benefitPolicy != null ? benefitPolicy.getStartDate() : null)
                 .coverageEnd(benefitPolicy != null ? benefitPolicy.getEndDate() : null)
                 .productName(benefitPolicy != null ? benefitPolicy.getName() : null)
                 // Employer
                 .employerId(context.getMemberEmployerId())
-                .employerName(context.getEmployer() != null ? 
-                        context.getEmployer().getName() : null)
+                .employerName(context.getEmployer() != null ? context.getEmployer().getName() : null)
                 // Provider
                 .providerId(provider != null ? provider.getId() : context.getProviderId())
                 .providerName(provider != null ? provider.getName() : null)
                 // Service
                 .serviceDate(context.getServiceDate())
                 .serviceCode(context.getServiceCode())
-                .build();
+                .medicalCategoryId(context.getMedicalCategoryId())
+                .medicalServiceId(context.getMedicalServiceId());
+
+        // Resolve detailed coverage if medical service or category is provided
+        if (benefitPolicy != null
+                && (context.getMedicalServiceId() != null || context.getMedicalCategoryId() != null)) {
+            BenefitPolicyCoverageService.ResolvedCoverage coverage = coverageService.resolveCoverage(
+                    benefitPolicy.getId(),
+                    context.getMedicalServiceId(),
+                    context.getMedicalCategoryId(),
+                    null, // overrideCategoryId
+                    member != null ? member.getId() : null, // memberId
+                    context.getServiceDate(),
+                    null // claimIdToExclude
+            );
+
+            if (coverage != null) {
+                builder.coveragePercent(coverage.getCoveragePercent())
+                        .patientCopayPercent(100 - coverage.getCoveragePercent())
+                        .requiresPreApproval(coverage.isRequiresPreApproval())
+                        .matchingCategoryId(coverage.getMatchingCategoryId());
+
+                if (coverage.getAmountLimit() != null) {
+                    builder.benefitLimit(coverage.getAmountLimit().doubleValue());
+                }
+                if (coverage.getUsedAmount() != null) {
+                    builder.usedAmount(coverage.getUsedAmount().doubleValue());
+                }
+                if (coverage.getRemainingAmount() != null) {
+                    builder.remainingAmount(coverage.getRemainingAmount().doubleValue());
+                }
+            }
+        }
+
+        return builder.build();
     }
 
     /**
@@ -331,7 +366,7 @@ public class EligibilityEngineServiceImpl implements EligibilityEngineService {
                     .checkTimestamp(context.getCheckTimestamp())
                     // Input
                     .memberId(context.getMemberId())
-                    .policyId(context.getBenefitPolicyId())  // Using benefitPolicyId as the policy reference
+                    .policyId(context.getBenefitPolicyId()) // Using benefitPolicyId as the policy reference
                     .providerId(context.getProviderId())
                     .serviceDate(context.getServiceDate())
                     .serviceCode(context.getServiceCode())
@@ -376,13 +411,14 @@ public class EligibilityEngineServiceImpl implements EligibilityEngineService {
         if (reasons == null || reasons.isEmpty()) {
             return "[]";
         }
-        
+
         try {
             // Simple JSON array construction
             StringBuilder sb = new StringBuilder("[");
             for (int i = 0; i < reasons.size(); i++) {
                 EligibilityResult.ReasonDetail r = reasons.get(i);
-                if (i > 0) sb.append(",");
+                if (i > 0)
+                    sb.append(",");
                 sb.append("{");
                 sb.append("\"code\":\"").append(escape(r.getCode())).append("\",");
                 sb.append("\"messageAr\":\"").append(escape(r.getMessageAr())).append("\",");
@@ -397,7 +433,8 @@ public class EligibilityEngineServiceImpl implements EligibilityEngineService {
     }
 
     private String escape(String s) {
-        if (s == null) return "";
+        if (s == null)
+            return "";
         return s.replace("\\", "\\\\")
                 .replace("\"", "\\\"")
                 .replace("\n", "\\n")
@@ -420,8 +457,9 @@ public class EligibilityEngineServiceImpl implements EligibilityEngineService {
      * Get client IP address
      */
     private String getClientIpAddress(HttpServletRequest request) {
-        if (request == null) return null;
-        
+        if (request == null)
+            return null;
+
         String xForwardedFor = request.getHeader("X-Forwarded-For");
         if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
             return xForwardedFor.split(",")[0].trim();

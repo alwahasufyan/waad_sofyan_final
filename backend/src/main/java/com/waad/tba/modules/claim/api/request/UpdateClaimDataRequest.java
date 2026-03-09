@@ -57,9 +57,18 @@ public class UpdateClaimDataRequest {
     @AllArgsConstructor
     public static class ClaimLineRequest {
 
-        @NotNull(message = "Medical service ID is required")
+        /**
+         * Medical service ID (from MedicalTaxonomy)
+         * Optional if pricingItemId is provided
+         */
         @Positive(message = "Medical service ID must be positive")
         private Long medicalServiceId;
+
+        /**
+         * Optional: Specific Pricing Item ID from Provider Contract
+         * Used for items that are verified in contract but not yet mapped to taxonomy
+         */
+        private Long pricingItemId;
 
         @NotNull(message = "Quantity is required")
         @Min(value = 1, message = "Quantity must be at least 1")
@@ -73,6 +82,8 @@ public class UpdateClaimDataRequest {
         private java.math.BigDecimal grossAmount;
         private java.math.BigDecimal coveredAmount;
         private java.math.BigDecimal refusedAmount;
+        private String serviceCode;
+        private String serviceName;
         private Boolean rejected;
         private String rejectionReason;
     }

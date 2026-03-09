@@ -63,10 +63,6 @@ public class PriceListExcelTemplateService {
     private final ProviderContractRepository contractRepository;
     private final ProviderContractPricingItemRepository pricingRepository;
     private final MedicalServiceRepository medicalServiceRepository;
-    private final MedicalCategoryRepository medicalCategoryRepository;
-    private final MedicalServiceCategoryRepository medicalServiceCategoryRepository;
-    private final ProviderRawServiceRepository providerRawServiceRepository;
-    private final ProviderServiceMappingRepository providerServiceMappingRepository;
     private final PlatformTransactionManager transactionManager;
 
     private static final String SHEET_NAME = "Pricing_Template";
@@ -77,8 +73,9 @@ public class PriceListExcelTemplateService {
     private static final int COL_BASE_PRICE = 2;
     private static final int COL_CONTRACT_PRICE = 3;
     private static final int COL_CATEGORY = 4;
-    private static final int COL_SPECIALTY = 5;
-    private static final int COL_NOTES = 6;
+    private static final int COL_SUB_CATEGORY = 5;
+    private static final int COL_SPECIALTY = 6;
+    private static final int COL_NOTES = 7;
 
     // ═══════════════════════════════════════════════════════════════════════════
     // TEMPLATE GENERATION - SIMPLIFIED
@@ -145,8 +142,13 @@ public class PriceListExcelTemplateService {
 
             // category (optional)
             Cell cell4 = headerRow.createCell(COL_CATEGORY);
-            cell4.setCellValue("category / التصنيف");
+            cell4.setCellValue("main_category / التصنيف الرئيسي");
             cell4.setCellStyle(headerStyle);
+
+            // sub_category (optional)
+            Cell cellSub = headerRow.createCell(COL_SUB_CATEGORY);
+            cellSub.setCellValue("sub_category / البند (التصنيف الفرعي)");
+            cellSub.setCellStyle(headerStyle);
 
             // specialty (optional)
             Cell cell5 = headerRow.createCell(COL_SPECIALTY);
@@ -181,6 +183,10 @@ public class PriceListExcelTemplateService {
             ex4.setCellValue("عيادات خارجية");
             ex4.setCellStyle(exampleStyle);
 
+            Cell exSub = exampleRow.createCell(COL_SUB_CATEGORY);
+            exSub.setCellValue("كشوفات استشارية");
+            exSub.setCellStyle(exampleStyle);
+
             Cell ex5 = exampleRow.createCell(COL_SPECIALTY);
             ex5.setCellValue("باطنة");
             ex5.setCellStyle(exampleStyle);
@@ -195,6 +201,7 @@ public class PriceListExcelTemplateService {
             sheet.setColumnWidth(COL_BASE_PRICE, 15 * 256);
             sheet.setColumnWidth(COL_CONTRACT_PRICE, 15 * 256);
             sheet.setColumnWidth(COL_CATEGORY, 25 * 256);
+            sheet.setColumnWidth(COL_SUB_CATEGORY, 25 * 256);
             sheet.setColumnWidth(COL_SPECIALTY, 25 * 256);
             sheet.setColumnWidth(COL_NOTES, 40 * 256);
 
@@ -431,10 +438,10 @@ public class PriceListExcelTemplateService {
                 }
             }
 
-            String messageAr = String.format("تم إنشاء %d بند، تخطي %d، رفض %d",
-                    summary.getCreated(), summary.getSkipped(), summary.getRejected());
-            String messageEn = String.format("Created %d items, skipped %d, rejected %d",
-                    summary.getCreated(), summary.getSkipped(), summary.getRejected());
+            String messageAr = String.format("النتيجة: إنشاء %d، تحديث %d، فاشل %d، تخطي %d",
+                    summary.getCreated(), summary.getUpdated(), summary.getFailed(), summary.getSkipped());
+            String messageEn = String.format("Import result: Created %d, Updated %d, Failed %d, Skipped %d",
+                    summary.getCreated(), summary.getUpdated(), summary.getFailed(), summary.getSkipped());
 
             log.info("[PriceListImport] Import completed: {}", messageEn);
 
@@ -482,6 +489,12 @@ public class PriceListExcelTemplateService {
                 indices.put("contract_price", i);
             }
             // category/classification detection
+            else if (value.contains("main_category") || value.contains("التصنيف الرئيسي")) {
+                indices.put("main_category", i);
+            }
+            else if (value.contains("sub_category") || value.contains("التصنيف الفرعي") || value.equals("البند") || value.contains("sub_cat")) {
+                indices.put("sub_category", i);
+            }
             else if (value.contains("category") || value.contains("classification") || value.contains("تصنيف")
                     || value.contains("فئة")) {
                 indices.put("provider_category", i);
@@ -522,74 +535,20 @@ public class PriceListExcelTemplateService {
             Map<String, Integer> columnIndices,
             ProviderContract contract,
             List<ImportError> errors) {
-        // Get service name (REQUIRED)
+        
+        // --- 1. Extract Service Name (REQUIRED) ---
         Integer serviceNameIdx = columnIndices.get("service_name");
         String serviceName = serviceNameIdx != null ? getCellStringValue(row.getCell(serviceNameIdx)) : null;
 
         if (serviceName == null || serviceName.trim().isEmpty() ||
                 serviceName.contains("مثال") || serviceName.toLowerCase().contains("example")) {
-            // Skip rows without service name or contain example placeholder
             return null;
         }
 
         serviceName = truncate(serviceName.trim(), 255);
 
-        // Get Prices
-        BigDecimal basePrice = null;
-        Integer basePriceIdx = columnIndices.get("base_price");
-        if (basePriceIdx != null) {
-            basePrice = readBigDecimal(row.getCell(basePriceIdx), rowNum);
-        }
-
-        BigDecimal contractPrice = null;
-        Integer contractPriceIdx = columnIndices.get("contract_price");
-        if (contractPriceIdx != null) {
-            contractPrice = readBigDecimal(row.getCell(contractPriceIdx), rowNum);
-        }
-
-        // Logic if only one price is provided
-        if (basePrice == null && contractPrice != null) {
-            basePrice = contractPrice; // Assume 0% discount if only contract price exists
-        } else if (contractPrice == null && basePrice != null) {
-            contractPrice = basePrice; // Assume 0% discount if only standard price exists
-        }
-
-        // Final fallbacks
-        if (basePrice == null || basePrice.compareTo(BigDecimal.ZERO) == 0) {
-            if (medicalService != null && medicalService.getBasePrice() != null) {
-                basePrice = medicalService.getBasePrice();
-            } else if (basePrice == null) {
-                basePrice = BigDecimal.ZERO;
-            }
-        }
-        
-        if (contractPrice == null) contractPrice = basePrice;
-        if (contractPrice == null) contractPrice = BigDecimal.ZERO;
-
-        // Calculate discount if possible
-        BigDecimal discountPercent = BigDecimal.ZERO;
-        if (basePrice.compareTo(BigDecimal.ZERO) > 0 && contractPrice.compareTo(BigDecimal.ZERO) >= 0) {
-            BigDecimal diff = basePrice.subtract(contractPrice);
-            if (diff.compareTo(BigDecimal.ZERO) > 0) {
-                discountPercent = diff.multiply(BigDecimal.valueOf(100)).divide(basePrice, 2, java.math.RoundingMode.HALF_UP);
-            }
-        }
-
-        int quantity = 0;
-
-        // Get notes (optional)
-        String notes = null;
-        Integer notesIdx = columnIndices.get("notes");
-        if (notesIdx != null) {
-            notes = getCellStringValue(row.getCell(notesIdx));
-            if (notes != null)
-                notes = notes.trim();
-        }
-
+        // --- 2. Extract Optional Fields ---
         String serviceCode = null;
-        String categoryName = null;
-
-        // 1. Resolve Service Code (Excel column vs Regex Extraction)
         Integer serviceCodeIdx = columnIndices.get("service_code");
         if (serviceCodeIdx != null) {
             String excelCode = getCellStringValue(row.getCell(serviceCodeIdx));
@@ -597,99 +556,50 @@ public class PriceListExcelTemplateService {
                 serviceCode = truncate(excelCode.trim(), 50);
             }
         }
+        if (serviceCode == null) serviceCode = extractCodeFromName(serviceName);
 
-        // If no code column or it was empty, try extracting from name (Regex)
-        if (serviceCode == null) {
-            serviceCode = extractCodeFromName(serviceName);
-            if (serviceCode != null) {
-                log.debug("[PriceListImport] Extracted code '{}' from name '{}'", serviceCode, serviceName);
+        BigDecimal basePrice = null;
+        Integer basePriceIdx = columnIndices.get("base_price");
+        if (basePriceIdx != null) basePrice = readBigDecimal(row.getCell(basePriceIdx), rowNum);
+
+        BigDecimal contractPrice = null;
+        Integer contractPriceIdx = columnIndices.get("contract_price");
+        if (contractPriceIdx != null) contractPrice = readBigDecimal(row.getCell(contractPriceIdx), rowNum);
+
+        if (basePrice == null && contractPrice != null) basePrice = contractPrice;
+        else if (contractPrice == null && basePrice != null) contractPrice = basePrice;
+        
+        if (basePrice == null) basePrice = BigDecimal.ZERO;
+        if (contractPrice == null) contractPrice = BigDecimal.ZERO;
+
+        String categoryName = null;
+        Integer categoryIdx = columnIndices.get("main_category");
+        if (categoryIdx == null) categoryIdx = columnIndices.get("provider_category");
+        if (categoryIdx != null) {
+            categoryName = getCellStringValue(row.getCell(categoryIdx));
+            if (categoryName != null) categoryName = truncate(categoryName.trim(), 255);
+        }
+
+        // If no main category, try sub-category
+        if (categoryName == null) {
+            Integer subCategoryIdx = columnIndices.get("sub_category");
+            if (subCategoryIdx != null) {
+                categoryName = getCellStringValue(row.getCell(subCategoryIdx));
+                if (categoryName != null) categoryName = truncate(categoryName.trim(), 255);
             }
         }
 
-        // 2. Capture Raw Classifications (Metadata)
-        String rawCategory = null;
-        Integer categoryIdx = columnIndices.get("provider_category");
-        if (categoryIdx != null) {
-            rawCategory = getCellStringValue(row.getCell(categoryIdx));
-            if (rawCategory != null)
-                rawCategory = truncate(rawCategory.trim(), 255);
-        }
+        Integer notesIdx = columnIndices.get("notes");
+        String notes = notesIdx != null ? getCellStringValue(row.getCell(notesIdx)) : null;
+        if (notes != null) notes = truncate(notes.trim(), 2000);
 
-        String rawSpecialty = null;
-        Integer specialtyIdx = columnIndices.get("provider_specialty");
-        if (specialtyIdx != null) {
-            rawSpecialty = getCellStringValue(row.getCell(specialtyIdx));
-            if (rawSpecialty != null)
-                rawSpecialty = truncate(rawSpecialty.trim(), 255);
-        }
-
-        // 3. Attempt Medical Service Lookup
+        // --- 3. Optional: Link to Unified Catalog (Dictionary) ---
         MedicalService medicalService = null;
-
-        // Priority 1: Match by Code
         if (serviceCode != null) {
             medicalService = medicalServiceRepository.findByCode(serviceCode).orElse(null);
         }
-
-        // Priority 2: Match by exact Name
         if (medicalService == null) {
             medicalService = medicalServiceRepository.findFirstByName(serviceName).orElse(null);
-        }
-
-        // Priority 3: Smart Match (Check Arabic/English separately)
-        if (medicalService == null) {
-            medicalService = attemptSmartNameMatch(serviceName);
-        }
-
-        if (medicalService != null) {
-            serviceCode = medicalService.getCode(); // Update code to canonical if matched
-            categoryName = resolveCategoryNameFromUnifiedCatalog(medicalService);
-            
-            // Link to the medical service's category if pricing item has no override yet
-            if (medicalCategory == null && medicalService.getCategoryId() != null) {
-                medicalCategory = medicalCategoryRepository.findById(medicalService.getCategoryId()).orElse(null);
-            }
-        }
-
-        // 4. Resolve Medical Category (Override)
-        MedicalCategory medicalCategory = null;
-        
-        // Priority 1: Match by 'category' column from Excel
-        if (rawCategory != null && !rawCategory.isBlank()) {
-            medicalCategory = medicalCategoryRepository.findFirstByName(rawCategory).orElse(null);
-            if (medicalCategory != null) {
-                categoryName = medicalCategory.getName();
-            } else {
-                categoryName = rawCategory; // User text fallback
-            }
-        }
-        
-        // Priority 2: Extract from Notes "Root Mapping: CAT-XXXX"
-        if (medicalCategory == null && notes != null && notes.contains("Root Mapping:")) {
-            try {
-                String rootCode = notes.split("Root Mapping:")[1].trim().split("\\s+")[0];
-                medicalCategory = medicalCategoryRepository.findActiveByCode(rootCode).orElse(null);
-                if (medicalCategory != null) {
-                    categoryName = medicalCategory.getName();
-                }
-            } catch (Exception e) {
-                log.debug("[PriceListImport] Failed to parse root mapping from notes: {}", notes);
-            }
-        }
-        
-        // Priority 3: Fallback to Service's Category if matched and not yet set
-        if (medicalCategory == null && medicalService != null && medicalService.getCategoryId() != null) {
-            medicalCategory = medicalCategoryRepository.findActiveById(medicalService.getCategoryId()).orElse(null);
-            if (medicalCategory != null) {
-                categoryName = medicalCategory.getName();
-            }
-        }
-
-        // 5. Sync to ProviderRawService & Mapping Center (NON-CRITICAL)
-        try {
-            syncProviderRawAndMapping(contract, serviceName, serviceCode, rawCategory, rawSpecialty, medicalService);
-        } catch (Exception e) {
-            log.warn("[PriceListImport] Raw service sync skipped for '{}': {}", serviceName, e.getMessage());
         }
 
         return ProviderContractPricingItem.builder()
@@ -699,45 +609,28 @@ public class PriceListExcelTemplateService {
                 .categoryName(categoryName)
                 .basePrice(basePrice)
                 .contractPrice(contractPrice)
-                .discountPercent(discountPercent)
-                .quantity(quantity)
                 .notes(notes)
                 .medicalService(medicalService)
-                .medicalCategory(medicalCategory)
                 .active(true)
                 .build();
     }
 
     private boolean upsertPricingItem(ProviderContract contract, ProviderContractPricingItem draft) {
-        if (draft.getMedicalService() != null) {
-            Optional<ProviderContractPricingItem> existingMapped = pricingRepository
-                    .findByContractAndMedicalService(contract, draft.getMedicalService());
+        // Find by service name within this contract
+        Optional<ProviderContractPricingItem> existing = pricingRepository
+                .findActiveUnmappedByContractAndServiceName(contract.getId(), draft.getServiceName());
 
-            if (existingMapped.isPresent()) {
-                ProviderContractPricingItem existing = existingMapped.get();
-                applyImportValues(existing, draft);
-                pricingRepository.save(existing);
-                return true;
-            }
-
-            Optional<ProviderContractPricingItem> existingUnmappedByName = pricingRepository
-                    .findActiveUnmappedByContractAndServiceName(contract.getId(), draft.getServiceName());
-            if (existingUnmappedByName.isPresent()) {
-                ProviderContractPricingItem existing = existingUnmappedByName.get();
-                applyImportValues(existing, draft);
-                existing.setMedicalService(draft.getMedicalService());
-                pricingRepository.save(existing);
-                return true;
-            }
-        } else {
-            Optional<ProviderContractPricingItem> existingUnmappedByName = pricingRepository
-                    .findActiveUnmappedByContractAndServiceName(contract.getId(), draft.getServiceName());
-            if (existingUnmappedByName.isPresent()) {
-                ProviderContractPricingItem existing = existingUnmappedByName.get();
-                applyImportValues(existing, draft);
-                pricingRepository.save(existing);
-                return true;
-            }
+        if (existing.isPresent()) {
+            ProviderContractPricingItem item = existing.get();
+            item.setServiceCode(draft.getServiceCode());
+            item.setCategoryName(draft.getCategoryName());
+            item.setBasePrice(draft.getBasePrice());
+            item.setContractPrice(draft.getContractPrice());
+            item.setNotes(draft.getNotes());
+            item.setMedicalService(draft.getMedicalService());
+            item.setActive(true);
+            pricingRepository.save(item);
+            return true;
         }
 
         pricingRepository.save(draft);
@@ -752,97 +645,6 @@ public class PriceListExcelTemplateService {
         target.setQuantity(source.getQuantity());
         target.setNotes(source.getNotes());
         target.setActive(true);
-    }
-
-    private String resolveCategoryNameFromUnifiedCatalog(MedicalService medicalService) {
-        if (medicalService == null || medicalService.getId() == null) {
-            return null;
-        }
-
-        Optional<MedicalServiceCategory> mapped = medicalServiceCategoryRepository
-                .findFirstByServiceIdAndActiveTrueOrderByIsPrimaryDescIdAsc(medicalService.getId());
-
-        if (mapped.isPresent()) {
-            Optional<MedicalCategory> category = medicalCategoryRepository.findById(mapped.get().getCategoryId());
-            if (category.isPresent()) {
-                return category.get().getName();
-            }
-        }
-
-        if (medicalService.getCategoryId() != null) {
-            return medicalCategoryRepository.findById(medicalService.getCategoryId())
-                    .map(MedicalCategory::getName)
-                    .orElse(null);
-        }
-
-        return null;
-    }
-
-    private void syncProviderRawAndMapping(
-            ProviderContract contract,
-            String serviceName,
-            String serviceCode,
-            String rawCategory,
-            String rawSpecialty,
-            MedicalService matchedService) {
-        if (contract == null || contract.getProvider() == null) {
-            return;
-        }
-
-        String rawName = (serviceName != null && !serviceName.isBlank()) ? serviceName.trim() : null;
-        if (rawName == null) {
-            return;
-        }
-
-        Long providerId = contract.getProvider().getId();
-
-        ProviderRawService raw = providerRawServiceRepository
-                .findFirstByProviderIdAndRawNameIgnoreCase(providerId, rawName)
-                .orElseGet(() -> ProviderRawService.builder()
-                        .providerId(providerId)
-                        .rawName(rawName)
-                        .normalizedName(rawName.toLowerCase())
-                        .source("CONTRACT_PRICING_IMPORT")
-                        .createdAt(LocalDateTime.now())
-                        .status(MappingStatus.PENDING)
-                        .build());
-
-        // Update metadata
-        if (serviceCode != null && !serviceCode.isBlank()) {
-            raw.setCode(serviceCode.trim());
-        }
-        if (rawCategory != null) {
-            raw.setProviderCategory(rawCategory);
-        }
-        if (rawSpecialty != null) {
-            raw.setProviderSpecialty(rawSpecialty);
-        }
-
-        if (matchedService != null) {
-            raw.setStatus(MappingStatus.AUTO_MATCHED);
-            raw.setConfidenceScore(BigDecimal.valueOf(100));
-        }
-
-        raw = providerRawServiceRepository.save(raw);
-
-        if (matchedService == null) {
-            return;
-        }
-
-        final ProviderRawService savedRaw = raw;
-
-        ProviderServiceMapping mapping = providerServiceMappingRepository
-                .findByProviderRawServiceId(savedRaw.getId())
-                .orElseGet(() -> ProviderServiceMapping.builder()
-                        .providerRawService(savedRaw)
-                        .build());
-
-        mapping.setMedicalService(matchedService);
-        mapping.setMappingStatus(MappingStatus.AUTO_MATCHED);
-        mapping.setConfidenceScore(BigDecimal.valueOf(100));
-        mapping.setMappedAt(LocalDateTime.now());
-        mapping.setMappedBy(null);
-        providerServiceMappingRepository.save(mapping);
     }
 
     /**
@@ -922,44 +724,6 @@ public class PriceListExcelTemplateService {
                 .build();
     }
 
-    private MedicalService attemptSmartNameMatch(String serviceName) {
-        if (serviceName == null || serviceName.trim().isEmpty()) {
-            return null;
-        }
-
-        String input = serviceName.trim();
-
-        // 1. Try exact match on nameAr or nameEn
-        Optional<MedicalService> match = medicalServiceRepository.findFirstByNameAr(input);
-        if (match.isPresent())
-            return match.get();
-
-        match = medicalServiceRepository.findFirstByNameEn(input);
-        if (match.isPresent())
-            return match.get();
-
-        // 2. Split by common separators (/, -, (, ), |) and try individual parts
-        String[] parts = input.split("[/\\\\-|\\\\(\\\\)|]");
-        for (String part : parts) {
-            String trimmedPart = part.trim();
-            if (trimmedPart.length() < 3)
-                continue;
-
-            match = medicalServiceRepository.findFirstByName(trimmedPart);
-            if (match.isPresent())
-                return match.get();
-
-            match = medicalServiceRepository.findFirstByNameAr(trimmedPart);
-            if (match.isPresent())
-                return match.get();
-
-            match = medicalServiceRepository.findFirstByNameEn(trimmedPart);
-            if (match.isPresent())
-                return match.get();
-        }
-
-        return null;
-    }
 
     private String truncate(String text, int length) {
         if (text == null)

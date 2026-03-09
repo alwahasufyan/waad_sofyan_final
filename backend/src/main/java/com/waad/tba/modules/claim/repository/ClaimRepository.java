@@ -862,6 +862,47 @@ public interface ClaimRepository extends JpaRepository<Claim, Long> {
                         @Param("yearStart") LocalDate yearStart,
                         @Param("yearEnd") LocalDate yearEnd);
 
+        /**
+         * Sum approved amounts for a specific member in a given category and year.
+         * Used for category-level limit tracking.
+         */
+        @Query("SELECT COALESCE(SUM(l.approvedUnitPrice * l.approvedQuantity), 0) FROM Claim c " +
+                        "JOIN c.lines l " +
+                        "WHERE c.active = true " +
+                        "AND c.member.id = :memberId " +
+                        "AND l.appliedCategoryId = :categoryId " +
+                        "AND c.status IN (com.waad.tba.modules.claim.entity.ClaimStatus.APPROVED, " +
+                        "com.waad.tba.modules.claim.entity.ClaimStatus.SETTLED, " +
+                        "com.waad.tba.modules.claim.entity.ClaimStatus.BATCHED) " +
+                        "AND c.serviceDate >= :yearStart " +
+                        "AND c.serviceDate <= :yearEnd")
+        java.math.BigDecimal sumApprovedAmountsByMemberAndCategoryAndYear(
+                        @Param("memberId") Long memberId,
+                        @Param("categoryId") Long categoryId,
+                        @Param("yearStart") LocalDate yearStart,
+                        @Param("yearEnd") LocalDate yearEnd);
+
+        /**
+         * Sum approved amounts for multiple categories (hierarchical tracking).
+         */
+        @Query("SELECT COALESCE(SUM(l.approvedUnitPrice * l.approvedQuantity), 0) FROM Claim c " +
+                        "JOIN c.lines l " +
+                        "WHERE c.active = true " +
+                        "AND c.member.id = :memberId " +
+                        "AND l.appliedCategoryId IN :categoryIds " +
+                        "AND c.status IN (com.waad.tba.modules.claim.entity.ClaimStatus.APPROVED, " +
+                        "com.waad.tba.modules.claim.entity.ClaimStatus.SETTLED, " +
+                        "com.waad.tba.modules.claim.entity.ClaimStatus.BATCHED) " +
+                        "AND c.serviceDate >= :yearStart " +
+                        "AND c.serviceDate <= :yearEnd " +
+                        "AND (:excludeClaimId IS NULL OR c.id <> :excludeClaimId)")
+        java.math.BigDecimal sumApprovedAmountsByMemberAndCategoriesAndYear(
+                        @Param("memberId") Long memberId,
+                        @Param("categoryIds") List<Long> categoryIds,
+                        @Param("yearStart") LocalDate yearStart,
+                        @Param("yearEnd") LocalDate yearEnd,
+                        @Param("excludeClaimId") Long excludeClaimId);
+
         // ═══════════════════════════════════════════════════════════════════════════════
         // PHASE 6: Provider Portal Queries
         // ═══════════════════════════════════════════════════════════════════════════════

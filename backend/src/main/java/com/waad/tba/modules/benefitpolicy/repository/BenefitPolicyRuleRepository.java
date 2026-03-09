@@ -59,7 +59,7 @@ public interface BenefitPolicyRuleRepository extends JpaRepository<BenefitPolicy
     /**
      * Find active rule for a specific service within a policy
      */
-    Optional<BenefitPolicyRule> findByBenefitPolicyIdAndMedicalServiceIdAndActiveTrue(
+    List<BenefitPolicyRule> findByBenefitPolicyIdAndMedicalServiceIdAndActiveTrue(
             Long policyId, Long serviceId);
 
     /**
@@ -126,21 +126,24 @@ public interface BenefitPolicyRuleRepository extends JpaRepository<BenefitPolicy
         AND r.active = true
         AND (
           (:serviceId IS NOT NULL AND r.medicalService.id = :serviceId)
-          OR (:categoryId IS NOT NULL AND r.medicalCategory.id = :categoryId AND r.medicalService IS NULL)
+          OR (:serviceCategoryId IS NOT NULL AND r.medicalCategory.id = :serviceCategoryId AND r.medicalService IS NULL)
+          OR (:overrideCategoryId IS NOT NULL AND r.medicalCategory.id = :overrideCategoryId AND r.medicalService IS NULL)
           OR (:parentCategoryId IS NOT NULL AND r.medicalCategory.id = :parentCategoryId AND r.medicalService IS NULL)
         )
       ORDER BY
         CASE
-          WHEN :serviceId IS NOT NULL AND r.medicalService IS NOT NULL THEN 0
-          WHEN r.medicalCategory.id = :categoryId THEN 1
-          ELSE 2
+          WHEN :serviceId IS NOT NULL AND r.medicalService.id = :serviceId THEN 0
+          WHEN :serviceCategoryId IS NOT NULL AND r.medicalCategory.id = :serviceCategoryId THEN 1
+          WHEN :overrideCategoryId IS NOT NULL AND r.medicalCategory.id = :overrideCategoryId THEN 2
+          ELSE 3
         END
       LIMIT 1
       """)
     Optional<BenefitPolicyRule> findBestRuleForService(
             @Param("policyId") Long policyId,
             @Param("serviceId") Long serviceId,
-            @Param("categoryId") Long categoryId,
+            @Param("serviceCategoryId") Long serviceCategoryId,
+            @Param("overrideCategoryId") Long overrideCategoryId,
             @Param("parentCategoryId") Long parentCategoryId);
 
     /**
@@ -152,8 +155,9 @@ public interface BenefitPolicyRuleRepository extends JpaRepository<BenefitPolicy
           AND r.medicalCategory.id = :categoryId
           AND r.medicalService IS NULL
           AND r.active = true
+        ORDER BY r.id DESC
         """)
-    Optional<BenefitPolicyRule> findActiveCategoryRule(
+    List<BenefitPolicyRule> findActiveCategoryRules(
             @Param("policyId") Long policyId,
             @Param("categoryId") Long categoryId);
 

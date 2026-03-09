@@ -163,6 +163,12 @@ public class EligibilityResult {
         private final Integer coveragePercent;      // From BenefitPolicyRule
         private final Integer patientCopayPercent;  // From BenefitPolicyRule  
         private final Boolean requiresPreApproval;  // From BenefitPolicyRule
+
+        // Financial Usage Data
+        private final Double benefitLimit;
+        private final Double usedAmount;
+        private final Double remainingAmount;
+        private final Long matchingCategoryId;
     }
 
     // ============================================

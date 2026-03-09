@@ -10,6 +10,7 @@ import com.waad.tba.modules.provider.service.ProviderContractService;
 import com.waad.tba.modules.benefitpolicy.service.BenefitPolicyCoverageService;
 import com.waad.tba.modules.preauthorization.entity.PreAuthorization;
 import com.waad.tba.modules.medicaltaxonomy.repository.MedicalCategoryRepository;
+import com.waad.tba.modules.providercontract.repository.ProviderContractPricingItemRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -36,6 +37,7 @@ public class ClaimMapper {
     private final ProviderContractService providerContractService;
     private final BenefitPolicyCoverageService benefitPolicyCoverageService;
     private final MedicalCategoryRepository medicalCategoryRepository;
+    private final ProviderContractPricingItemRepository pricingItemRepository;
 
     /**
      * Maps CreateClaimDto (from Visit) to a new Claim entity.
@@ -75,46 +77,104 @@ public class ClaimMapper {
         List<ClaimLine> lines = new ArrayList<>();
 
         for (ClaimLineDto lineDto : dto.getLines()) {
-            MedicalService medicalService = medicalServiceMap.get(lineDto.getMedicalServiceId());
-            if (medicalService == null)
-                continue;
+            MedicalService medicalService = lineDto.getMedicalServiceId() != null 
+                ? medicalServiceMap.get(lineDto.getMedicalServiceId()) 
+                : null;
 
             // ARCHITECTURAL LAW: Capture what was requested vs what is allowed by contract.
             BigDecimal enteredUnitPrice = lineDto.getUnitPrice() != null ? lineDto.getUnitPrice() : BigDecimal.ZERO;
             BigDecimal resolvedUnitPrice = null;
 
             boolean isBacklog = visit.getVisitType() == com.waad.tba.modules.visit.entity.VisitType.LEGACY_BACKLOG;
+            
+            String serviceCode = lineDto.getServiceCode();
+            String serviceName = lineDto.getServiceName();
+
+            if (medicalService != null) {
+                serviceCode = medicalService.getCode();
+                serviceName = medicalService.getName();
+            }
+
             log.info("🔍 [MAPPER] Processing line for service '{}'. VisitType: {}, isBacklog: {}, Entered Price: {}",
-                    medicalService.getCode(), visit.getVisitType(), isBacklog, enteredUnitPrice);
+                    serviceCode, visit.getVisitType(), isBacklog, enteredUnitPrice);
+
+            Long resolvedPricingItemId = lineDto.getPricingItemId();
 
             if (isBacklog && enteredUnitPrice.compareTo(BigDecimal.ZERO) > 0) {
                 resolvedUnitPrice = enteredUnitPrice;
                 log.info("ℹ️ [BACKLOG] Using user-provided price as approved base: {}", resolvedUnitPrice);
             } else {
-                // Resolve contract price
-                EffectivePriceResponseDto priceResponse = providerContractService.getEffectivePrice(
-                        provider.getId(), medicalService.getCode(), dto.getServiceDate());
+                // Resolve contract price - Use code if medicalService is null
+                String codeToLookup = (medicalService != null) ? medicalService.getCode() : lineDto.getServiceCode();
+                
+                // FALLBACK: If code is missing but pricingItemId is provided, fetch code from DB
+                if (codeToLookup == null && lineDto.getPricingItemId() != null) {
+                    codeToLookup = pricingItemRepository.findById(lineDto.getPricingItemId())
+                            .map(com.waad.tba.modules.providercontract.entity.ProviderContractPricingItem::getServiceCode)
+                            .orElse(null);
+                }
 
-                if (priceResponse.isHasContract() && priceResponse.getContractPrice() != null) {
-                    resolvedUnitPrice = priceResponse.getContractPrice();
-                } else {
-                    // FALLBACK: Use base price as fallback, but log as warning
-                    resolvedUnitPrice = medicalService.getBasePrice() != null ? medicalService.getBasePrice() : BigDecimal.ZERO;
-                    log.warn("⚠️ [NO_CONTRACT] No contract price for service '{}'. Using base price: {}",
-                            medicalService.getCode(), resolvedUnitPrice);
+                if (codeToLookup != null) {
+                    EffectivePriceResponseDto priceResponse = providerContractService.getEffectivePrice(
+                            provider.getId(), codeToLookup, dto.getServiceDate());
+
+                    if (priceResponse.isHasContract() && priceResponse.getContractPrice() != null) {
+                        resolvedUnitPrice = priceResponse.getContractPrice();
+                        resolvedPricingItemId = priceResponse.getPricingItemId();
+                        
+                        // Capture canonical name/code for unmapped services if missing
+                        if (serviceCode == null || "N/A".equals(serviceCode)) 
+                            serviceCode = priceResponse.getServiceCode();
+                        if (serviceName == null || "Unknown Service".equals(serviceName)) 
+                            serviceName = priceResponse.getServiceName();
+                    } else if (medicalService != null) {
+                        // FALLBACK: Use base price
+                        resolvedUnitPrice = medicalService.getBasePrice() != null ? medicalService.getBasePrice() : BigDecimal.ZERO;
+                    }
+                }
+
+                if (resolvedUnitPrice == null) {
+                    resolvedUnitPrice = enteredUnitPrice;
                 }
             }
 
             // Resolve coverage snapshot
-            var coverageInfoOpt = benefitPolicyCoverageService.getCoverageForService(claim.getMember(),
-                    medicalService.getId(), categoryOverrideId);
-            boolean requiresPA = coverageInfoOpt.map(c -> c.isRequiresPreApproval()).orElse(false);
-            Integer coveragePercentSnapshot = coverageInfoOpt.map(c -> c.getCoveragePercent()).orElse(null);
+            Integer coveragePercentSnapshot = lineDto.getCoveragePercent();
+            boolean requiresPA = lineDto.getRequiresPA() != null ? lineDto.getRequiresPA() : false;
 
-            // Fetch applied category info (either manual or resolved)
-            Long appliedCategoryId = (categoryOverrideId != null) ? categoryOverrideId : medicalService.getCategoryId();
-            String appliedCategoryName = (categoryOverrideId != null) 
-                    ? medicalCategoryRepository.findById(categoryOverrideId).map(c -> c.getName()).orElse(null)
+            // Resolve coverage (support unmapped services via category rules)
+            Long targetCategoryId = (categoryOverrideId != null) ? categoryOverrideId 
+                : (medicalService != null ? medicalService.getCategoryId() : lineDto.getAppliedCategoryId());
+                
+            var coverageResult = benefitPolicyCoverageService.resolveCoverage(
+                claim.getMember().getBenefitPolicy().getId(),
+                medicalService != null ? medicalService.getId() : null,
+                medicalService != null ? medicalService.getCategoryId() : lineDto.getAppliedCategoryId(),
+                categoryOverrideId,
+                claim.getMember().getId(),
+                claim.getServiceDate(),
+                claim.getId()
+            );
+
+            if (coverageResult != null) {
+                requiresPA = coverageResult.isRequiresPreApproval();
+                coveragePercentSnapshot = coverageResult.getCoveragePercent();
+                
+                // POPULATE FINANCIAL SNAPSHOTS (Flyway V112)
+                lineDto.setBenefitLimit(coverageResult.getAmountLimit());
+                lineDto.setUsedAmount(coverageResult.getUsedAmount());
+                lineDto.setRemainingAmount(coverageResult.getRemainingAmount());
+            }
+
+            // Fetch applied category info: Rule match is MOST specific and should be prioritized
+            // for correct limit tracking (e.g. tracking a physio limit even if in 'Outpatient' context)
+            Long appliedCategoryId = (coverageResult != null && coverageResult.getMatchingCategoryId() != null)
+                ? coverageResult.getMatchingCategoryId()
+                : (categoryOverrideId != null ? categoryOverrideId 
+                : (medicalService != null ? medicalService.getCategoryId() : lineDto.getAppliedCategoryId()));
+            
+            String appliedCategoryName = (appliedCategoryId != null) 
+                    ? medicalCategoryRepository.findById(appliedCategoryId).map(c -> c.getName()).orElse("Unknown Category")
                     : lineDto.getServiceCategoryName();
 
             if (isBacklog && coveragePercentSnapshot == null) {
@@ -127,39 +187,24 @@ public class ClaimMapper {
             Integer quantity = lineDto.getQuantity() != null ? lineDto.getQuantity() : 1;
             BigDecimal quantityBd = BigDecimal.valueOf(quantity);
             
-            // Financials:
-            // requestedTotal = what provider asked for
-            // resolvedTotal = what contract allows
             BigDecimal lineRequestedTotal = enteredUnitPrice.multiply(quantityBd);
             BigDecimal lineApprovedBase = resolvedUnitPrice != null ? resolvedUnitPrice : enteredUnitPrice;
             
-            // If entered price exceeds contract price, track it as refused
             BigDecimal priceExcessRefusal = BigDecimal.ZERO;
             if (enteredUnitPrice.compareTo(lineApprovedBase) > 0) {
                 priceExcessRefusal = enteredUnitPrice.subtract(lineApprovedBase).multiply(quantityBd);
-                log.info("💰 [REFUSAL] Price excess detected: requested={}, approved={}, refused={}", 
-                        enteredUnitPrice, lineApprovedBase, priceExcessRefusal);
             }
 
             boolean isRejected = Boolean.TRUE.equals(lineDto.getRejected());
-            
-            // Total refusal = Price Excess + (Full line rejection if applicable)
-            BigDecimal lineRefused;
-            if (isRejected) {
-                lineRefused = lineRequestedTotal;
-            } else if (lineDto.getRefusedAmount() != null && lineDto.getRefusedAmount().compareTo(BigDecimal.ZERO) > 0) {
-                // Use frontend value if it already calculated some refusal (e.g. limit check)
-                // but ensure it's at least the price excess
-                lineRefused = lineDto.getRefusedAmount().max(priceExcessRefusal);
-            } else {
-                lineRefused = priceExcessRefusal;
-            }
+            BigDecimal lineRefused = isRejected ? lineRequestedTotal 
+                : (lineDto.getRefusedAmount() != null ? lineDto.getRefusedAmount().max(priceExcessRefusal) : priceExcessRefusal);
 
             ClaimLine line = ClaimLine.builder()
                     .claim(claim)
                     .medicalService(medicalService)
-                    .serviceCode(medicalService.getCode())
-                    .serviceName(medicalService.getName())
+                    .serviceCode(serviceCode != null ? serviceCode : "N/A")
+                    .serviceName(serviceName != null ? serviceName : "Unknown Service")
+                    .pricingItemId(resolvedPricingItemId)
                     .serviceCategoryId(lineDto.getServiceCategoryId())
                     .serviceCategoryName(lineDto.getServiceCategoryName())
                     .appliedCategoryId(appliedCategoryId)
@@ -168,15 +213,19 @@ public class ClaimMapper {
                     .coveragePercentSnapshot(coveragePercentSnapshot)
                     .patientCopayPercentSnapshot(patientCopayPercentSnapshot)
                     .quantity(quantity)
-                    .unitPrice(lineApprovedBase) // Approved base unit price
-                    .totalPrice(lineApprovedBase.multiply(quantityBd)) // Approved total
+                    .unitPrice(lineApprovedBase)
+                    .totalPrice(lineApprovedBase.multiply(quantityBd))
                     .rejected(isRejected)
                     .rejectionReason(lineDto.getRejectionReason())
                     .refusedAmount(lineRefused)
-                    .requestedUnitPrice(enteredUnitPrice) // Capture original input
+                    .requestedUnitPrice(enteredUnitPrice)
                     .requestedQuantity(quantity)
                     .approvedUnitPrice(isRejected ? BigDecimal.ZERO : lineApprovedBase)
                     .approvedQuantity(isRejected ? 0 : quantity)
+                    // Set the financial snapshots to the entity (Flyway V112)
+                    .benefitLimit(lineDto.getBenefitLimit())
+                    .usedAmountSnapshot(lineDto.getUsedAmount())
+                    .remainingAmountSnapshot(lineDto.getRemainingAmount())
                     .build();
 
             lines.add(line);
@@ -257,10 +306,9 @@ public class ClaimMapper {
         }
 
         for (ClaimLineDto lineDto : lineDtos) {
-            MedicalService medicalService = medicalServiceMap.get(lineDto.getMedicalServiceId());
-            if (medicalService == null) {
-                throw new IllegalArgumentException("MedicalService not found for ID: " + lineDto.getMedicalServiceId());
-            }
+            MedicalService medicalService = lineDto.getMedicalServiceId() != null 
+                ? medicalServiceMap.get(lineDto.getMedicalServiceId()) 
+                : null;
 
             // ARCHITECTURAL LAW: Capture what was requested vs what is allowed by contract.
             BigDecimal enteredUnitPrice = lineDto.getUnitPrice() != null ? lineDto.getUnitPrice() : BigDecimal.ZERO;
@@ -268,17 +316,49 @@ public class ClaimMapper {
 
             boolean isBacklog = claim.getVisit() != null && claim.getVisit().getVisitType() == com.waad.tba.modules.visit.entity.VisitType.LEGACY_BACKLOG;
 
+            String serviceCode = lineDto.getServiceCode();
+            String serviceName = lineDto.getServiceName();
+
+            if (medicalService != null) {
+                serviceCode = medicalService.getCode();
+                serviceName = medicalService.getName();
+            }
+
+            Long resolvedPricingItemId = lineDto.getPricingItemId();
+
             if (isBacklog && enteredUnitPrice.compareTo(BigDecimal.ZERO) > 0) {
                 resolvedUnitPrice = enteredUnitPrice;
             } else {
-                EffectivePriceResponseDto priceResponse = providerContractService.getEffectivePrice(
-                        claim.getProviderId(), medicalService.getCode(), serviceDate);
+                String codeToLookup = (medicalService != null) ? medicalService.getCode() : lineDto.getServiceCode();
+                
+                // FALLBACK: If code is missing but pricingItemId is provided, fetch code from DB
+                if (codeToLookup == null && lineDto.getPricingItemId() != null) {
+                    codeToLookup = pricingItemRepository.findById(lineDto.getPricingItemId())
+                            .map(com.waad.tba.modules.providercontract.entity.ProviderContractPricingItem::getServiceCode)
+                            .orElse(null);
+                }
 
-                if (priceResponse.isHasContract() && priceResponse.getContractPrice() != null) {
-                    resolvedUnitPrice = priceResponse.getContractPrice();
-                } else {
-                    // FALLBACK: If draft + no contract, try base price
-                    resolvedUnitPrice = medicalService.getBasePrice() != null ? medicalService.getBasePrice() : BigDecimal.ZERO;
+                if (codeToLookup != null) {
+                    EffectivePriceResponseDto priceResponse = providerContractService.getEffectivePrice(
+                            claim.getProviderId(), codeToLookup, serviceDate);
+
+                    if (priceResponse.isHasContract() && priceResponse.getContractPrice() != null) {
+                        resolvedUnitPrice = priceResponse.getContractPrice();
+                        resolvedPricingItemId = priceResponse.getPricingItemId();
+                        
+                        // Capture canonical name/code for unmapped services if missing
+                        if (serviceCode == null || "N/A".equals(serviceCode)) 
+                            serviceCode = priceResponse.getServiceCode();
+                        if (serviceName == null || "Unknown Service".equals(serviceName)) 
+                            serviceName = priceResponse.getServiceName();
+                    } else if (medicalService != null) {
+                        // FALLBACK: If draft + no contract, try base price
+                        resolvedUnitPrice = medicalService.getBasePrice() != null ? medicalService.getBasePrice() : BigDecimal.ZERO;
+                    }
+                }
+
+                if (resolvedUnitPrice == null) {
+                    resolvedUnitPrice = enteredUnitPrice;
                 }
             }
 
@@ -294,13 +374,32 @@ public class ClaimMapper {
                 ? enteredUnitPrice.subtract(lineApprovedBase).multiply(quantityBd)
                 : BigDecimal.ZERO;
 
-            var coverageInfoOpt = benefitPolicyCoverageService.getCoverageForService(claim.getMember(),
-                    medicalService.getId(), categoryOverrideId);
-            boolean requiresPA = coverageInfoOpt.map(c -> c.isRequiresPreApproval()).orElse(false);
-            Integer coveragePercentSnapshot = coverageInfoOpt.map(c -> c.getCoveragePercent()).orElse(null);
+            Integer coveragePercentSnapshot = lineDto.getCoveragePercent();
+            boolean requiresPA = lineDto.getRequiresPA() != null ? lineDto.getRequiresPA() : false;
+
+            // Resolve coverage (support unmapped services via category rules)
+            Long targetCategoryId = (categoryOverrideId != null) ? categoryOverrideId 
+                : (medicalService != null ? medicalService.getCategoryId() : lineDto.getAppliedCategoryId());
+                
+            var coverageResult = benefitPolicyCoverageService.resolveCoverage(
+                claim.getMember().getBenefitPolicy().getId(),
+                medicalService != null ? medicalService.getId() : null,
+                medicalService != null ? medicalService.getCategoryId() : lineDto.getAppliedCategoryId(),
+                categoryOverrideId,
+                claim.getMember().getId(),
+                claim.getServiceDate(),
+                claim.getId()
+            );
+
+            if (coverageResult != null) {
+                requiresPA = coverageResult.isRequiresPreApproval();
+                coveragePercentSnapshot = coverageResult.getCoveragePercent();
+            }
 
             // Fetch applied category info (either manual or resolved)
-            Long appliedCategoryId = (categoryOverrideId != null) ? categoryOverrideId : medicalService.getCategoryId();
+            Long appliedCategoryId = (categoryOverrideId != null) ? categoryOverrideId 
+                : (medicalService != null ? medicalService.getCategoryId() : lineDto.getAppliedCategoryId());
+            
             String appliedCategoryName = (categoryOverrideId != null) 
                     ? medicalCategoryRepository.findById(categoryOverrideId).map(c -> c.getName()).orElse(null)
                     : lineDto.getServiceCategoryName();
@@ -328,8 +427,6 @@ public class ClaimMapper {
                     : priceExcessRefusal;
 
                 // Net Available (Allowed base) = resolvedTotal - (any other refusal beyond price)
-                // Actually, resolvedTotal IS the allowed base. We must subtract other refusals (e.g. limit checks) 
-                // ONLY IF those other refusals were calculated relative to the allowed price.
                 BigDecimal netAvailable = lineApprovedTotal.subtract(lineRefused.subtract(priceExcessRefusal)).max(BigDecimal.ZERO);
 
                 if (coveragePercentSnapshot != null) {
@@ -348,8 +445,9 @@ public class ClaimMapper {
             ClaimLine line = ClaimLine.builder()
                     .claim(claim)
                     .medicalService(medicalService)
-                    .serviceCode(medicalService.getCode())
-                    .serviceName(medicalService.getName())
+                    .serviceCode(serviceCode != null ? serviceCode : "N/A")
+                    .serviceName(serviceName != null ? serviceName : "Unknown Service")
+                    .pricingItemId(resolvedPricingItemId)
                     .serviceCategoryId(lineDto.getServiceCategoryId())
                     .serviceCategoryName(lineDto.getServiceCategoryName())
                     .appliedCategoryId(appliedCategoryId)
@@ -357,6 +455,9 @@ public class ClaimMapper {
                     .requiresPA(requiresPA)
                     .coveragePercentSnapshot(coveragePercentSnapshot)
                     .patientCopayPercentSnapshot(patientCopayPercentSnapshot)
+                    .benefitLimit(coverageResult != null ? coverageResult.getAmountLimit() : null)
+                    .usedAmountSnapshot(coverageResult != null ? coverageResult.getUsedAmount() : null)
+                    .remainingAmountSnapshot(coverageResult != null ? coverageResult.getRemainingAmount() : null)
                     .rejected(lineDto.getRejected() != null ? lineDto.getRejected() : false)
                     .rejectionReason(lineDto.getRejectionReason())
                     .refusedAmount(lineRefused)
@@ -546,6 +647,9 @@ public class ClaimMapper {
                 .patientSharePercent(line.getPatientCopayPercentSnapshot())
                 .companyShare(calculateCompanyShare(line))
                 .patientShare(calculatePatientShare(line))
+                .benefitLimit(line.getBenefitLimit())
+                .usedAmount(line.getUsedAmountSnapshot())
+                .remainingAmount(line.getRemainingAmountSnapshot())
                 .appliedCategoryId(line.getAppliedCategoryId())
                 .appliedCategoryName(line.getAppliedCategoryName())
                 .build();

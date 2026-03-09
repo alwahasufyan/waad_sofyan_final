@@ -152,27 +152,28 @@ public class BenefitPolicyRuleService {
 
     @Transactional(readOnly = true)
     public Optional<BenefitPolicyRuleResponseDto> findCoverageForService(Long policyId, Long serviceId, Long categoryOverrideId) {
-        // Resolve target category and its parent
-        Long targetCategoryId = categoryOverrideId;
-        Long parentCategoryId = null;
+        Long serviceCategoryId = null;
+        Long sid = (serviceId != null && serviceId > 0) ? serviceId : null;
 
-        // If serviceId is provided (> 0) and categoryOverrideId is null, resolve category from service
-        if (targetCategoryId == null && serviceId != null && serviceId > 0) {
-            MedicalService service = serviceRepository.findById(serviceId)
-                    .orElseThrow(() -> new ResourceNotFoundException("MedicalService", "id", serviceId));
-            targetCategoryId = resolveCategoryIdForCoverage(service);
+        // 1. Resolve actual category from service if possible
+        if (sid != null) {
+            MedicalService service = serviceRepository.findById(sid)
+                    .orElseThrow(() -> new ResourceNotFoundException("MedicalService", "id", sid));
+            serviceCategoryId = resolveCategoryIdForCoverage(service);
         }
 
-        if (targetCategoryId != null) {
-            parentCategoryId = categoryRepository.findById(targetCategoryId)
+        // 2. Resolve parent of the override (or service cat if no override) for fallback
+        Long targetForParentRef = (categoryOverrideId != null) ? categoryOverrideId : serviceCategoryId;
+        Long parentCategoryId = null;
+        if (targetForParentRef != null) {
+            parentCategoryId = categoryRepository.findById(targetForParentRef)
                     .map(MedicalCategory::getParentId)
                     .orElse(null);
         }
 
-        // Search for best rule. If serviceId is null/0, it will only match category-level rules
-        Long sid = (serviceId != null && serviceId > 0) ? serviceId : null;
-        
-        Optional<BenefitPolicyRule> ruleOpt = ruleRepository.findBestRuleForService(policyId, sid, targetCategoryId, parentCategoryId);
+        // 3. Search for best rule with the new prioritized architecture
+        Optional<BenefitPolicyRule> ruleOpt = ruleRepository.findBestRuleForService(
+                policyId, sid, serviceCategoryId, categoryOverrideId, parentCategoryId);
         
         if (ruleOpt.isPresent()) {
             return ruleOpt.map(BenefitPolicyRuleResponseDto::fromEntity);

@@ -514,10 +514,12 @@ public class ClaimService {
         if (dto.getLines() != null) {
             List<Long> serviceIds = dto.getLines().stream()
                     .map(ClaimLineDto::getMedicalServiceId)
+                    .filter(java.util.Objects::nonNull)
                     .toList();
 
-            Map<Long, MedicalService> medicalServiceMap = medicalServiceRepository.findAllById(serviceIds).stream()
-                    .collect(Collectors.toMap(MedicalService::getId, s -> s));
+            Map<Long, MedicalService> medicalServiceMap = serviceIds.isEmpty() ? java.util.Collections.emptyMap()
+                    : medicalServiceRepository.findAllById(serviceIds).stream()
+                            .collect(Collectors.toMap(MedicalService::getId, s -> s));
 
             claimMapper.replaceClaimLinesForDraft(claim, dto.getLines(), medicalServiceMap);
         }
@@ -1752,14 +1754,14 @@ public class ClaimService {
         // contract
         if (dto.getLines() == null || dto.getLines().isEmpty()) {
             throw new IllegalArgumentException(
-                    "ARCHITECTURAL VIOLATION: At least one claim line with medicalServiceId is REQUIRED");
+                    "ARCHITECTURAL VIOLATION: At least one claim line is REQUIRED");
         }
 
-        // Validate each line has medicalServiceId
+        // Validate each line has identification (medicalServiceId OR pricingItemId)
         for (ClaimLineDto line : dto.getLines()) {
-            if (line.getMedicalServiceId() == null) {
+            if (line.getMedicalServiceId() == null && line.getPricingItemId() == null) {
                 throw new IllegalArgumentException(
-                        "ARCHITECTURAL VIOLATION: Each line MUST have medicalServiceId - no free-text services");
+                        "ARCHITECTURAL VIOLATION: Each line MUST have either medicalServiceId or pricingItemId - no free-text services");
             }
         }
     }
@@ -2048,6 +2050,9 @@ public class ClaimService {
         log.info("🗑️ Deleting claim {}", id);
         Claim claim = claimRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Claim", "id", id));
+
+        // Delete associated audit logs first due to FK constraint
+        claimAuditService.deleteAuditLog(id);
 
         claimRepository.delete(claim);
         log.info("✅ Claim {} deleted successfully", id);

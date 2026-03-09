@@ -1028,6 +1028,12 @@ export default function ProviderClaimsSubmission() {
       return;
     }
 
+    const isDuplicate = claimLines.some(l => l.id !== lineId && l.medicalServiceId === service.id);
+    if (isDuplicate) {
+      setError('هذه الخدمة مضافة بالفعل في بند آخر');
+      return;
+    }
+
     const hasContractPrice = service.hasContract !== false && service.price !== undefined && service.price !== null;
 
     setClaimLines((prev) =>

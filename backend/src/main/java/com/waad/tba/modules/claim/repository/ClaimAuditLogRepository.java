@@ -93,4 +93,8 @@ public interface ClaimAuditLogRepository extends JpaRepository<ClaimAuditLog, Lo
            "AND a.changeType = 'STATUS_CHANGE' " +
            "ORDER BY a.timestamp ASC")
     List<ClaimAuditLog> findStatusChangesForClaim(@Param("claimId") Long claimId);
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    @Query("DELETE FROM ClaimAuditLog a WHERE a.claimId = :claimId")
+    void deleteByClaimId(@Param("claimId") Long claimId);
 }

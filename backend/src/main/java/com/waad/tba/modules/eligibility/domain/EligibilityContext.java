@@ -57,9 +57,19 @@ public class EligibilityContext {
     private final LocalDate serviceDate;
 
     /**
-     * Service code (optional, for future phases)
+     * Service code (optional)
      */
     private final String serviceCode;
+
+    /**
+     * Medical Category ID (optional)
+     */
+    private final Long medicalCategoryId;
+
+    /**
+     * Medical Service ID (optional)
+     */
+    private final Long medicalServiceId;
 
     // ============================================
     // Resolved Entities (loaded from database)

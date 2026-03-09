@@ -90,6 +90,7 @@ import {
   addPricingItem,
   updatePricingItem,
   deletePricingItem,
+  deleteAllPricingItems,
   CONTRACT_STATUS,
   CONTRACT_STATUS_CONFIG,
   PRICING_MODEL_CONFIG
@@ -191,9 +192,18 @@ const getCategoryHierarchy = (item, categoriesList = []) => {
   }
 
   // Fallback for imported items or if lookup fails
+  let fallbackMain = item?.categoryName || item?.mainCategoryName || '-';
+  let fallbackSub = item?.subCategoryName || '-';
+
+  if (item?.categoryName?.includes(' > ')) {
+    const parts = item.categoryName.split(' > ');
+    fallbackMain = parts[0];
+    fallbackSub = parts[1] || '-';
+  }
+
   return {
-    main: item?.categoryName || item?.mainCategoryName || '-',
-    sub: item?.subCategoryName || '-',
+    main: fallbackMain,
+    sub: fallbackSub,
     mainCode: '-',
     subCode: '-'
   };
@@ -266,6 +276,7 @@ const ProviderContractView = () => {
   const [downloadingTemplate, setDownloadingTemplate] = useState(false);
   const [uploadingPricingFile, setUploadingPricingFile] = useState(false);
   const [selectedPricingItem, setSelectedPricingItem] = useState(null);
+  const [clearAllDialogOpen, setClearAllDialogOpen] = useState(false);
   const [pricingForm, setPricingForm] = useState({
     medicalServiceId: null,
     mainCategoryId: null,
@@ -315,13 +326,14 @@ const ProviderContractView = () => {
   // NOTE: Medical services are now fetched dynamically by MedicalServiceSelector component
 
   // Fetch Medical Categories for Dropdown
-  const { data: medicalCategoriesData } = useQuery({
-    queryKey: ['medical-categories-dropdown'],
-    queryFn: getAllMedicalCategories,
-    staleTime: 300000 // 5 minutes
+  const { data: medicalCategories = [] } = useQuery({
+    queryKey: ['medicalCategories'],
+    queryFn: async () => {
+      const data = await getAllMedicalCategories();
+      return Array.isArray(data) ? data : (data?.data || []);
+    },
+    staleTime: 60 * 60 * 1000 // 1 hour
   });
-
-  const medicalCategories = useMemo(() => medicalCategoriesData?.data || medicalCategoriesData || [], [medicalCategoriesData]);
 
   const mainCategoriesList = useMemo(() => {
     return medicalCategories.filter((c) => !c.parentId);
@@ -450,6 +462,19 @@ const ProviderContractView = () => {
     },
     onError: (err) => {
       enqueueSnackbar(err.message || 'فشل إلغاء العقد', { variant: 'error' });
+    }
+  });
+  const deleteAllPricingMutation = useMutation({
+    mutationFn: () => deleteAllPricingItems(id),
+    onSuccess: (count) => {
+      enqueueSnackbar(`تم حذف ${count} بند تسعير بنجاح. يمكنك الآن استيراد القائمة الجديدة.`, { variant: 'success' });
+      queryClient.invalidateQueries(['provider-contract-pricing', id]);
+      queryClient.invalidateQueries(['provider-contract', id]);
+      setClearAllDialogOpen(false);
+      setPricingPage(0);
+    },
+    onError: (err) => {
+      enqueueSnackbar(err.response?.data?.message || err.message || 'فشل حذف بنود التسعير', { variant: 'error' });
     }
   });
 
@@ -626,7 +651,7 @@ const ProviderContractView = () => {
     addPricingMutation.mutate({
       medicalServiceId: finalServiceId,
       medicalCategoryId: effectiveCategoryId || null,
-      basePrice: parseFloat(pricingForm.basePrice),
+      basePrice: parseFloat(pricingForm.contractPrice), // BasePrice becomes ContractPrice
       contractPrice: parseFloat(pricingForm.contractPrice),
       notes: pricingForm.notes
     });
@@ -657,12 +682,12 @@ const ProviderContractView = () => {
   );
 
   const handleEditPricingSubmit = useCallback(() => {
-    if (!pricingForm.basePrice || !pricingForm.contractPrice) return;
+    if (!pricingForm.contractPrice) return;
 
     updatePricingMutation.mutate({
       medicalServiceId: pricingForm.medicalServiceId?.id || null,
       medicalCategoryId: pricingForm.medicalCategoryId?.id || pricingForm.mainCategoryId?.id || null,
-      basePrice: parseFloat(pricingForm.basePrice),
+      basePrice: parseFloat(pricingForm.contractPrice), // BasePrice becomes ContractPrice
       contractPrice: parseFloat(pricingForm.contractPrice),
       notes: pricingForm.notes
     });
@@ -890,39 +915,71 @@ const ProviderContractView = () => {
               }}
             />
 
-            <Autocomplete
-              size="small"
-              sx={{ minWidth: 200 }}
-              options={medicalCategories?.data || []}
-              getOptionLabel={(option) => option.nameAr || option.name || option.code || ''}
-              value={medicalCategories?.data?.find(c => c.id === selectedCategoryId) || null}
-              onChange={(event, newValue) => {
-                setSelectedCategoryId(newValue?.id || null);
-                setPricingPage(0);
-              }}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  placeholder="فلترة حسب التصنيف"
-                  size="small"
-                />
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+              <Autocomplete
+                size="small"
+                sx={{ minWidth: 200 }}
+                options={medicalCategories?.data || []}
+                getOptionLabel={(option) => option.nameAr || option.name || option.code || ''}
+                value={medicalCategories?.data?.find(c => c.id === selectedCategoryId) || null}
+                onChange={(event, newValue) => {
+                  setSelectedCategoryId(newValue?.id || null);
+                  setPricingPage(0);
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    placeholder="فلترة حسب التصنيف"
+                    size="small"
+                  />
+                )}
+              />
+
+              <Chip size="small" variant="outlined" color="primary" label={`${totalPricingItems} بند`} sx={{ width: 'fit-content' }} />
+            </Box>
+
+            <Box sx={{ flexGrow: 1 }} />
+
+            <Stack direction="row" spacing={1}>
+              {/* Add System Service Button */}
+              <Button
+                variant="contained"
+                color="secondary"
+                onClick={handleOpenAddPricing}
+                startIcon={<AddIcon />}
+                size="medium"
+                disabled={contract.status === CONTRACT_STATUS.TERMINATED}
+              >
+                إضافة خدمة
+              </Button>
+
+              {/* Import Price List Button */}
+              <Button
+                variant="outlined"
+                color="primary"
+                onClick={handleImportPriceList}
+                startIcon={<CloudUploadIcon />}
+                size="medium"
+                disabled={contract.status === CONTRACT_STATUS.TERMINATED}
+              >
+                استيراد الأسعار
+              </Button>
+
+              {/* Delete All Button - Only available in DRAFT */}
+              {contract.status === CONTRACT_STATUS.DRAFT && pricingItems.length > 0 && (
+                <Tooltip title="حذف جميع بنود التسعير لإعادة الاستيراد">
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    onClick={() => setClearAllDialogOpen(true)}
+                    startIcon={<DeleteIcon />}
+                    size="medium"
+                  >
+                    حذف الكل
+                  </Button>
+                </Tooltip>
               )}
-            />
-
-            <Chip size="small" variant="outlined" color="primary" label={`${totalPricingItems} بند`} sx={{ width: 'fit-content' }} />
-
-            {/* Add System Service Button */}
-
-            <Button variant="contained" color="secondary" onClick={handleOpenAddPricing} startIcon={<AddIcon />} size="medium">
-              إضافة خدمة طبية
-            </Button>
-
-
-            {/* Import Price List Button */}
-
-            <Button variant="outlined" color="primary" onClick={handleImportPriceList} startIcon={<ContractIcon />} size="medium">
-              استيراد قائمة الأسعار
-            </Button>
+            </Stack>
 
 
           </Stack>
@@ -932,14 +989,12 @@ const ProviderContractView = () => {
             <Table size="small" stickyHeader>
               <TableHead>
                 <TableRow sx={{ backgroundColor: 'grey.50' }}>
-                  <TableCell>كود الخدمة</TableCell>
-                  <TableCell>اسم الخدمة</TableCell>
-                  <TableCell>التصنيف الرئيسي</TableCell>
-                  <TableCell>البند (التصنيف الفرعي)</TableCell>
-                  <TableCell align="right">السعر الأساسي</TableCell>
-                  <TableCell align="right">سعر العقد</TableCell>
-                  <TableCell align="right">الخصم %</TableCell>
-                  <TableCell align="center">الإجراءات</TableCell>
+                  <TableCell sx={{ width: 120 }}>كود الخدمة</TableCell>
+                  <TableCell sx={{ minWidth: 250 }}>اسم الخدمة</TableCell>
+                  <TableCell sx={{ minWidth: 180 }}>التصنيف الرئيسي</TableCell>
+                  <TableCell sx={{ minWidth: 180 }}>البند (التصنيف الفرعي)</TableCell>
+                  <TableCell align="right" sx={{ width: 120 }}>سعر العقد</TableCell>
+                  <TableCell align="center" sx={{ width: 100 }}>الإجراءات</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -1017,18 +1072,10 @@ const ProviderContractView = () => {
                           );
                         })()}
                       </TableCell>
-                      <TableCell align="right">{formatCurrency(item.basePrice)}</TableCell>
                       <TableCell align="right">
-                        <Typography fontWeight={500} color="primary.main">
+                        <Typography fontWeight={700} color="primary.main">
                           {formatCurrency(item.contractPrice)}
                         </Typography>
-                      </TableCell>
-                      <TableCell align="right">
-                        {item.discountPercent !== null && item.discountPercent !== undefined ? (
-                          <Chip label={`${item.discountPercent}%`} size="small" color="success" variant="outlined" />
-                        ) : (
-                          '-'
-                        )}
                       </TableCell>
 
                       <TableCell align="center">
@@ -1197,26 +1244,22 @@ const ProviderContractView = () => {
             اختر التصنيف أولاً ثم الخدمة من القاموس وأدخل السعر المتفق عليه.
           </DialogContentText>
           <Stack spacing={3}>
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <Autocomplete
-                  fullWidth
-                  sx={{ width: '100%' }}
-                  options={mainCategoriesList}
-                  getOptionLabel={(option) => `${option.code || ''} - ${option.nameAr || option.name || ''}`}
-                  value={pricingForm.mainCategoryId}
-                  onChange={(e, newValue) => {
-                    setPricingForm({
-                      ...pricingForm,
-                      mainCategoryId: newValue,
-                      medicalCategoryId: null,
-                      medicalServiceId: null
-                    });
-                  }}
-                  renderInput={(params) => <TextField {...params} label="التصنيف الرئيسي *" required fullWidth />}
-                />
-              </Grid>
-            </Grid>
+              <Autocomplete
+                fullWidth
+                sx={{ width: '100%' }}
+                options={mainCategoriesList}
+                getOptionLabel={(option) => `${option.code || ''} - ${option.nameAr || option.name || ''}`}
+                value={pricingForm.mainCategoryId}
+                onChange={(e, newValue) => {
+                  setPricingForm({
+                    ...pricingForm,
+                    mainCategoryId: newValue,
+                    medicalCategoryId: null,
+                    medicalServiceId: null
+                  });
+                }}
+                renderInput={(params) => <TextField {...params} label="التصنيف الرئيسي *" required fullWidth />}
+              />
 
             {/* Subcategory - shown when main category is chosen and subcategories exist */}
             {(pricingForm.mainCategoryId && subCategoriesList.length > 0) && (
@@ -1307,37 +1350,15 @@ const ProviderContractView = () => {
               </Stack>
             )}
 
-            <TextField
-              label="السعر الأساسي"
-              type="number"
-              fullWidth
-              value={pricingForm.basePrice}
-              onChange={(e) => updatePriceFields({ basePrice: e.target.value })}
-              required
-              helperText="السعر المرجعي للخدمة (تغييره يؤثر على سعر العقد إذا وجد خصم)"
-            />
 
             <TextField
-              label="نسبة الخصم %"
-              type="number"
-              fullWidth
-              value={pricingForm.discountPercent}
-              onChange={(e) => updatePriceFields({ discountPercent: e.target.value })}
-              helperText="سيتم تحديث سعر العقد تلقائياً بناءً على الخصم"
-            />
-
-            <TextField
-              label="سعر العقد (المتفق عليه) *"
+              label="سعر الخدمة (المتفق عليه) *"
               type="number"
               fullWidth
               value={pricingForm.contractPrice}
               onChange={(e) => updatePriceFields({ contractPrice: e.target.value })}
               required
-              helperText={
-                pricingForm.basePrice && pricingForm.contractPrice
-                  ? `القيمة المخفضة: ${formatCurrency(pricingForm.basePrice - pricingForm.contractPrice)}`
-                  : ''
-              }
+              helperText="أدخل السعر الصافي المتفق عليه لهذا البند"
             />
 
             <TextField
@@ -1415,35 +1436,15 @@ const ProviderContractView = () => {
               />
             )}
 
-            <TextField
-              label="السعر الأساسي"
-              type="number"
-              fullWidth
-              value={pricingForm.basePrice}
-              onChange={(e) => updatePriceFields({ basePrice: e.target.value })}
-              required
-            />
 
             <TextField
-              label="نسبة الخصم الجديدة %"
-              type="number"
-              fullWidth
-              value={pricingForm.discountPercent}
-              onChange={(e) => updatePriceFields({ discountPercent: e.target.value })}
-            />
-
-            <TextField
-              label="سعر العقد الجديد *"
+              label="سعر الخدمة الجديد *"
               type="number"
               fullWidth
               value={pricingForm.contractPrice}
               onChange={(e) => updatePriceFields({ contractPrice: e.target.value })}
               required
-              helperText={
-                pricingForm.basePrice && pricingForm.contractPrice
-                  ? `القيمة المخفضة: ${formatCurrency(pricingForm.basePrice - pricingForm.contractPrice)}`
-                  : ''
-              }
+              helperText="أدخل السعر الجديد المتفق عليه"
             />
 
             <TextField
@@ -1487,6 +1488,31 @@ const ProviderContractView = () => {
             disabled={deletePricingMutation.isLoading}
           >
             {deletePricingMutation.isLoading ? <CircularProgress size={20} /> : 'حذف'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Clear All Pricing Items Dialog */}
+      <Dialog open={clearAllDialogOpen} onClose={() => setClearAllDialogOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle color="error" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <DeleteIcon /> حذف جميع بنود التسعير
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            سيؤدي هذا الإجراء إلى حذف <strong>جميع</strong> بنود التسعير الحالية (عدد {totalPricingItems}) من هذا العقد.
+            <br /><br />
+            هل أنت متأكد من رغبتك في الحذف لإعادة استيراد القائمة من جديد؟
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setClearAllDialogOpen(false)} disabled={deleteAllPricingMutation.isLoading}>إلغاء</Button>
+          <Button
+            onClick={() => deleteAllPricingMutation.mutate()}
+            color="error"
+            variant="contained"
+            disabled={deleteAllPricingMutation.isLoading}
+          >
+            {deleteAllPricingMutation.isLoading ? <CircularProgress size={20} /> : 'نعم، حذف الكل'}
           </Button>
         </DialogActions>
       </Dialog>

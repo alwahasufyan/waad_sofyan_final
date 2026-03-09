@@ -3,7 +3,9 @@ package com.waad.tba.modules.providercontract.service;
 import com.waad.tba.modules.medicaltaxonomy.dto.ExcelImportResultDto;
 import com.waad.tba.modules.medicaltaxonomy.dto.ExcelImportResultDto.ImportError;
 import com.waad.tba.modules.medicaltaxonomy.dto.ExcelImportResultDto.ImportSummary;
+import com.waad.tba.modules.medicaltaxonomy.entity.MedicalCategory;
 import com.waad.tba.modules.medicaltaxonomy.entity.MedicalService;
+import com.waad.tba.modules.medicaltaxonomy.repository.MedicalCategoryRepository;
 import com.waad.tba.modules.medicaltaxonomy.repository.MedicalServiceRepository;
 import com.waad.tba.modules.providercontract.entity.ProviderContract;
 import com.waad.tba.modules.providercontract.entity.ProviderContractPricingItem;
@@ -52,6 +54,7 @@ public class ProviderContractPricingExcelService {
     private final ProviderContractRepository contractRepository;
     private final ProviderContractPricingItemRepository pricingRepository;
     private final MedicalServiceRepository serviceRepository;
+    private final MedicalCategoryRepository categoryRepository;
 
     /**
      * Column name mappings (supports both Arabic and English)
@@ -118,6 +121,13 @@ public class ProviderContractPricingExcelService {
         COLUMN_MAPPINGS.put("category / التصنيف", "category");
         COLUMN_MAPPINGS.put("category",           "category");
         COLUMN_MAPPINGS.put("التصنيف",             "category");
+        COLUMN_MAPPINGS.put("main_category / التصنيف الرئيسي", "mainCategory");
+        COLUMN_MAPPINGS.put("main_category",        "mainCategory");
+        COLUMN_MAPPINGS.put("التصنيف الرئيسي",       "mainCategory");
+        COLUMN_MAPPINGS.put("sub_category / البند (التصنيف الفرعي)", "subCategory");
+        COLUMN_MAPPINGS.put("sub_category",         "subCategory");
+        COLUMN_MAPPINGS.put("البند",                "subCategory");
+        COLUMN_MAPPINGS.put("التصنيف الفرعي",         "subCategory");
         COLUMN_MAPPINGS.put("specialty / التخصص", "specialty");
         COLUMN_MAPPINGS.put("specialty",           "specialty");
         COLUMN_MAPPINGS.put("التخصص",              "specialty");
@@ -222,6 +232,8 @@ public class ProviderContractPricingExcelService {
                     String serviceNameValue = getCellValueAsString(row, columnIndices.get("serviceName"));
                     BigDecimal contractPriceValue = getCellValueAsDecimal(row, columnIndices.get("contractPrice"));
                     String currencyValue = getCellValueAsString(row, columnIndices.get("currency"));
+                    String mainCatCode = getCellValueAsString(row, columnIndices.get("mainCategory"));
+                    String subCatCode = getCellValueAsString(row, columnIndices.get("subCategory"));
 
                     log.debug("Row {}: serviceCode='{}', serviceName='{}', price={}", 
                             rowNum + 1, serviceCodeValue, serviceNameValue, contractPriceValue);
@@ -284,19 +296,14 @@ public class ProviderContractPricingExcelService {
                         }
                     }
 
-                    if (service == null) {
-                        String identifier = serviceCodeValue != null ? serviceCodeValue : serviceNameValue;
-                        errors.add(ImportError.builder()
-                                .row(rowNum + 1)
-                                .column("قالب المنتج")
-                                .error("الخدمة الطبية غير موجودة: " + identifier)
-                                .build());
-                        skipped++;
-                        log.warn("Row {}: Skipped - service not found: '{}'", rowNum + 1, identifier);
-                        continue;
-                    }
+                    // Identifier for logs
+                    String identifier = (serviceCodeValue != null && !serviceCodeValue.isBlank()) 
+                            ? serviceCodeValue : serviceNameValue;
 
-                    if (!service.isActive()) {
+                    if (service == null) {
+                        log.info("Row {}: Service not found in medical taxonomy. Importing as unmapped item: '{}'", 
+                                rowNum + 1, identifier);
+                    } else if (!service.isActive()) {
                         errors.add(ImportError.builder()
                                 .row(rowNum + 1)
                                 .column(service.getCode())
@@ -306,8 +313,8 @@ public class ProviderContractPricingExcelService {
                         continue;
                     }
 
-                    // Use service.basePrice as basePrice
-                    BigDecimal basePrice = service.getBasePrice() != null 
+                    // Use service.basePrice as basePrice if available, else 0
+                    BigDecimal basePrice = (service != null && service.getBasePrice() != null) 
                             ? service.getBasePrice() 
                             : BigDecimal.ZERO;
 
@@ -316,9 +323,48 @@ public class ProviderContractPricingExcelService {
                             ? currencyValue.trim().toUpperCase() 
                             : "LYD";
 
+                    // Resolve Medical Category from Excel if provided
+                    MedicalCategory assignedCategory = null;
+                    String targetCatCode = (subCatCode != null && !subCatCode.isBlank()) ? subCatCode : mainCatCode;
+                    
+                    if (targetCatCode != null && !targetCatCode.isBlank()) {
+                        assignedCategory = categoryRepository.findByCode(targetCatCode.trim())
+                                .orElse(null);
+                        if (assignedCategory == null) {
+                            // Try and find by name if code fails
+                            assignedCategory = categoryRepository.findAll().stream()
+                                    .filter(c -> c.getName().equalsIgnoreCase(targetCatCode.trim()))
+                                    .findFirst()
+                                    .orElse(null);
+                        }
+                    }
+                    
+                    // If still null and service is present, use service category
+                    if (assignedCategory == null && service != null && service.getCategoryId() != null) {
+                        assignedCategory = categoryRepository.findById(service.getCategoryId()).orElse(null);
+                    }
+
                     // Check if pricing item already exists (upsert)
-                    Optional<ProviderContractPricingItem> existingOpt = pricingRepository
-                            .findByContractAndMedicalService(contract, service);
+                    Optional<ProviderContractPricingItem> existingOpt = Optional.empty();
+                    
+                    if (service != null) {
+                        existingOpt = pricingRepository.findByContractAndMedicalService(contract, service);
+                    } else if (serviceCodeValue != null && !serviceCodeValue.isBlank()) {
+                        // Match unmapped item by Code
+                        existingOpt = pricingRepository.findActiveUnmappedByContractAndServiceCode(
+                                contract.getId(), serviceCodeValue.trim());
+                    } else if (serviceNameValue != null && !serviceNameValue.isBlank()) {
+                        // Match unmapped item by Name
+                        existingOpt = pricingRepository.findActiveUnmappedByContractAndServiceName(
+                                contract.getId(), serviceNameValue.trim());
+                    }
+
+                    String fallbackCategoryName = null;
+                    if (mainCatCode != null || subCatCode != null) {
+                        fallbackCategoryName = (mainCatCode != null ? mainCatCode : "") + 
+                                               (mainCatCode != null && subCatCode != null ? " > " : "") + 
+                                               (subCatCode != null ? subCatCode : "");
+                    }
 
                     if (existingOpt.isPresent()) {
                         // UPDATE
@@ -326,6 +372,9 @@ public class ProviderContractPricingExcelService {
                         existing.setBasePrice(basePrice);
                         existing.setContractPrice(contractPriceValue);
                         existing.setCurrency(currency);
+                        existing.setServiceCode(serviceCodeValue);
+                        existing.setMedicalCategory(assignedCategory);
+                        existing.setCategoryName(fallbackCategoryName);
                         existing.setUpdatedBy(currentUser);
                         existing.setActive(true);
                         // discountPercent calculated automatically via @PreUpdate
@@ -334,12 +383,16 @@ public class ProviderContractPricingExcelService {
                         updated++;
                         
                         log.debug("Updated pricing: contract={}, service={}, price={}", 
-                                contractId, service.getCode(), contractPriceValue);
+                                contractId, identifier, contractPriceValue);
                     } else {
                         // INSERT
                         ProviderContractPricingItem newItem = ProviderContractPricingItem.builder()
                                 .contract(contract)
                                 .medicalService(service)
+                                .serviceName(serviceNameValue)
+                                .serviceCode(serviceCodeValue)
+                                .medicalCategory(assignedCategory)
+                                .categoryName(fallbackCategoryName)
                                 .basePrice(basePrice)
                                 .contractPrice(contractPriceValue)
                                 .currency(currency)
@@ -353,7 +406,7 @@ public class ProviderContractPricingExcelService {
                         inserted++;
                         
                         log.debug("Inserted pricing: contract={}, service={}, price={}", 
-                                contractId, service.getCode(), contractPriceValue);
+                                contractId, identifier, contractPriceValue);
                     }
 
                 } catch (Exception e) {

@@ -158,11 +158,16 @@ public class CreateClaimRequest {
         
         /**
          * Medical service ID (from MedicalTaxonomy)
-         * REQUIRED - No free-text services allowed
+         * Optional if pricingItemId is provided
          */
-        @NotNull(message = "Medical service ID is required")
         @Positive(message = "Medical service ID must be positive")
         private Long medicalServiceId;
+
+        /**
+         * Optional: Specific Pricing Item ID from Provider Contract
+         * Used for items that are verified in contract but not yet mapped to taxonomy
+         */
+        private Long pricingItemId;
         
         /**
          * Quantity of service (e.g., number of sessions)
@@ -197,6 +202,12 @@ public class CreateClaimRequest {
          * Reason for rejection (if rejected)
          */
         private String rejectionReason;
+
+        @Size(max = 50, message = "Service code must not exceed 50 characters")
+        private String serviceCode;
+
+        @Size(max = 255, message = "Service name must not exceed 255 characters")
+        private String serviceName;
 
         // ❌ NO totalPrice - Calculated as quantity * unitPrice
         // ❌ NO approvedPrice - Calculated during approval

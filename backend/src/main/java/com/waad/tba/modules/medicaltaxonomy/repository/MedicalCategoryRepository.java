@@ -38,6 +38,16 @@ public interface MedicalCategoryRepository extends JpaRepository<MedicalCategory
     Optional<MedicalCategory> findFirstByName(String name);
 
     /**
+     * Find category by Arabic name
+     */
+    Optional<MedicalCategory> findFirstByNameAr(String nameAr);
+
+    /**
+     * Find category by English name
+     */
+    Optional<MedicalCategory> findFirstByNameEn(String nameEn);
+
+    /**
      * Check if code exists (for duplicate validation)
      */
     boolean existsByCode(String code);

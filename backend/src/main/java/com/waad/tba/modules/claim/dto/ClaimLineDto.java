@@ -27,12 +27,16 @@ public class ClaimLineDto {
     // ==================== INPUT (for create/update) ====================
     
     /**
-     * REQUIRED: Medical Service ID (from Provider Contract)
-     * ARCHITECTURAL LAW: Service MUST be selected - NO free-text
+     * Optional: Medical Service ID (from Provider Contract)
+     * If null, pricingItemId or serviceName/Code must be used.
      */
-    @NotNull(message = "Medical Service ID is required - Select from covered services")
     @Positive(message = "Medical Service ID must be positive")
     private Long medicalServiceId;
+
+    /**
+     * Optional: Pricing Item ID (from Provider Contract Pricing Items)
+     */
+    private Long pricingItemId;
     
     /**
      * REQUIRED: Quantity of service
@@ -94,6 +98,9 @@ public class ClaimLineDto {
     // Financial Split (READ-ONLY)
     private Integer coveragePercent;
     private Integer patientSharePercent;
+    private BigDecimal benefitLimit;
+    private BigDecimal usedAmount;
+    private BigDecimal remainingAmount;
     private BigDecimal companyShare;
     private BigDecimal patientShare;
 

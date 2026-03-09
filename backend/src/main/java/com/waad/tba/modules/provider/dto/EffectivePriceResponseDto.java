@@ -72,6 +72,11 @@ public class EffectivePriceResponseDto {
     private LocalDate effectiveTo;
 
     /**
+     * Pricing Item ID (from provider_contract_pricing_items)
+     */
+    private Long pricingItemId;
+
+    /**
      * Has Contract
      * true if contract was found
      */

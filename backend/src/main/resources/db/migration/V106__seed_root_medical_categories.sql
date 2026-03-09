@@ -5,7 +5,7 @@
 -- 1. Ensure the sequences are aware of new manual IDs or just let them generate
 -- We use business codes for reliability.
 
--- ROOT CATEGORIES (8 context roots)
+-- ROOT CATEGORIES (9 context roots)
 INSERT INTO medical_categories (code, name, name_ar, context, parent_id, active)
 VALUES 
 ('CAT-OUTPAT', 'Outpatient', 'خارج المستشفى (OP)', 'OUTPATIENT', NULL, true),
@@ -15,6 +15,7 @@ VALUES
 ('CAT-MATERNITY', 'Maternity', 'الأمومة', 'ANY', NULL, true),
 ('CAT-CHRONIC', 'Chronic Diseases', 'الأمراض المزمنة', 'ANY', NULL, true),
 ('CAT-EMERGENCY', 'Emergency', 'الحالات الطارئة', 'EMERGENCY', NULL, true),
+('CAT-PHYSIO', 'Physiotherapy', 'العلاج الطبيعي', 'ANY', NULL, true),
 ('CAT-OTHER', 'Other Services', 'أخرى', 'ANY', NULL, true)
 ON CONFLICT (code) DO UPDATE 
 SET name_ar = EXCLUDED.name_ar, context = EXCLUDED.context;
