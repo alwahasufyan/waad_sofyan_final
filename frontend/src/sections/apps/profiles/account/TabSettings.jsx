@@ -14,17 +14,17 @@ import MainCard from 'components/MainCard';
 export default function TabSettings() {
   return (
     <Grid container spacing={3}>
-      <Grid item xs={12}>
+      <Grid size={12}>
         <MainCard title="Notification Settings">
           <Grid container spacing={3}>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Stack spacing={2}>
                 <FormControlLabel control={<Switch defaultChecked />} label="Email Notifications" />
                 <FormControlLabel control={<Switch defaultChecked />} label="SMS Notifications" />
                 <FormControlLabel control={<Switch />} label="Push Notifications" />
               </Stack>
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Stack direction="row" justifyContent="flex-end" spacing={2}>
                 <Button variant="outlined" color="secondary">
                   Cancel

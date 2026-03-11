@@ -13,28 +13,28 @@ import MainCard from 'components/MainCard';
 export default function TabPersonal() {
   return (
     <Grid container spacing={3}>
-      <Grid item xs={12}>
+      <Grid size={12}>
         <MainCard title="Personal Information">
           <Grid container spacing={3}>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <Stack spacing={1}>
                 <Typography variant="subtitle1">Phone Number</Typography>
                 <TextField fullWidth placeholder="Enter phone number" />
               </Stack>
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <Stack spacing={1}>
                 <Typography variant="subtitle1">Date of Birth</Typography>
                 <TextField fullWidth type="date" />
               </Stack>
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Stack spacing={1}>
                 <Typography variant="subtitle1">Address</Typography>
                 <TextField fullWidth multiline rows={3} placeholder="Enter address" />
               </Stack>
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Stack direction="row" justifyContent="flex-end" spacing={2}>
                 <Button variant="outlined" color="secondary">
                   Cancel

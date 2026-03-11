@@ -361,7 +361,7 @@ const ProviderPreAuthReport = () => {
 
           <Collapse in={showFilters}>
             <Grid container spacing={2} alignItems="center">
-              <Grid item xs={12} md={3}>
+              <Grid size={{ xs: 12, md: 3 }}>
                 <DatePicker
                   label="من تاريخ"
                   value={filters.fromDate}
@@ -375,7 +375,7 @@ const ProviderPreAuthReport = () => {
                 />
               </Grid>
 
-              <Grid item xs={12} md={3}>
+              <Grid size={{ xs: 12, md: 3 }}>
                 <DatePicker
                   label="إلى تاريخ"
                   value={filters.toDate}
@@ -389,7 +389,7 @@ const ProviderPreAuthReport = () => {
                 />
               </Grid>
 
-              <Grid item xs={12} md={2}>
+              <Grid size={{ xs: 12, md: 2 }}>
                 <TextField
                   fullWidth
                   select
@@ -407,7 +407,7 @@ const ProviderPreAuthReport = () => {
                 </TextField>
               </Grid>
 
-              <Grid item xs={12} md={2}>
+              <Grid size={{ xs: 12, md: 2 }}>
                 <TextField
                   fullWidth
                   label="الباركود"
@@ -418,7 +418,7 @@ const ProviderPreAuthReport = () => {
                 />
               </Grid>
 
-              <Grid item xs={12} md={2}>
+              <Grid size={{ xs: 12, md: 2 }}>
                 <Stack direction="row" spacing={1}>
                   <Button
                     variant="contained"

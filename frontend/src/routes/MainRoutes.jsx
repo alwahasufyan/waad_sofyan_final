@@ -196,6 +196,7 @@ const Error500 = Loadable(lazy(() => import('pages/errors/ServerError500')));
 // Batch-based settlement system for provider payments
 
 const ProviderAccountsList = Loadable(lazy(() => import('pages/settlement/ProviderAccountsList')));
+const ProviderPaymentsList = Loadable(lazy(() => import('pages/settlement/ProviderPaymentsList')));
 const ProviderAccountView = Loadable(lazy(() => import('pages/settlement/ProviderAccountView')));
 const SettlementBatchesList = Loadable(lazy(() => import('pages/settlement/SettlementBatchesList')));
 const SettlementBatchView = Loadable(lazy(() => import('pages/settlement/SettlementBatchView')));
@@ -383,7 +384,15 @@ const MainRoutes = {
           )
         },
         {
-          path: 'provider-accounts/:providerId',
+          path: 'provider-payments',
+          element: (
+            <PermissionGuard resource="provider_accounts" action="view" isRouteGuard>
+              <ProviderPaymentsList />
+            </PermissionGuard>
+          )
+        },
+        {
+          path: 'provider-payments/:providerId',
           element: (
             <PermissionGuard resource="provider_accounts" action="view" isRouteGuard>
               <ProviderAccountView />

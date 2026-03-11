@@ -111,7 +111,7 @@ const STATUS_CONFIG = {
  */
 const DetailRow = ({ label, value, icon: Icon }) => (
   <Grid container spacing={2} sx={{ mb: 2 }}>
-    <Grid item xs={12} sm={4}>
+    <Grid size={{ xs: 12, sm: 4 }}>
       <Stack direction="row" spacing={1} alignItems="center">
         {Icon && <Icon fontSize="small" color="action" />}
         <Typography variant="body2" color="text.secondary" fontWeight={500}>
@@ -119,7 +119,7 @@ const DetailRow = ({ label, value, icon: Icon }) => (
         </Typography>
       </Stack>
     </Grid>
-    <Grid item xs={12} sm={8}>
+    <Grid size={{ xs: 12, sm: 8 }}>
       <Typography variant="body1">{value || 'غير متوفر'}</Typography>
     </Grid>
   </Grid>
@@ -469,7 +469,7 @@ const BenefitPolicyView = () => {
         /* Overview Tab - Policy Header Card - Odoo Style */
         <Grid container spacing={3}>
           {/* Basic Information */}
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <MainCard title="معلومات أساسية" secondary={<StatusChip status={policy?.status} />}>
               <DetailRow label="اسم الوثيقة" value={policy?.name} icon={PolicyIcon} />
               <DetailRow label="رمز الوثيقة" value={policy?.policyCode} icon={CodeIcon} />
@@ -489,7 +489,7 @@ const BenefitPolicyView = () => {
           </Grid>
 
           {/* Coverage Information */}
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <MainCard title="معلومات التغطية">
               <DetailRow
                 label="الحد السنوي"
@@ -513,7 +513,7 @@ const BenefitPolicyView = () => {
 
           {/* Description / Notes */}
           {policy?.description && (
-            <Grid item xs={12}>
+            <Grid size={12}>
               <MainCard title="الوصف">
                 <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
                   {policy.description}
@@ -523,17 +523,17 @@ const BenefitPolicyView = () => {
           )}
 
           {/* Audit Information */}
-          <Grid item xs={12}>
+          <Grid size={12}>
             <MainCard title="معلومات النظام">
               <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <DetailRow
                     label="تاريخ الإنشاء"
                     value={policy?.createdAt ? new Date(policy.createdAt).toLocaleString('en-US') : null}
                     icon={CalendarIcon}
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <DetailRow
                     label="آخر تحديث"
                     value={policy?.updatedAt ? new Date(policy.updatedAt).toLocaleString('en-US') : null}

@@ -153,13 +153,13 @@ const RBACDashboard = () => {
 
       {/* ====== STATS ROW ====== */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={4}>
+        <Grid size={{ xs: 12, sm: 4 }}>
           <StatCard title="المستخدمين" value={stats.users} icon={PeopleAltIcon} color="primary" loading={loading} />
         </Grid>
-        <Grid item xs={12} sm={4}>
+        <Grid size={{ xs: 12, sm: 4 }}>
           <StatCard title="الأدوار" value={stats.roles} icon={AdminPanelSettingsIcon} color="warning" loading={loading} />
         </Grid>
-        <Grid item xs={12} sm={4}>
+        <Grid size={{ xs: 12, sm: 4 }}>
           <StatCard title="الصلاحيات" value={stats.permissions} icon={KeyIcon} color="success" loading={loading} />
         </Grid>
       </Grid>
@@ -169,7 +169,7 @@ const RBACDashboard = () => {
         الإدارة
       </Typography>
       <Grid container spacing={3}>
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <NavCard
             title="إدارة المستخدمين"
             description="عرض وإدارة المستخدمين وتعيين الأدوار لهم. يمكنك تفعيل أو تعطيل أدوار كل مستخدم."

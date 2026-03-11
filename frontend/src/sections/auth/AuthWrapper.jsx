@@ -54,7 +54,7 @@ export default function AuthWrapper({ children }) {
               alignItems: 'center'
             }}
           >
-            <Grid item xs={12}>
+            <Grid size={12}>
               <AuthCard>{children}</AuthCard>
             </Grid>
           </Grid>

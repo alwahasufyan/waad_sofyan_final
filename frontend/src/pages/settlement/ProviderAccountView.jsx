@@ -14,7 +14,7 @@
  * ╚═══════════════════════════════════════════════════════════════════════════════╝
  */
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 
@@ -35,7 +35,12 @@ import {
   Tab,
   Tabs,
   Tooltip,
-  Typography
+  Typography,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField
 } from '@mui/material';
 
 // MUI Icons
@@ -50,6 +55,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
 import PrintIcon from '@mui/icons-material/Print';
 import TableChartIcon from '@mui/icons-material/TableChart';
+import PaymentIcon from '@mui/icons-material/Payment';
 
 // Project Components
 import MainCard from 'components/MainCard';
@@ -58,7 +64,7 @@ import PermissionGuard from 'components/PermissionGuard';
 import { UnifiedMedicalTable } from 'components/common';
 
 // Services
-import { providerAccountsService } from 'services/api/settlement.service';
+import { providerAccountsService, providerPaymentsService } from 'services/api/settlement.service';
 
 // Utils
 import { exportProviderAccountTransactionsToExcel } from 'utils/settlementExcelExport';
@@ -249,7 +255,7 @@ const AccountSummaryCard = ({ account, isLoading }) => {
             <Skeleton variant="text" width="60%" height={40} />
             <Grid container spacing={3}>
               {[1, 2, 3, 4].map((i) => (
-                <Grid item xs={12} sm={6} md={3} key={i}>
+                <Grid key={i} size={{ xs: 12, sm: 6, md: 3 }}>
                   <Skeleton variant="rectangular" height={100} />
                 </Grid>
               ))}
@@ -296,7 +302,7 @@ const AccountSummaryCard = ({ account, isLoading }) => {
         {/* Financial Summary */}
         <Grid container spacing={3}>
           {/* Running Balance */}
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Paper
               elevation={0}
               sx={{
@@ -319,7 +325,7 @@ const AccountSummaryCard = ({ account, isLoading }) => {
           </Grid>
 
           {/* Total Approved */}
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Paper elevation={0} sx={{ p: 2, bgcolor: 'primary.lighter', borderRadius: 2, textAlign: 'center' }}>
               <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                 إجمالي المعتمد
@@ -337,7 +343,7 @@ const AccountSummaryCard = ({ account, isLoading }) => {
           </Grid>
 
           {/* Total Paid */}
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Paper elevation={0} sx={{ p: 2, bgcolor: 'success.lighter', borderRadius: 2, textAlign: 'center' }}>
               <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                 إجمالي المدفوع
@@ -355,7 +361,7 @@ const AccountSummaryCard = ({ account, isLoading }) => {
           </Grid>
 
           {/* Transaction Count */}
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Paper elevation={0} sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 2, textAlign: 'center' }}>
               <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                 عدد الحركات
@@ -384,9 +390,23 @@ const AccountSummaryCard = ({ account, isLoading }) => {
 const ProviderAccountView = () => {
   const { providerId } = useParams();
   const navigate = useNavigate();
+
+  // Guard: providerId must be a valid integer. If not (e.g. "actions" from a mismatched route),
+  // skip all API calls and redirect back to the list page.
+  const isValidProvider = !!providerId && !isNaN(Number(providerId)) && Number.isInteger(Number(providerId));
+
+  useEffect(() => {
+    if (providerId && !isValidProvider) {
+      navigate('/settlement/provider-payments', { replace: true });
+    }
+  }, [providerId, isValidProvider, navigate]);
+
   const [activeTab, setActiveTab] = useState(0);
   const [verificationResult, setVerificationResult] = useState(null);
   const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 10 });
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [paymentForm, setPaymentForm] = useState({ amount: '', paymentReference: '', notes: '' });
+  const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
 
   // ========================================
   // DATA FETCHING
@@ -402,7 +422,7 @@ const ProviderAccountView = () => {
   } = useQuery({
     queryKey: ['provider-account', providerId],
     queryFn: () => providerAccountsService.getByProviderId(providerId),
-    enabled: !!providerId,
+    enabled: isValidProvider,
     staleTime: 1000 * 60 * 2
   });
 
@@ -418,7 +438,7 @@ const ProviderAccountView = () => {
         page: paginationModel.page,
         size: paginationModel.pageSize
       }),
-    enabled: !!providerId,
+    enabled: isValidProvider,
     staleTime: 1000 * 60 * 2
   });
 
@@ -426,7 +446,7 @@ const ProviderAccountView = () => {
   const { data: recentTransactionsRaw, isLoading: isLoadingRecent } = useQuery({
     queryKey: ['provider-account', providerId, 'recent'],
     queryFn: () => providerAccountsService.getRecentTransactions(providerId),
-    enabled: !!providerId,
+    enabled: isValidProvider,
     staleTime: 1000 * 60 * 2
   });
 
@@ -479,7 +499,7 @@ const ProviderAccountView = () => {
   // ========================================
 
   const handleBack = useCallback(() => {
-    navigate('/settlement/provider-accounts');
+    navigate('/settlement/provider-payments');
   }, [navigate]);
 
   const handleRefresh = useCallback(() => {
@@ -510,6 +530,35 @@ const ProviderAccountView = () => {
       });
     }
   }, [accountData]);
+
+  const handlePaymentSubmit = async () => {
+    if (!paymentForm.amount || !paymentForm.paymentReference) {
+      openSnackbar({ message: 'الرجاء تعبئة الحقول المطلوبة', variant: 'warning' });
+      return;
+    }
+
+    // Amount can not be greater than outstanding balance
+    const currentBalance = Number(accountData?.runningBalance) || 0;
+    const amountVal = Number(paymentForm.amount);
+    
+    if (amountVal > currentBalance) {
+      openSnackbar({ message: 'المبلغ المدخل يجب ألا يتجاوز رصيد مقدم الخدمة', variant: 'error' });
+      return;
+    }
+
+    setIsSubmittingPayment(true);
+    try {
+      await providerPaymentsService.createProviderInstallment(providerId, paymentForm);
+      openSnackbar({ message: 'تم تسجيل الدفعة بنجاح', variant: 'success' });
+      setIsPaymentModalOpen(false);
+      setPaymentForm({ amount: '', paymentReference: '', notes: '' });
+      handleRefresh(); // Refresh the datagrid
+    } catch (error) {
+      openSnackbar({ message: error?.message || 'حدث خطأ أثناء تسجيل الدفعة', variant: 'error' });
+    } finally {
+      setIsSubmittingPayment(false);
+    }
+  };
 
   const handleTabChange = (_, newValue) => {
     setActiveTab(newValue);
@@ -789,6 +838,17 @@ const ProviderAccountView = () => {
 
   const pageActions = (
     <Stack direction="row" spacing={1}>
+      <Tooltip title="دفع دفعة مالية">
+        <Button 
+          variant="contained" 
+          color="success" 
+          startIcon={<PaymentIcon />} 
+          onClick={() => setIsPaymentModalOpen(true)}
+          disabled={!accountData || Number(accountData.runningBalance) <= 0}
+        >
+          دفع دفعة للرصيد المستحق
+        </Button>
+      </Tooltip>
       <Tooltip title="التحقق من الرصيد">
         <Button variant="outlined" color="info" startIcon={<VerifiedIcon />} onClick={handleVerifyBalance} disabled={!accountData}>
           التحقق من الرصيد
@@ -918,6 +978,50 @@ const ProviderAccountView = () => {
             />
           </TabPanel>
         </MainCard>
+
+        {/* Modal for Payment Submission */}
+        <Dialog open={isPaymentModalOpen} onClose={() => setIsPaymentModalOpen(false)} maxWidth="sm" fullWidth>
+          <DialogTitle>تسجيل دفعة لمقدم الخدمة</DialogTitle>
+          <DialogContent>
+            <Stack spacing={2} sx={{ mt: 2 }}>
+              <Typography variant="body2" color="text.secondary">
+                الرصيد المستحق: <strong>{formatCurrency(accountData?.runningBalance)}</strong>
+              </Typography>
+              <TextField 
+                label="المبلغ" 
+                type="number" 
+                fullWidth 
+                required 
+                value={paymentForm.amount}
+                onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })}
+                error={Number(paymentForm.amount) > Number(accountData?.runningBalance)}
+                helperText={Number(paymentForm.amount) > Number(accountData?.runningBalance) ? 'المبلغ أكبر من الرصيد المستحق' : ''}
+              />
+              <TextField 
+                label="المرجع (إيصال، حوالة...)" 
+                fullWidth 
+                required 
+                value={paymentForm.paymentReference}
+                onChange={(e) => setPaymentForm({ ...paymentForm, paymentReference: e.target.value })}
+              />
+              <TextField 
+                label="ملاحظات" 
+                fullWidth 
+                multiline 
+                rows={3} 
+                value={paymentForm.notes}
+                onChange={(e) => setPaymentForm({ ...paymentForm, notes: e.target.value })}
+              />
+            </Stack>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setIsPaymentModalOpen(false)} color="inherit" disabled={isSubmittingPayment}>إلغاء</Button>
+            <Button onClick={handlePaymentSubmit} variant="contained" color="primary" disabled={isSubmittingPayment}>
+              {isSubmittingPayment ? 'جاري التسجيل...' : 'تسجيل الدفعة'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
       </Box>
     </PermissionGuard>
   );

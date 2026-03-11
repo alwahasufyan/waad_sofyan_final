@@ -91,7 +91,7 @@ export default function ReportsPage() {
           {availableReports.map((report) => {
             const IconComponent = report.icon;
             return (
-              <Grid item xs={12} sm={6} md={4} key={report.id}>
+              <Grid key={report.id} size={{ xs: 12, sm: 6, md: 4 }}>
                 <Card
                   elevation={3}
                   sx={{

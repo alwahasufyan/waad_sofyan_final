@@ -232,25 +232,25 @@ const MembersBulkUploadDialog = ({ open, onClose, onSuccess }) => {
             <Box>
               <Typography variant="h6" gutterBottom>ملخص الاستيراد</Typography>
               <Grid container spacing={2} sx={{ mb: 3 }}>
-                <Grid item xs={3}>
+                <Grid size={3}>
                   <Paper variant="outlined" sx={{ p: 2, textAlign: 'center', bgcolor: 'primary.lighter' }}>
                     <Typography variant="h4" color="primary.main">{result.summary?.totalRows || 0}</Typography>
                     <Typography variant="caption">إجمالي الصفوف</Typography>
                   </Paper>
                 </Grid>
-                <Grid item xs={3}>
+                <Grid size={3}>
                   <Paper variant="outlined" sx={{ p: 2, textAlign: 'center', bgcolor: 'success.lighter' }}>
                     <Typography variant="h4" color="success.main">{result.summary?.created || 0}</Typography>
                     <Typography variant="caption">تم استيرادها</Typography>
                   </Paper>
                 </Grid>
-                <Grid item xs={3}>
+                <Grid size={3}>
                   <Paper variant="outlined" sx={{ p: 2, textAlign: 'center', bgcolor: 'warning.lighter' }}>
                     <Typography variant="h4" color="warning.main">{result.summary?.skipped || 0}</Typography>
                     <Typography variant="caption">تكرار/تخطي</Typography>
                   </Paper>
                 </Grid>
-                <Grid item xs={3}>
+                <Grid size={3}>
                   <Paper variant="outlined" sx={{ p: 2, textAlign: 'center', bgcolor: 'error.lighter' }}>
                     <Typography variant="h4" color="error.main">{(result.summary?.rejected || 0) + (result.summary?.failed || 0)}</Typography>
                     <Typography variant="caption">فشل</Typography>

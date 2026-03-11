@@ -319,7 +319,7 @@ const MedicalServiceEdit = () => {
 
           <Grid container spacing={3}>
             {/* Code */}
-            <Grid item xs={12} md={4}>
+            <Grid size={{ xs: 12, md: 4 }}>
               <TextField
                 fullWidth
                 label="الرمز"
@@ -333,7 +333,7 @@ const MedicalServiceEdit = () => {
             </Grid>
 
             {/* Category */}
-            <Grid item xs={12} md={4}>
+            <Grid size={{ xs: 12, md: 4 }}>
               <FormControl fullWidth error={!!errors.categoryId} required disabled={submitting || categoriesLoading}>
                 <InputLabel>التصنيف الطبي</InputLabel>
                 <Select value={form.categoryId} onChange={handleChange('categoryId')} label="التصنيف الطبي">
@@ -349,7 +349,7 @@ const MedicalServiceEdit = () => {
             </Grid>
 
             {/* Name */}
-            <Grid item xs={12} md={4}>
+            <Grid size={{ xs: 12, md: 4 }}>
               <TextField
                 fullWidth
                 label="الاسم"
@@ -363,7 +363,7 @@ const MedicalServiceEdit = () => {
             </Grid>
 
             {/* Description */}
-            <Grid item xs={12}>
+            <Grid size={12}>
               <TextField
                 fullWidth
                 label="الوصف"
@@ -383,7 +383,7 @@ const MedicalServiceEdit = () => {
           <Divider sx={{ mb: 3 }} />
 
           <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 label="السعر الأساسي (د.ل)"
@@ -404,7 +404,7 @@ const MedicalServiceEdit = () => {
           <Divider sx={{ mb: 3 }} />
 
           <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <Box
                 sx={{
                   border: '1px solid',

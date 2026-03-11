@@ -133,7 +133,7 @@ const BenefitPackageEdit = () => {
         <MainCard>
           <Grid container spacing={3}>
             {[1, 2, 3, 4, 5, 6].map((i) => (
-              <Grid item xs={12} md={6} key={i}>
+              <Grid key={i} size={{ xs: 12, md: 6 }}>
                 <Skeleton variant="rectangular" height={56} />
               </Grid>
             ))}
@@ -173,13 +173,13 @@ const BenefitPackageEdit = () => {
         <form onSubmit={handleSubmit}>
           <Grid container spacing={3}>
             {/* Basic Information */}
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Typography variant="h5" gutterBottom>
                 المعلومات الأساسية
               </Typography>
             </Grid>
 
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 required
@@ -191,7 +191,7 @@ const BenefitPackageEdit = () => {
               />
             </Grid>
 
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 required
@@ -203,18 +203,18 @@ const BenefitPackageEdit = () => {
               />
             </Grid>
 
-            <Grid item xs={12}>
+            <Grid size={12}>
               <TextField fullWidth multiline rows={3} label="الوصف" value={form.description} onChange={handleChange('description')} />
             </Grid>
 
             {/* Medical Packages Selection */}
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Typography variant="h5" gutterBottom sx={{ mt: 2 }}>
                 الباقات الطبية المشمولة
               </Typography>
             </Grid>
 
-            <Grid item xs={12}>
+            <Grid size={12}>
               <FormControl fullWidth error={!!errors.medicalPackageIds}>
                 <InputLabel>اختر الباقات الطبية</InputLabel>
                 <Select
@@ -250,13 +250,13 @@ const BenefitPackageEdit = () => {
             </Grid>
 
             {/* Coverage & Validity */}
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Typography variant="h5" gutterBottom sx={{ mt: 2 }}>
                 التغطية والصلاحية
               </Typography>
             </Grid>
 
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 type="number"
@@ -270,7 +270,7 @@ const BenefitPackageEdit = () => {
               />
             </Grid>
 
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 type="number"
@@ -286,13 +286,13 @@ const BenefitPackageEdit = () => {
             </Grid>
 
             {/* Status */}
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Typography variant="h5" gutterBottom sx={{ mt: 2 }}>
                 الحالة
               </Typography>
             </Grid>
 
-            <Grid item xs={12}>
+            <Grid size={12}>
               <FormControlLabel
                 control={<Switch checked={form.active} onChange={handleChange('active')} />}
                 label={form.active ? 'نشط' : 'غير نشط'}
@@ -300,7 +300,7 @@ const BenefitPackageEdit = () => {
             </Grid>
 
             {/* Action Buttons */}
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ mt: 2 }}>
                 <Button variant="outlined" startIcon={<CancelIcon />} onClick={handleCancel} disabled={loading}>
                   إلغاء

@@ -20,8 +20,7 @@ import lombok.NoArgsConstructor;
 @Table(
         name = "provider_payments",
         uniqueConstraints = {
-                @UniqueConstraint(name = "uq_provider_payments_reference", columnNames = "payment_reference"),
-                @UniqueConstraint(name = "uq_provider_payments_batch", columnNames = "settlement_batch_id")
+                @UniqueConstraint(name = "uq_provider_payments_reference", columnNames = "payment_reference")
         }
 )
 @Data
@@ -34,7 +33,7 @@ public class ProviderPayment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "settlement_batch_id", nullable = false)
+    @Column(name = "settlement_batch_id")
     private Long settlementBatchId;
 
     @Column(name = "provider_id", nullable = false)

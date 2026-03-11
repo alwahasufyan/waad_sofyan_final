@@ -292,7 +292,7 @@ const EligibilityCheckPage = () => {
 
       <Grid container spacing={3}>
         {/* Input Section */}
-        <Grid item xs={12} lg={6}>
+        <Grid size={{ xs: 12, lg: 6 }}>
           <MainCard title="طرق التحقق" sx={{ height: '100%' }}>
             <Stack spacing={3}>
               {/* Method 1: QR/Barcode Scanner */}
@@ -392,7 +392,7 @@ const EligibilityCheckPage = () => {
         </Grid>
 
         {/* Result Section */}
-        <Grid item xs={12} lg={6}>
+        <Grid size={{ xs: 12, lg: 6 }}>
           {result ? (
             <MainCard
               title="نتيجة الفحص"

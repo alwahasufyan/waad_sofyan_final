@@ -91,7 +91,7 @@ const VisitsFilters = ({
       <Grid container spacing={2}>
         {/* Employer Selector (Admin Only) */}
         {canSelectEmployer && (
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <FormControl fullWidth size="small">
               <InputLabel id="employer-filter-label">الشريك</InputLabel>
               <Select
@@ -119,7 +119,7 @@ const VisitsFilters = ({
         )}
 
         {/* Provider Selector */}
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <FormControl fullWidth size="small">
             <InputLabel id="provider-filter-label">مقدم الخدمة</InputLabel>
             <Select
@@ -146,7 +146,7 @@ const VisitsFilters = ({
         </Grid>
 
         {/* Provider Search */}
-        <Grid item xs={12} sm={6} md={canSelectEmployer ? 3 : 4}>
+        <Grid size={{ xs: 12, sm: 6, md: canSelectEmployer ? 3 : 4 }}>
           <TextField
             fullWidth
             size="small"
@@ -172,7 +172,7 @@ const VisitsFilters = ({
         </Grid>
 
         {/* Member Search */}
-        <Grid item xs={12} sm={6} md={canSelectEmployer ? 3 : 4}>
+        <Grid size={{ xs: 12, sm: 6, md: canSelectEmployer ? 3 : 4 }}>
           <TextField
             fullWidth
             size="small"
@@ -198,7 +198,7 @@ const VisitsFilters = ({
         </Grid>
 
         {/* Has Claims Filter */}
-        <Grid item xs={12} sm={6} md={canSelectEmployer ? 3 : 4}>
+        <Grid size={{ xs: 12, sm: 6, md: canSelectEmployer ? 3 : 4 }}>
           <FormControl fullWidth size="small">
             <InputLabel id="has-claims-filter-label">حالة المطالبات</InputLabel>
             <Select labelId="has-claims-filter-label" value={filters.hasClaims} label="حالة المطالبات" onChange={handleChange('hasClaims')}>
@@ -210,7 +210,7 @@ const VisitsFilters = ({
         </Grid>
 
         {/* Date From */}
-        <Grid item xs={6} sm={3} md={2}>
+        <Grid size={{ xs: 6, sm: 3, md: 2 }}>
           <TextField
             fullWidth
             size="small"
@@ -223,7 +223,7 @@ const VisitsFilters = ({
         </Grid>
 
         {/* Date To */}
-        <Grid item xs={6} sm={3} md={2}>
+        <Grid size={{ xs: 6, sm: 3, md: 2 }}>
           <TextField
             fullWidth
             size="small"
@@ -236,7 +236,7 @@ const VisitsFilters = ({
         </Grid>
 
         {/* Services Count Range */}
-        <Grid item xs={6} sm={3} md={2}>
+        <Grid size={{ xs: 6, sm: 3, md: 2 }}>
           <TextField
             fullWidth
             size="small"
@@ -250,7 +250,7 @@ const VisitsFilters = ({
             }}
           />
         </Grid>
-        <Grid item xs={6} sm={3} md={2}>
+        <Grid size={{ xs: 6, sm: 3, md: 2 }}>
           <TextField
             fullWidth
             size="small"

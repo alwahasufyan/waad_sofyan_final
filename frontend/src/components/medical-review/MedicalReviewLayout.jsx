@@ -136,13 +136,13 @@ const MedicalReviewLayout = ({
       <Box sx={{ minHeight }}>
         <Grid container spacing={gap / 8}>
           {/* Main content */}
-          <Grid item xs={12} md={showRightPanel ? 7 : 12}>
+          <Grid size={{ xs: 12, md: showRightPanel ? 7 : 12 }}>
             <Box sx={{ minHeight }}>{centerPanel}</Box>
           </Grid>
 
           {/* Right panel (sticky) */}
           {showRightPanel && (
-            <Grid item xs={12} md={5}>
+            <Grid size={{ xs: 12, md: 5 }}>
               <Box sx={{ position: 'sticky', top: gap, minHeight }}>{rightPanel}</Box>
             </Grid>
           )}

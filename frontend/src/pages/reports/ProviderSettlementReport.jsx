@@ -480,7 +480,7 @@ const ProviderSettlementReport = () => {
         <CardContent>
           <Grid container spacing={2} alignItems="center">
             {/* Provider Selector - only for admin */}
-            <Grid item xs={12} md={3}>
+            <Grid size={{ xs: 12, md: 3 }}>
               <FormControl fullWidth size="small">
                 <InputLabel>مقدم الخدمة *</InputLabel>
                 <Select
@@ -499,7 +499,7 @@ const ProviderSettlementReport = () => {
             </Grid>
 
             {/* Date From */}
-            <Grid item xs={12} md={2}>
+            <Grid size={{ xs: 12, md: 2 }}>
               <TextField
                 fullWidth
                 size="small"
@@ -512,7 +512,7 @@ const ProviderSettlementReport = () => {
             </Grid>
 
             {/* Date To */}
-            <Grid item xs={12} md={2}>
+            <Grid size={{ xs: 12, md: 2 }}>
               <TextField
                 fullWidth
                 size="small"
@@ -525,7 +525,7 @@ const ProviderSettlementReport = () => {
             </Grid>
 
             {/* Status Filter */}
-            <Grid item xs={12} md={2}>
+            <Grid size={{ xs: 12, md: 2 }}>
               <FormControl fullWidth size="small">
                 <InputLabel>الحالة</InputLabel>
                 <Select
@@ -548,7 +548,7 @@ const ProviderSettlementReport = () => {
             </Grid>
 
             {/* Search Actions */}
-            <Grid item xs={12} md={3}>
+            <Grid size={{ xs: 12, md: 3 }}>
               <Stack direction="row" spacing={1}>
                 <Button variant="contained" startIcon={<FilterIcon />} onClick={fetchReport} disabled={loading || !selectedProviderId}>
                   بحث وتحديث
@@ -560,7 +560,7 @@ const ProviderSettlementReport = () => {
             </Grid>
 
             {/* Quick Date Presets */}
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Stack direction="row" spacing={1} flexWrap="wrap">
                 <Chip label="هذا الشهر" variant="outlined" size="small" clickable onClick={() => setQuickDateRange('THIS_MONTH')} />
                 <Chip label="الشهر السابق" variant="outlined" size="small" clickable onClick={() => setQuickDateRange('PREVIOUS_MONTH')} />
@@ -589,13 +589,13 @@ const ProviderSettlementReport = () => {
           <>
             {/* Screen-Only Summary (Dashboard Style) */}
             <Grid container spacing={2} sx={{ mb: 3 }} className="no-print">
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                 <Card sx={{ bgcolor: 'info.lighter', textAlign: 'center', p: 2 }}>
                   <Typography variant="caption" color="info.main" fontWeight="bold">إجمالي المطالب (له)</Typography>
                   <Typography variant="h5" fontWeight="bold">{formatLYD(reportData.totalRequestedAmount)}</Typography>
                 </Card>
               </Grid>
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                 <Card sx={{ bgcolor: 'error.lighter', textAlign: 'center', p: 2 }}>
                   <Typography variant="caption" color="error.main" fontWeight="bold">استقطاعات ورفض (عليه)</Typography>
                   <Typography variant="h5" fontWeight="bold">
@@ -603,7 +603,7 @@ const ProviderSettlementReport = () => {
                   </Typography>
                 </Card>
               </Grid>
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                 <Card sx={{ bgcolor: 'warning.lighter', textAlign: 'center', p: 2 }}>
                   <Typography variant="caption" color="warning.main" fontWeight="bold">نسبة الخصم</Typography>
                   <Typography variant="h5" fontWeight="bold">
@@ -613,7 +613,7 @@ const ProviderSettlementReport = () => {
                   </Typography>
                 </Card>
               </Grid>
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                 <Card sx={{ bgcolor: 'primary.main', textAlign: 'center', p: 2, color: 'white' }}>
                   <Typography variant="caption" sx={{ opacity: 0.9, fontWeight: 'bold' }}>صافي المستحق للمرفق</Typography>
                   <Typography variant="h5" fontWeight="bold">{formatLYD(reportData.netProviderAmount)}</Typography>

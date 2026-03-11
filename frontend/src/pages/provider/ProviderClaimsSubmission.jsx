@@ -1396,7 +1396,7 @@ export default function ProviderClaimsSubmission() {
       />
 
       <Grid container spacing={3} alignItems="flex-start">
-        <Grid item xs={12} lg={8.5}>
+        <Grid size={{ xs: 12, lg: 8.5 }}>
           <Stack spacing={3}>
             {/* ═══════════════════════ ROW 1: COMPACT READ-ONLY HEADER ═══════════════════════ */}
             <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, bgcolor: 'common.white' }}>
@@ -1773,7 +1773,7 @@ export default function ProviderClaimsSubmission() {
               <Divider sx={{ mb: 3 }} />
 
               <Grid container spacing={3}>
-                <Grid item xs={12} lg={7}>
+                <Grid size={{ xs: 12, lg: 7 }}>
                   <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.5 }}>
                     {LABELS.diagnosis}
                   </Typography>
@@ -1818,7 +1818,7 @@ export default function ProviderClaimsSubmission() {
                   </Stack>
                 </Grid>
 
-                <Grid item xs={12} lg={5}>
+                <Grid size={{ xs: 12, lg: 5 }}>
                   <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.5 }}>
                     {LABELS.preAuth}
                   </Typography>
@@ -2049,7 +2049,7 @@ export default function ProviderClaimsSubmission() {
           </Stack>
         </Grid>
 
-        <Grid item xs={12} lg={3.5}>
+        <Grid size={{ xs: 12, lg: 3.5 }}>
           <Stack spacing={1.5} sx={{ position: { lg: 'sticky' }, top: { lg: 85 }, zIndex: 5 }}>
             <InfoCard bgcolor={(theme) => alpha(theme.palette.success.main, 0.05)} sx={{ p: 1.5 }}>
               <SectionHeader icon={LimitIcon} title={LABELS.coverageInfo} subtitle="تغطية المؤمن عليه" color="success" />

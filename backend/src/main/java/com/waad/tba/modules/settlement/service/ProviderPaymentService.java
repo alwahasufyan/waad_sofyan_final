@@ -37,6 +37,7 @@ public class ProviderPaymentService {
     private final ClaimRepository claimRepository;
     private final ProviderRepository providerRepository;
     private final ProviderAccountService providerAccountService;
+    private final AccountTransactionService accountTransactionService;
 
     @Transactional(readOnly = true)
     public Page<SettlementBatch> getConfirmedBatches(Pageable pageable) {
@@ -72,7 +73,8 @@ public class ProviderPaymentService {
 
         if (request.getAmount() == null || batch.getTotalNetAmount() == null
                 || request.getAmount().compareTo(batch.getTotalNetAmount()) != 0) {
-            throw new IllegalStateException("Payment amount must exactly match batch total: " + batch.getTotalNetAmount());
+            throw new IllegalStateException(
+                    "Payment amount must exactly match batch total: " + batch.getTotalNetAmount());
         }
 
         providerAccountService.debitOnBatchPayment(
@@ -80,8 +82,7 @@ public class ProviderPaymentService {
                 batch.getId(),
                 batch.getBatchNumber(),
                 batch.getTotalNetAmount(),
-                userId
-        );
+                userId);
 
         ProviderPayment payment = ProviderPayment.builder()
                 .settlementBatchId(batch.getId())
@@ -98,12 +99,15 @@ public class ProviderPaymentService {
         List<SettlementBatchItem> items = settlementBatchItemRepository.findBySettlementBatchId(batchId);
         LocalDateTime settledAt = LocalDateTime.now();
 
-        // Batch-load all claims in one query, update in memory, then saveAll in one query
-        List<Long> claimIds = items.stream().map(SettlementBatchItem::getClaimId).collect(java.util.stream.Collectors.toList());
+        // Batch-load all claims in one query, update in memory, then saveAll in one
+        // query
+        List<Long> claimIds = items.stream().map(SettlementBatchItem::getClaimId)
+                .collect(java.util.stream.Collectors.toList());
         List<com.waad.tba.modules.claim.entity.Claim> claims = claimRepository.findAllById(claimIds);
         if (claims.size() != claimIds.size()) {
             // Detect any missing claims before committing
-            java.util.Set<Long> found = claims.stream().map(com.waad.tba.modules.claim.entity.Claim::getId).collect(java.util.stream.Collectors.toSet());
+            java.util.Set<Long> found = claims.stream().map(com.waad.tba.modules.claim.entity.Claim::getId)
+                    .collect(java.util.stream.Collectors.toSet());
             claimIds.stream().filter(id -> !found.contains(id)).findFirst().ifPresent(id -> {
                 throw new jakarta.persistence.EntityNotFoundException("Claim not found: " + id);
             });
@@ -123,7 +127,8 @@ public class ProviderPaymentService {
 
         Provider provider = providerRepository.findById(batch.getProviderId()).orElse(null);
 
-        log.info("Provider payment recorded: paymentId={}, batchId={}, amount={}", payment.getId(), batchId, payment.getAmount());
+        log.info("Provider payment recorded: paymentId={}, batchId={}, amount={}", payment.getId(), batchId,
+                payment.getAmount());
 
         return ProviderPaymentDTO.builder()
                 .paymentId(payment.getId())
@@ -131,6 +136,80 @@ public class ProviderPaymentService {
                 .batchNumber(batch.getBatchNumber())
                 .providerId(batch.getProviderId())
                 .providerName(provider != null ? provider.getName() : ("Provider #" + batch.getProviderId()))
+                .amount(payment.getAmount())
+                .paymentReference(payment.getPaymentReference())
+                .paymentMethod(payment.getPaymentMethod())
+                .paymentDate(payment.getPaymentDate())
+                .notes(payment.getNotes())
+                .createdBy(payment.getCreatedBy())
+                .createdAt(payment.getCreatedAt())
+                .build();
+    }
+
+    @Transactional
+    public ProviderPaymentDTO createInstallmentPayment(Long providerId, CreateProviderPaymentRequest request,
+            Long userId) {
+        String reference = request.getPaymentReference() != null ? request.getPaymentReference().trim() : null;
+        if (reference == null || reference.isBlank()) {
+            throw new IllegalStateException("Payment reference is required");
+        }
+        if (providerPaymentRepository.existsByPaymentReference(reference)) {
+            throw new IllegalStateException("Payment reference already exists: " + reference);
+        }
+
+        if (request.getAmount() == null || request.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalStateException("Payment amount must be greater than zero");
+        }
+
+        Provider provider = providerRepository.findById(providerId)
+                .orElseThrow(() -> new EntityNotFoundException("Provider not found: " + providerId));
+
+        // Get or create account to avoid hard failures when legacy providers have no
+        // account row yet.
+        com.waad.tba.modules.settlement.entity.ProviderAccount account = providerAccountService
+                .getOrCreateAccount(providerId);
+        BigDecimal runningBalance = account.getRunningBalance() != null ? account.getRunningBalance() : BigDecimal.ZERO;
+
+        if (runningBalance.compareTo(request.getAmount()) < 0) {
+            throw new IllegalStateException(
+                    "Insufficient balance for installment. Provider balance: " + runningBalance +
+                            ", Payment amount: " + request.getAmount());
+        }
+
+        account.setRunningBalance(runningBalance);
+        BigDecimal balanceBefore = runningBalance;
+        account.debit(request.getAmount());
+
+        accountTransactionService.createAdjustment(
+                account,
+                request.getAmount(),
+                false, // DEBIT
+                balanceBefore,
+                "Installment Payment Reference: " + reference
+                        + (request.getNotes() != null ? " - " + request.getNotes() : ""),
+                userId);
+
+        ProviderPayment payment = ProviderPayment.builder()
+                .settlementBatchId(null) // Unlinked to a specific batch
+                .providerId(providerId)
+                .amount(request.getAmount())
+                .paymentReference(reference)
+                .paymentMethod(request.getPaymentMethod())
+                .paymentDate(request.getPaymentDate() != null ? request.getPaymentDate() : LocalDateTime.now())
+                .notes(request.getNotes())
+                .createdBy(userId)
+                .build();
+        payment = providerPaymentRepository.save(payment);
+
+        log.info("Provider installment recorded: paymentId={}, providerId={}, amount={}", payment.getId(), providerId,
+                payment.getAmount());
+
+        return ProviderPaymentDTO.builder()
+                .paymentId(payment.getId())
+                .batchId(null)
+                .batchNumber(null)
+                .providerId(providerId)
+                .providerName(provider.getName())
                 .amount(payment.getAmount())
                 .paymentReference(payment.getPaymentReference())
                 .paymentMethod(payment.getPaymentMethod())

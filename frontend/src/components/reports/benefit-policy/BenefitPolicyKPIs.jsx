@@ -171,7 +171,7 @@ const BenefitPolicyKPIs = ({ kpis = {}, loading = false }) => {
   return (
     <Grid container spacing={2}>
       {KPI_CONFIG.map((config) => (
-        <Grid item xs={12} sm={6} md={2.4} key={config.key}>
+        <Grid key={config.key} size={{ xs: 12, sm: 6, md: 2.4 }}>
           <KPICard config={config} value={kpis[config.key] ?? 0} loading={loading} />
         </Grid>
       ))}

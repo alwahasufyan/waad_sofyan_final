@@ -174,7 +174,7 @@ const MedicalCatalogHierarchyPage = () => {
                 <Divider sx={{ mb: 2 }} />
                 <Grid container spacing={2}>
                   {(category.specialties || []).map((specialty) => (
-                    <Grid item xs={12} key={specialty.id}>
+                    <Grid key={specialty.id} size={12}>
                       <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
                         {/* Specialty header */}
                         <Stack direction="row" spacing={1} alignItems="center" mb={1}>
@@ -238,7 +238,7 @@ const MedicalCatalogHierarchyPage = () => {
                     </Grid>
                   ))}
                   {(category.specialties || []).length === 0 && (
-                    <Grid item xs={12}>
+                    <Grid size={12}>
                       <Typography variant="body2" color="text.secondary" sx={{ pl: 2 }}>
                         لا توجد تخصصات مرتبطة بهذا التصنيف
                       </Typography>

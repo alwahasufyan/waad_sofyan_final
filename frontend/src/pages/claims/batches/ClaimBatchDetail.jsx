@@ -53,6 +53,7 @@ import { useReactToPrint } from 'react-to-print';
 import claimsService from 'services/api/claims.service';
 import employersService from 'services/api/employers.service';
 import providersService from 'services/api/providers.service';
+import claimBatchesService from 'services/api/claim-batches.service';
 
 const MONTHS_AR = [
     'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
@@ -67,19 +68,6 @@ const MONTHS_EN = [
 // ===========================================
 // HELPERS
 // ===========================================
-const generateBatchCode = (employer, providerId, month, year) => {
-    // 1. Get Employer Symbol (Code)
-    const symbol = employer?.code || 'EMP';
-
-    // 2. Year suffix
-    const yy = String(year).substring(2);
-
-    // 3. Serial - derived from IDs for demo stability
-    const serialNum = (parseInt(providerId) * 11 + (month * 3)) % 100000;
-    const serial = String(serialNum).padStart(5, '0');
-
-    return `${symbol}${yy}-${serial}`;
-};
 
 export default function ClaimBatchDetail() {
     const [searchParams] = useSearchParams();
@@ -97,7 +85,12 @@ export default function ClaimBatchDetail() {
     const batchReportRef = useRef(null);
     const rejectedReportRef = useRef(null);
 
-    // 1. Fetch Context
+    // 0. Fetch real batch info
+    const { data: realBatch } = useQuery({
+        queryKey: ['claim-batch-detail', providerId, employerId, year, month],
+        queryFn: () => claimBatchesService.getCurrentBatch(providerId, employerId, year, month),
+        enabled: !!providerId && !!employerId
+    });
     const { data: employer } = useQuery({
         queryKey: ['employer-detail', employerId],
         queryFn: () => employersService.getById(employerId),
@@ -153,11 +146,12 @@ export default function ClaimBatchDetail() {
         return claims.slice(start, start + rowsPerPage);
     }, [claims, page, rowsPerPage]);
 
-    // Batch Code (Generated same as card)
+    // Batch Code (Real or Fallback)
     const batchCode = useMemo(() => {
-        if (!employer) return '...';
-        return generateBatchCode(employer, providerId, month, year);
-    }, [employer, providerId, month, year]);
+        if (realBatch) return realBatch.batchCode;
+        if (employer) return `${employer.code || 'EMP'}${String(year).substring(2)}-BATCH`;
+        return '...';
+    }, [realBatch, employer, year]);
 
     // -------------------------------------------------------------------------
     // EXPORT HANDLERS

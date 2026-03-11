@@ -21,6 +21,7 @@ export const ClaimHeaderFields = ({
     setManualCategoryEnabled,
     rootCategories,
     refetchAllLinesCoverage,
+    linesRef,
     preAuthResults,
     searchingPreAuth,
     preAuthId,
@@ -45,7 +46,7 @@ export const ClaimHeaderFields = ({
                         setIsDirty(true); 
                         if (v?.id) {
                             // Fetch all lines coverage for THE NEW MEMBER
-                            refetchAllLinesCoverage(primaryCategoryCode);
+                            refetchAllLinesCoverage(primaryCategoryCode, linesRef.current);
                         }
                     }}
                     onInputChange={(_, v) => setMemberInput(v)}
@@ -82,7 +83,7 @@ export const ClaimHeaderFields = ({
                                     setPrimaryCategoryCode(newCode);
                                     setManualCategoryEnabled(true);
                                     setIsDirty(true);
-                                    refetchAllLinesCoverage(newCode);
+                                    refetchAllLinesCoverage(newCode, linesRef.current);
                                 }}
                             />
                         }
@@ -100,7 +101,7 @@ export const ClaimHeaderFields = ({
                                 setPrimaryCategoryCode(newCode);
                                 setManualCategoryEnabled(!!v);
                                 setIsDirty(true);
-                                refetchAllLinesCoverage(newCode);
+                                refetchAllLinesCoverage(newCode, linesRef.current);
                             }}
                             renderInput={(params) => (
                                 <TextField {...params} variant="standard" placeholder="اختر التصنيف..."

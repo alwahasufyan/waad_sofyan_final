@@ -75,7 +75,7 @@ public class SettlementBatchService {
     }
 
     @Transactional
-    public SettlementBatch createBatchWithClaims(CreateBatchRequest request) {
+    public SettlementBatch createBatchWithClaims(com.waad.tba.modules.settlement.dto.CreateBatchRequest request) {
         SettlementBatch batch = createBatch(request.getProviderId(), request.getDescription(), request.getCreatedBy());
         if (request.getClaimIds() != null && !request.getClaimIds().isEmpty()) {
             addClaimsToBatch(batch.getId(), request.getClaimIds());

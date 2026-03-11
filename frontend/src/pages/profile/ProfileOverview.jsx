@@ -214,7 +214,7 @@ export default function ProfileOverview() {
 
       <Grid container spacing={3}>
         {/* Profile Information Card */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <MainCard
             title={
               <Stack direction="row" alignItems="center" spacing={1}>
@@ -253,7 +253,7 @@ export default function ProfileOverview() {
         </Grid>
 
         {/* Change Password Card */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <MainCard
             title={
               <Stack direction="row" alignItems="center" spacing={1}>

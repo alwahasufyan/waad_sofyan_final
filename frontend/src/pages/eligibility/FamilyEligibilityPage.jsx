@@ -127,7 +127,7 @@ const FamilyEligibilityPage = () => {
         <Card sx={{ mb: 3 }}>
           <CardContent>
             <Grid container spacing={2} alignItems="flex-end">
-              <Grid item xs={12} sm={4}>
+              <Grid size={{ xs: 12, sm: 4 }}>
                 <TextField
                   fullWidth
                   label="رقم المشترك (Member ID)"
@@ -143,7 +143,7 @@ const FamilyEligibilityPage = () => {
                   onKeyPress={(e) => e.key === 'Enter' && handleCheck()}
                 />
               </Grid>
-              <Grid item xs={12} sm={4}>
+              <Grid size={{ xs: 12, sm: 4 }}>
                 <DatePicker
                   label="تاريخ الخدمة"
                   value={serviceDate}
@@ -153,7 +153,7 @@ const FamilyEligibilityPage = () => {
                   }}
                 />
               </Grid>
-              <Grid item xs={12} sm={4}>
+              <Grid size={{ xs: 12, sm: 4 }}>
                 <Button
                   fullWidth
                   variant="contained"
@@ -188,7 +188,7 @@ const FamilyEligibilityPage = () => {
                 </Box>
 
                 <Grid container spacing={3}>
-                  <Grid item xs={4}>
+                  <Grid size={4}>
                     <Box sx={{ textAlign: 'center' }}>
                       <Typography variant="h3" color="text.secondary">
                         {result.summary?.totalMembers || 0}
@@ -196,7 +196,7 @@ const FamilyEligibilityPage = () => {
                       <Typography variant="body2">إجمالي الأفراد</Typography>
                     </Box>
                   </Grid>
-                  <Grid item xs={4}>
+                  <Grid size={4}>
                     <Box sx={{ textAlign: 'center' }}>
                       <Typography variant="h3" color="success.main">
                         {result.summary?.eligibleCount || 0}
@@ -204,7 +204,7 @@ const FamilyEligibilityPage = () => {
                       <Typography variant="body2">مؤهلون</Typography>
                     </Box>
                   </Grid>
-                  <Grid item xs={4}>
+                  <Grid size={4}>
                     <Box sx={{ textAlign: 'center' }}>
                       <Typography variant="h3" color="error.main">
                         {result.summary?.ineligibleCount || 0}

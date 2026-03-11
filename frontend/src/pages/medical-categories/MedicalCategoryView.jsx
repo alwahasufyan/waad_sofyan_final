@@ -204,7 +204,7 @@ const MedicalCategoryView = () => {
       <MainCard>
         <Grid container spacing={3}>
           {/* ====== BASIC INFORMATION SECTION ====== */}
-          <Grid item xs={12}>
+          <Grid size={12}>
             <Typography variant="h6" gutterBottom>
               المعلومات الأساسية
             </Typography>
@@ -212,7 +212,7 @@ const MedicalCategoryView = () => {
           </Grid>
 
           {/* Code */}
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Paper variant="outlined" sx={{ p: 2 }}>
               <Typography variant="caption" color="text.secondary" gutterBottom display="block">
                 الرمز
@@ -224,7 +224,7 @@ const MedicalCategoryView = () => {
           </Grid>
 
           {/* Parent Category */}
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Paper variant="outlined" sx={{ p: 2 }}>
               <Typography variant="caption" color="text.secondary" gutterBottom display="block">
                 التصنيف الأب
@@ -241,7 +241,7 @@ const MedicalCategoryView = () => {
           </Grid>
 
           {/* Name */}
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Paper variant="outlined" sx={{ p: 2 }}>
               <Typography variant="caption" color="text.secondary" gutterBottom display="block">
                 الاسم
@@ -253,7 +253,7 @@ const MedicalCategoryView = () => {
           </Grid>
 
           {/* Status */}
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Paper variant="outlined" sx={{ p: 2 }}>
               <Typography variant="caption" color="text.secondary" gutterBottom display="block">
                 الحالة
@@ -264,7 +264,7 @@ const MedicalCategoryView = () => {
 
           {/* Description (Not in contract strictly but usually good to keep if backend sends it) */}
           {category?.description && (
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Paper variant="outlined" sx={{ p: 2 }}>
                 <Typography variant="caption" color="text.secondary" gutterBottom display="block">
                   الوصف
@@ -277,7 +277,7 @@ const MedicalCategoryView = () => {
           )}
 
           {/* ====== METADATA SECTION ====== */}
-          <Grid item xs={12}>
+          <Grid size={12}>
             <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
               معلومات النظام
             </Typography>
@@ -285,7 +285,7 @@ const MedicalCategoryView = () => {
           </Grid>
 
           {/* Created At */}
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Paper variant="outlined" sx={{ p: 2 }}>
               <Typography variant="caption" color="text.secondary" gutterBottom display="block">
                 تاريخ الإنشاء
@@ -295,7 +295,7 @@ const MedicalCategoryView = () => {
           </Grid>
 
           {/* Updated At */}
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Paper variant="outlined" sx={{ p: 2 }}>
               <Typography variant="caption" color="text.secondary" gutterBottom display="block">
                 آخر تحديث
@@ -306,7 +306,7 @@ const MedicalCategoryView = () => {
 
           {/* Created By */}
           {category?.createdBy && (
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <Paper variant="outlined" sx={{ p: 2 }}>
                 <Typography variant="caption" color="text.secondary" gutterBottom display="block">
                   أنشئ بواسطة
@@ -318,7 +318,7 @@ const MedicalCategoryView = () => {
 
           {/* Updated By */}
           {category?.updatedBy && (
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <Paper variant="outlined" sx={{ p: 2 }}>
                 <Typography variant="caption" color="text.secondary" gutterBottom display="block">
                   آخر تحديث بواسطة

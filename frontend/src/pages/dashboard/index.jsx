@@ -533,23 +533,23 @@ export default function Dashboard() {
 
         {/* Row 1: KPIs */}
         <Grid container spacing={2.5}>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <GradientKPICard title="المستفيدين" value={activeMembers} subtitle={`إجمالي: ${totalMembers}`} icon={PeopleIcon} gradient="linear-gradient(135deg, #059669 0%, #10b981 100%)" loading={summaryLoading} />
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <GradientKPICard title="مقدمي الخدمات" value={activeProviders} subtitle={`إجمالي: ${totalProviders}`} icon={LocalHospitalIcon} gradient="linear-gradient(135deg, #0ea5e9 0%, #38bdf8 100%)" loading={summaryLoading} />
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <GradientKPICard title="إجمالي المطالبات" value={totalClaims} subtitle={formatLYD(totalMedicalCost)} icon={ReceiptLongIcon} gradient="linear-gradient(135deg, #0d9488 0%, #14b8a6 100%)" loading={summaryLoading} />
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <GradientKPICard title="قيد المراجعة" value={openClaims} subtitle={openClaims > 0 ? 'بحاجة لتدخل' : 'مكتمل'} icon={PendingIcon} gradient={openClaims > 0 ? 'linear-gradient(135deg, #e11d48 0%, #fb7185 100%)' : 'linear-gradient(135deg, #475569 0%, #64748b 100%)'} loading={summaryLoading} />
           </Grid>
         </Grid>
 
         {/* Row 2: Analysis & Records */}
         <Grid container spacing={2.5}>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card sx={{ height: '360px', borderRadius: 3, boxShadow: '0 4px 20px rgba(0,0,0,0.06)' }}>
               <CardContent sx={{ p: 2.5 }}>
                 <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 2 }}>توزيع الحالات</Typography>
@@ -558,7 +558,7 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card sx={{ height: '360px', borderRadius: 3, boxShadow: '0 4px 20px rgba(0,0,0,0.06)' }}>
               <CardContent sx={{ p: 2.5 }}>
                 <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 2 }}>أعلى مقدمي الخدمات</Typography>
@@ -567,7 +567,7 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card sx={{ height: '360px', borderRadius: 3, boxShadow: '0 4px 20px rgba(0,0,0,0.06)' }}>
               <CardContent sx={{ p: 2.5 }}>
                 <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 2 }}>إحصائيات الشبكة</Typography>
@@ -581,7 +581,7 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card sx={{ height: '360px', borderRadius: 3, boxShadow: '0 4px 20px rgba(0,0,0,0.06)' }}>
               <CardContent sx={{ p: 2.5 }}>
                 <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 2 }}>آخر الأنشطة</Typography>

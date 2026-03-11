@@ -179,7 +179,7 @@ const ClaimReviewPanel = ({ claim, type = 'claim' }) => {
             </Stack>
 
             <Grid container spacing={2}>
-              <Grid item xs={6}>
+              <Grid size={6}>
                 <Typography variant="caption" color="text.secondary">
                   الوثيقة
                 </Typography>
@@ -187,7 +187,7 @@ const ClaimReviewPanel = ({ claim, type = 'claim' }) => {
                   {claim.policyNumber || claim.member?.policyNumber || '-'}
                 </Typography>
               </Grid>
-              <Grid item xs={6}>
+              <Grid size={6}>
                 <Typography variant="caption" color="text.secondary">
                   التغطية
                 </Typography>
@@ -334,7 +334,7 @@ const ClaimReviewPanel = ({ claim, type = 'claim' }) => {
               </Stack>
 
               <Grid container spacing={2}>
-                <Grid item xs={4}>
+                <Grid size={4}>
                   <Box
                     sx={{
                       textAlign: 'center',
@@ -352,7 +352,7 @@ const ClaimReviewPanel = ({ claim, type = 'claim' }) => {
                   </Box>
                 </Grid>
 
-                <Grid item xs={4}>
+                <Grid size={4}>
                   <Box
                     sx={{
                       textAlign: 'center',
@@ -370,7 +370,7 @@ const ClaimReviewPanel = ({ claim, type = 'claim' }) => {
                   </Box>
                 </Grid>
 
-                <Grid item xs={4}>
+                <Grid size={4}>
                   <Box
                     sx={{
                       textAlign: 'center',

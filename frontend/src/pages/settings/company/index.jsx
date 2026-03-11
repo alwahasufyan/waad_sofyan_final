@@ -240,7 +240,7 @@ const CompanySettingsPage = () => {
 
             <Grid container spacing={3}>
               {/* Company Name */}
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <TextField
                   fullWidth
                   label="اسم الشركة"
@@ -255,7 +255,7 @@ const CompanySettingsPage = () => {
               </Grid>
 
               {/* Company Code */}
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <TextField
                   fullWidth
                   label="كود الشركة"
@@ -270,7 +270,7 @@ const CompanySettingsPage = () => {
               </Grid>
 
               {/* Business Type */}
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <TextField
                   fullWidth
                   label="نوع النشاط"
@@ -282,7 +282,7 @@ const CompanySettingsPage = () => {
               </Grid>
 
               {/* Phone */}
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <TextField
                   fullWidth
                   label="الهاتف"
@@ -294,7 +294,7 @@ const CompanySettingsPage = () => {
               </Grid>
 
               {/* Email */}
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <TextField
                   fullWidth
                   label="البريد الإلكتروني"
@@ -307,7 +307,7 @@ const CompanySettingsPage = () => {
               </Grid>
 
               {/* Website */}
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <TextField
                   fullWidth
                   label="الموقع الإلكتروني"
@@ -319,7 +319,7 @@ const CompanySettingsPage = () => {
               </Grid>
 
               {/* Tax Number */}
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <TextField
                   fullWidth
                   label="الرقم الضريبي"
@@ -331,7 +331,7 @@ const CompanySettingsPage = () => {
               </Grid>
 
               {/* Address */}
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <TextField
                   fullWidth
                   label="العنوان"
@@ -347,7 +347,7 @@ const CompanySettingsPage = () => {
               {/* Logo URL - hidden: logo is managed via the Logo section below */}
 
               {/* Active Status */}
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <FormControl component="fieldset">
                   <FormLabel component="legend">الحالة</FormLabel>
                   <RadioGroup row name="active" value={formData.active.toString()} onChange={handleChange('active')}>
@@ -358,7 +358,7 @@ const CompanySettingsPage = () => {
               </Grid>
 
               {/* Submit Button */}
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <Box display="flex" justifyContent="center" sx={{ mt: 2 }}>
                   <Button
                     type="submit"

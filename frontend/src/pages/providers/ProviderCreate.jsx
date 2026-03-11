@@ -414,7 +414,7 @@ const ProviderCreate = () => {
       </Stack>
       <Grid container spacing={3}>
         {/* Auto-generated Code */}
-        <Grid item xs={12}>
+        <Grid size={12}>
           <Alert severity="info" sx={{ mb: 2 }}>
             <Typography variant="body2">
               <strong>الرمز التلقائي:</strong> سيتم إنشاء رمز تلقائي لمقدم الخدمة عند الحفظ
@@ -436,7 +436,7 @@ const ProviderCreate = () => {
         </Grid>
 
         {/* Provider Name */}
-        <Grid item xs={12}>
+        <Grid size={12}>
           <Controller
             name="name"
             control={providerControl}
@@ -455,7 +455,7 @@ const ProviderCreate = () => {
         </Grid>
 
         {/* Provider Type */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Controller
             name="providerType"
             control={providerControl}
@@ -475,7 +475,7 @@ const ProviderCreate = () => {
         </Grid>
 
         {/* Network Status */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Controller
             name="networkStatus"
             control={providerControl}
@@ -495,7 +495,7 @@ const ProviderCreate = () => {
         </Grid>
 
         {/* License Number */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Controller
             name="licenseNumber"
             control={providerControl}
@@ -506,7 +506,7 @@ const ProviderCreate = () => {
         </Grid>
 
         {/* Tax Number */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Controller
             name="taxNumber"
             control={providerControl}
@@ -533,7 +533,7 @@ const ProviderCreate = () => {
       </Stack>
       <Grid container spacing={3}>
         {/* City */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Controller
             name="city"
             control={providerControl}
@@ -542,7 +542,7 @@ const ProviderCreate = () => {
         </Grid>
 
         {/* Address */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Controller
             name="address"
             control={providerControl}
@@ -551,7 +551,7 @@ const ProviderCreate = () => {
         </Grid>
 
         {/* Phone */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Controller
             name="phone"
             control={providerControl}
@@ -574,7 +574,7 @@ const ProviderCreate = () => {
         </Grid>
 
         {/* Email */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Controller
             name="email"
             control={providerControl}
@@ -613,7 +613,7 @@ const ProviderCreate = () => {
       </Alert>
       <Grid container spacing={3}>
         {/* Contract Start Date - 🔴 BUG-001 FIX: Using Controller properly */}
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Controller
             name="contractStartDate"
             control={providerControl}
@@ -635,7 +635,7 @@ const ProviderCreate = () => {
         </Grid>
 
         {/* Contract End Date - 🔴 BUG-001 FIX: Using Controller properly */}
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Controller
             name="contractEndDate"
             control={providerControl}
@@ -657,7 +657,7 @@ const ProviderCreate = () => {
         </Grid>
 
         {/* Default Discount Rate */}
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Controller
             name="defaultDiscountRate"
             control={providerControl}
@@ -713,7 +713,7 @@ const ProviderCreate = () => {
       ) : (
         <Grid container spacing={2}>
           {payers.map((payer) => (
-            <Grid item xs={12} sm={6} md={4} key={payer.id}>
+            <Grid key={payer.id} size={{ xs: 12, sm: 6, md: 4 }}>
               <Paper
                 variant="outlined"
                 sx={{
@@ -799,7 +799,7 @@ const ProviderCreate = () => {
       {accountMode === 'CREATE' && (
         <Grid container spacing={3} maxWidth="md">
           {/* Full Name */}
-          <Grid item xs={12}>
+          <Grid size={12}>
             <Controller
               name="fullName"
               control={accountControl}
@@ -808,7 +808,7 @@ const ProviderCreate = () => {
           </Grid>
 
           {/* Username */}
-          <Grid item xs={12}>
+          <Grid size={12}>
             <Controller
               name="username"
               control={accountControl}
@@ -833,7 +833,7 @@ const ProviderCreate = () => {
           </Grid>
 
           {/* Password */}
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Controller
               name="password"
               control={accountControl}
@@ -866,7 +866,7 @@ const ProviderCreate = () => {
           </Grid>
 
           {/* Confirm Password */}
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Controller
               name="confirmPassword"
               control={accountControl}
@@ -886,7 +886,7 @@ const ProviderCreate = () => {
 
           {/* Password Strength Indicator */}
           {accountPassword && (
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Box sx={{ mb: 1 }}>
                 <Typography variant="caption" color="text.secondary">
                   قوة كلمة المرور: <strong>{passwordStrength.label}</strong>

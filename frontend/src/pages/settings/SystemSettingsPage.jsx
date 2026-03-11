@@ -452,7 +452,7 @@ const SystemSettingsPage = () => {
         <TabPanel value={activeTab} index={0}>
           <Grid container spacing={3}>
             {/* Current SLA */}
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <Card>
                 <CardContent>
                   <Typography variant="h6" gutterBottom>
@@ -474,7 +474,7 @@ const SystemSettingsPage = () => {
             </Grid>
 
             {/* Update SLA */}
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <Card>
                 <CardContent>
                   <Typography variant="h6" gutterBottom>
@@ -526,7 +526,7 @@ const SystemSettingsPage = () => {
 
           {slaReport && (
             <Grid container spacing={3}>
-              <Grid item xs={12} md={4}>
+              <Grid size={{ xs: 12, md: 4 }}>
                 <Card sx={{ bgcolor: 'success.lighter' }}>
                   <CardContent>
                     <Typography variant="h6" color="success.dark">
@@ -538,7 +538,7 @@ const SystemSettingsPage = () => {
                   </CardContent>
                 </Card>
               </Grid>
-              <Grid item xs={12} md={4}>
+              <Grid size={{ xs: 12, md: 4 }}>
                 <Card sx={{ bgcolor: 'warning.lighter' }}>
                   <CardContent>
                     <Typography variant="h6" color="warning.dark">
@@ -550,7 +550,7 @@ const SystemSettingsPage = () => {
                   </CardContent>
                 </Card>
               </Grid>
-              <Grid item xs={12} md={4}>
+              <Grid size={{ xs: 12, md: 4 }}>
                 <Card sx={{ bgcolor: 'error.lighter' }}>
                   <CardContent>
                     <Typography variant="h6" color="error.dark">
@@ -563,7 +563,7 @@ const SystemSettingsPage = () => {
                 </Card>
               </Grid>
               {slaReport.complianceRate !== undefined && (
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <Card>
                     <CardContent>
                       <Typography variant="h6" gutterBottom>
@@ -593,12 +593,12 @@ const SystemSettingsPage = () => {
           ) : (
             <Grid container spacing={2}>
               {featureFlags.length === 0 && (
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <Typography color="text.secondary" align="center">لا توجد إعدادات ميزات</Typography>
                 </Grid>
               )}
               {featureFlags.map((flag) => (
-                <Grid item xs={12} md={6} key={flag.flagKey}>
+                <Grid key={flag.flagKey} size={{ xs: 12, md: 6 }}>
                   <Card variant="outlined" sx={{ p: 2, borderColor: flag.enabled ? 'success.main' : 'divider', transition: 'border-color 0.3s' }}>
                     <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
                       <Box sx={{ flex: 1 }}>
@@ -636,7 +636,7 @@ const SystemSettingsPage = () => {
         {/* Password Reset Settings Tab */}
         <TabPanel value={activeTab} index={3}>
           <Grid container spacing={3}>
-            <Grid item xs={12} md={8}>
+            <Grid size={{ xs: 12, md: 8 }}>
               <Card>
                 <CardContent>
                   <Typography variant="h6" gutterBottom>
@@ -647,7 +647,7 @@ const SystemSettingsPage = () => {
                   </Typography>
 
                   <Grid container spacing={2}>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <TextField
                         fullWidth
                         select
@@ -660,7 +660,7 @@ const SystemSettingsPage = () => {
                       </TextField>
                     </Grid>
 
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <TextField
                         fullWidth
                         type="number"
@@ -671,7 +671,7 @@ const SystemSettingsPage = () => {
                       />
                     </Grid>
 
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <TextField
                         fullWidth
                         type="number"
@@ -682,7 +682,7 @@ const SystemSettingsPage = () => {
                       />
                     </Grid>
 
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <TextField
                         fullWidth
                         type="number"
@@ -711,7 +711,7 @@ const SystemSettingsPage = () => {
               </Card>
             </Grid>
 
-            <Grid item xs={12} md={4}>
+            <Grid size={{ xs: 12, md: 4 }}>
               <Card sx={{ bgcolor: 'info.lighter' }}>
                 <CardContent>
                   <Typography variant="subtitle1" gutterBottom>

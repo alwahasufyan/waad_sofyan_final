@@ -14,9 +14,8 @@ export const BatchHistorySidebar = ({
     loadingBatch,
     batchContent,
     editingClaimId,
-    setEditingClaimId,
+    onSwitchClaim,
     handleDeleteClaim,
-    resetForm,
     batchData,
     page,
     setPage,
@@ -25,6 +24,8 @@ export const BatchHistorySidebar = ({
     theme,
     navigate,
     detailUrl,
+    currentBatch,
+    isBatchOpen,
     t
 }) => {
     return (
@@ -37,16 +38,22 @@ export const BatchHistorySidebar = ({
                 <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mb: 1.5 }}>
                     <HistoryIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
                     <Typography variant="subtitle2" fontWeight={900} sx={{ fontSize: '0.9rem', flex: 1 }}>
-                        {t('claimEntry.batchHistory')}
+                        {currentBatch ? `الدفعة: ${currentBatch.batchCode}` : t('claimEntry.batchHistory')}
                     </Typography>
-                    <Button size="small" variant="contained" color="primary" startIcon={<AddIcon sx={{ fontSize: 13 }} />}
-                        onClick={() => { resetForm(); setEditingClaimId(null); }}
-                        sx={{ height: 24, fontSize: '0.75rem', fontWeight: 800, borderRadius: 1.2 }}>
-                        جديد
-                    </Button>
+                    {/* FIX: Disable New button if batch is not open (closed or expired) */}
+                    <Tooltip title={!isBatchOpen ? 'الدفعة مغلقة — لا يمكن إضافة مطالبات جديدة' : ''}>
+                        <span>
+                            <Button size="small" variant="contained" color="primary" startIcon={<AddIcon sx={{ fontSize: 13 }} />}
+                                onClick={() => onSwitchClaim(null)}
+                                disabled={!isBatchOpen}
+                                sx={{ height: 24, fontSize: '0.75rem', fontWeight: 800, borderRadius: 1.2 }}>
+                                جديد
+                            </Button>
+                        </span>
+                    </Tooltip>
                 </Stack>
                 <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.65rem', mb: 1, display: 'block' }}>
-                    {monthLabel} {year}
+                    {currentBatch ? `${currentBatch.monthLabel} ${currentBatch.batchYear} — ${currentBatch.claimsCount || 0} مطالبة` : `${monthLabel} ${year}`}
                 </Typography>
                 <Divider sx={{ mb: 1 }} />
 
@@ -58,7 +65,7 @@ export const BatchHistorySidebar = ({
                     <Stack spacing={0.5} sx={{ flex: 1, overflowY: 'auto' }}>
                         {batchContent.map(c => (
                             <Paper key={c.id} variant="outlined"
-                                onClick={() => setEditingClaimId(c.id)}
+                                onClick={() => onSwitchClaim(c.id)}
                                 sx={{
                                     p: 0.75, borderRadius: 1.5, cursor: 'pointer', flexShrink: 0,
                                     transition: 'all 0.15s',
@@ -99,11 +106,20 @@ export const BatchHistorySidebar = ({
                                         </Tooltip>
                                     </Stack>
                                 </Stack>
-                                <Stack direction="row" justifyContent="space-between" sx={{ mt: 0.3 }}>
-                                    <Typography variant="caption" color="text.disabled"
-                                        sx={{ fontFamily: 'monospace', fontSize: '0.6rem' }}>
-                                        #{c.id}
-                                    </Typography>
+                                <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mt: 0.3 }}>
+                                    <Stack direction="row" spacing={1} alignItems="center">
+                                        <Typography variant="caption" color="text.disabled"
+                                            sx={{ fontFamily: 'monospace', fontSize: '0.6rem' }}>
+                                            #{c.id}
+                                        </Typography>
+                                        <Typography variant="caption" sx={{
+                                            fontSize: '0.55rem', fontWeight: 800, px: 0.6, py: 0.1, borderRadius: 1,
+                                            color: c.status === 'REJECTED' ? 'error.dark' : 'success.dark',
+                                            bgcolor: c.status === 'REJECTED' ? alpha('#d32f2f', 0.1) : alpha('#2e7d32', 0.1)
+                                        }}>
+                                            {c.status === 'REJECTED' ? 'مرفوضة' : 'مقبولة'}
+                                        </Typography>
+                                    </Stack>
                                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.6rem' }}>
                                         {c.serviceDate}
                                     </Typography>

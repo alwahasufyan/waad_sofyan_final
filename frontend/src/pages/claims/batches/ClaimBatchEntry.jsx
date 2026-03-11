@@ -23,7 +23,8 @@ import {
     Search as SearchIcon, LocalPrintshop as PrintIcon,
     FileDownload as FileDownloadIcon, WarningAmber as WarningIcon,
     VerifiedUser as PolicyIcon, Info as InfoIcon, Block as RejectIcon,
-    Cancel as CancelIcon, AttachFile as AttachFileIcon
+    Cancel as CancelIcon, AttachFile as AttachFileIcon,
+    Lock as LockIcon
 } from '@mui/icons-material';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
@@ -41,6 +42,7 @@ import visitsService from 'services/api/visits.service';
 import benefitPoliciesService from 'services/api/benefit-policies.service';
 import * as medicalCategoriesService from 'services/api/medical-categories.service';
 import providerContractsService from 'services/api/provider-contracts.service';
+import claimBatchesService from 'services/api/claim-batches.service';
 
 import { useCalculationLogic } from './hooks/useCalculationLogic';
 import { useCoverageLogic } from './hooks/useCoverageLogic';
@@ -159,7 +161,7 @@ export default function ClaimBatchEntry() {
     const { fetchCoverage, refetchAllLinesCoverage } = useCoverageLogic({
         policyId, policyInfo, member, applyBenefits, rootCategories, primaryCategoryCode,
         setLines, recompute,
-        serviceYear: year || new Date().getFullYear(),
+        serviceYear: serviceDate ? new Date(serviceDate).getFullYear() : (year || new Date().getFullYear()),
         currentClaimId: editingClaimId
     });
 
@@ -188,14 +190,23 @@ export default function ClaimBatchEntry() {
         queryFn: () => providersService.getById(providerId),
         enabled: !!providerId
     });
+    const { data: currentBatch, isLoading: loadingBatchMeta, error: batchError } = useQuery({
+        queryKey: ['claim-batch-current', providerId, employerId, month, year],
+        // FIX: Read-only GET — does NOT auto-create a batch on page load
+        queryFn: () => claimBatchesService.getCurrentBatch(providerId, employerId, year, month),
+        enabled: !!providerId && !!employerId && !isNaN(month) && !isNaN(year),
+        retry: false
+    });
+
     const { data: batchData, isLoading: loadingBatch } = useQuery({
         queryKey: ['batch-claims-entry', employerId, providerId, month, year, page],
         queryFn: async () => {
             if (!employerId || !providerId || isNaN(month) || isNaN(year)) return null;
+            const lastDay = new Date(year, month, 0).getDate();
             return claimsService.list({
                 employerId, providerId,
                 dateFrom: `${year}-${String(month).padStart(2, '0')}-01`,
-                dateTo: `${year}-${String(month).padStart(2, '0')}-31`,
+                dateTo: `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`,
                 size: 20, page, sortBy: 'createdAt', sortDir: 'desc'
             });
         },
@@ -238,6 +249,15 @@ export default function ClaimBatchEntry() {
         enabled: !!employerId && !!providerId
     });
 
+    const isExpiredBatch = useMemo(() => {
+        if (!month || !year) return false;
+        const now = new Date();
+        const currentYM = now.getFullYear() * 12 + now.getMonth();
+        const targetYM = year * 12 + (month - 1);
+        // FIX: >= 3 is correct — 3 months back is the LAST allowed month
+        return (currentYM - targetYM) >= 3;
+    }, [month, year]);
+
     const { data: preAuthResults, isFetching: searchingPreAuth } = useQuery({
         queryKey: ['preauth-search', preAuthSearch, member?.id],
         queryFn: () => preApprovalsService.search({ q: preAuthSearch, size: 20 }),
@@ -251,6 +271,7 @@ export default function ClaimBatchEntry() {
         queryClient.invalidateQueries({ queryKey: ['batch-claims-entry'] });
         queryClient.invalidateQueries({ queryKey: ['batch-claims-detail'] });
         queryClient.invalidateQueries({ queryKey: ['batch-stats'] });
+        queryClient.invalidateQueries({ queryKey: ['claim-batch-current'] });
         // Invalidate cached claim detail so re-opening a claim always triggers a fresh
         // coverage/usage fetch (ensures سقف المنفعة reflects the latest consumed amounts)
         queryClient.invalidateQueries({ queryKey: ['claim'] });
@@ -461,6 +482,8 @@ export default function ClaimBatchEntry() {
         setManualCategoryEnabled(true); setPrimaryCategoryCode('CAT-OUTPAT');
         setIsClaimRejected(false); setRejectionInput('');
         setAttachments([]);
+        // FIX: resetForm must also clear the editing state
+        setEditingClaimId(null);
         setTimeout(() => memberRef.current?.focus(), 120);
     }, [defaultDate]);
 
@@ -481,7 +504,7 @@ export default function ClaimBatchEntry() {
         setRejectDialogOpen(false);
     };
 
-    const handleSave = async () => {
+    const handleSave = async (resetAfter = false) => {
         if (isSavingRef.current) return;
         if (!member) { enqueueSnackbar(t('claimEntry.validationMember'), { variant: 'error' }); return; }
         if (lines.some(l => !l.service && !l.serviceName)) { enqueueSnackbar(t('claimEntry.validationService'), { variant: 'error' }); return; }
@@ -496,16 +519,19 @@ export default function ClaimBatchEntry() {
 
             // المرحلة 2.2: التحقق من انتهاء صلاحية الوثيقة
             if (policyInfo?.endDate && new Date(actualDate) > new Date(policyInfo.endDate)) {
-                enqueueSnackbar(`⚠️ تاريخ الخدمة (${actualDate}) يتجاوز نهاية الوثيقة المحددة (${policyInfo.endDate})`,
-                    { variant: 'warning', autoHideDuration: 6000 });
-                // لا نوقف الحفظ تماماً في حالة السماح بالعمليات اللاحقة، ولكن نعطيه تحذيراً صارماً
+                enqueueSnackbar(`⚠️ تاريخ الخدمة (${actualDate}) يتجاوز نهاية الوثيقة المحددة (${policyInfo.endDate}) — لا يمكن الحفظ`,
+                    { variant: 'error', autoHideDuration: 6000 });
+                setSaving(false);
+                isSavingRef.current = false;
+                return;
             }
 
             const claimData = {
                 memberId: member.id,
                 providerId: parseInt(providerId),
+                claimBatchId: currentBatch?.id, // Phase 11 Link
                 serviceDate: actualDate,
-                diagnosis,
+                diagnosisDescription: diagnosis,
                 complaint,
                 notes,
                 status: isClaimRejected ? 'REJECTED' : 'SETTLED',
@@ -532,6 +558,28 @@ export default function ClaimBatchEntry() {
                 await claimsService.update(editingClaimId, claimData);
                 resultClaimId = editingClaimId;
             } else {
+                // FIX: Open/create batch here (on first save), NOT on page load
+                // This ensures GET /current is truly read-only
+                let batchForSave = currentBatch;
+                if (!batchForSave) {
+                    try {
+                        batchForSave = await claimBatchesService.openOrGetBatch(
+                            providerId, employerId, year, month
+                        );
+                        // Update the query cache so the UI reflects the new batch
+                        queryClient.setQueryData(
+                            ['claim-batch-current', providerId, employerId, month, year],
+                            batchForSave
+                        );
+                    } catch (batchErr) {
+                         enqueueSnackbar(`فشل فتح الدفعة: ${batchErr?.response?.data?.message || batchErr?.message}`, { variant: 'error' });
+                         setSaving(false);
+                         isSavingRef.current = false;
+                         return;
+                    }
+                    claimData.claimBatchId = batchForSave?.id;
+                }
+
                 // 1. Create a Visit automatically for this manual entry (Backlog Flow)
                 const visitData = {
                     memberId: member.id,
@@ -543,18 +591,19 @@ export default function ClaimBatchEntry() {
                 };
 
                 const visitResponse = await visitsService.create(visitData);
-                const visitId = visitResponse.id; // visitResponse is already unwrapped
+                const visitId = visitResponse.id;
 
                 // 2. Link Claim to this Visit
                 claimData.visitId = visitId;
 
-                // Map frontend 'diagnosis' to backend 'diagnosisDescription'
-                if (diagnosis) {
-                    claimData.diagnosisDescription = diagnosis;
-                    delete claimData.diagnosis;
+                let claimResponse;
+                try {
+                    claimResponse = await claimsService.create(claimData);
+                } catch (claimErr) {
+                    // Rollback orphan visit if claim creation fails
+                    try { await visitsService.remove(visitId); } catch (_) {}
+                    throw claimErr;
                 }
-
-                const claimResponse = await claimsService.create(claimData);
                 resultClaimId = claimResponse.id;
             }
 
@@ -579,8 +628,14 @@ export default function ClaimBatchEntry() {
             );
             invalidateBatchData();
             setPage(0);
-            resetForm();
-            setEditingClaimId(null);
+            if (resetAfter) {
+                resetForm();
+                setEditingClaimId(null);
+            } else {
+                setEditingClaimId(resultClaimId);
+                // Keep isDirty as false after save
+                setIsDirty(false);
+            }
         } catch (err) {
             enqueueSnackbar(err.message || t('claimEntry.saveFailed'), { variant: 'error' });
         } finally {
@@ -615,6 +670,14 @@ export default function ClaimBatchEntry() {
     };
 
     // ── حذف مطالبة من الشريط الجانبي ─────────────────────────────────────────
+    const handleSwitchClaim = useCallback((claimId) => {
+        if (isDirty) {
+            if (!window.confirm('يوجد تعديلات غير محفوظة. هل تريد الانتقال بدون حفظ؟')) return;
+        }
+        if (claimId === null) resetForm();
+        setEditingClaimId(claimId);
+    }, [isDirty, resetForm]);
+
     const handleDeleteClaim = async (claimId, e) => {
         e.stopPropagation();
         setConfirmDeleteId(claimId);
@@ -652,10 +715,11 @@ export default function ClaimBatchEntry() {
                     icon={<ReceiptIcon />}
                     actions={
                         <Stack direction="row" spacing={1} alignItems="center">
-                            <Button variant="outlined" size="small" startIcon={<FileDownloadIcon />}
+                             <Button variant="outlined" size="small" startIcon={<FileDownloadIcon />}
                                 onClick={handleExport} disabled={!batchContent.length}
                                 sx={{ color: '#1b5e20', borderColor: '#1b5e20', fontWeight: 700, borderRadius: 1.5, '&:hover': { bgcolor: '#1b5e2012' } }}>
-                                {t('claimEntry.exportExcel')}
+                                {/* FIX: Correct label — exports CSV not Excel */}
+                                تصدير CSV
                             </Button>
                             <Button variant="outlined" size="small" color="info" startIcon={<PrintIcon />}
                                 onClick={handlePrint}
@@ -663,11 +727,13 @@ export default function ClaimBatchEntry() {
                                 {t('claimEntry.printTable')}
                             </Button>
                             <Divider orientation="vertical" flexItem />
+                            {/* FIX: Finish batch goes to claim-batches management page (different from detail) */}
                             <Button variant="contained" size="small" color="success" startIcon={<DoneIcon />}
-                                onClick={() => navigate(detailUrl)} disabled={!batchContent.length}
+                                onClick={() => navigate(`/claims/batches`)} disabled={!batchContent.length}
                                 sx={{ fontWeight: 700, borderRadius: 1.5 }}>
                                 {t('claimEntry.finishBatch')}
                             </Button>
+                            {/* FIX: Back goes to detail page (same month view) */}
                             <Button variant="outlined" size="small" color="secondary"
                                 startIcon={<BackIcon sx={{ ml: 1, mr: 0 }} />}
                                 onClick={() => navigate(detailUrl)} sx={{ borderRadius: 1.5 }}>
@@ -678,6 +744,14 @@ export default function ClaimBatchEntry() {
                 />
             </Box>
 
+            {/* FIX: Show batch error as visible alert (not silent) */}
+            {batchError && (
+                <Alert severity="warning" variant="filled" sx={{ mx: 2, mb: 0.5, borderRadius: 1.5, fontWeight: 700 }}>
+                    ⚠️ تعذّر تحميل بيانات الدفعة: {batchError?.response?.data?.message || batchError?.message || 'خطأ غير معروف'}
+                    {batchError?.response?.status === 403 && ' — لا تملك صلاحية الوصول.'}
+                </Alert>
+            )}
+
             {/* ═══ المحتوى ═══ */}
             <Box sx={{ flex: 1, display: 'flex', minHeight: 0, gap: 2, px: 2, pb: 2 }}>
                 
@@ -686,9 +760,8 @@ export default function ClaimBatchEntry() {
                     loadingBatch={loadingBatch}
                     batchContent={batchContent}
                     editingClaimId={editingClaimId}
-                    setEditingClaimId={setEditingClaimId}
+                    onSwitchClaim={handleSwitchClaim}
                     handleDeleteClaim={handleDeleteClaim}
-                    resetForm={resetForm}
                     batchData={batchData}
                     page={page}
                     setPage={setPage}
@@ -697,6 +770,8 @@ export default function ClaimBatchEntry() {
                     theme={theme}
                     navigate={navigate}
                     detailUrl={detailUrl}
+                    currentBatch={currentBatch}
+                    isBatchOpen={!isExpiredBatch && (!currentBatch || currentBatch.status === 'OPEN')}
                     t={t}
                 />
 
@@ -758,6 +833,13 @@ export default function ClaimBatchEntry() {
                                         sx={{ fontWeight: 800, fontSize: '0.75rem' }}
                                     />
                                 )}
+                                {(currentBatch?.status !== 'OPEN' || isExpiredBatch) && !loadingBatchMeta && (
+                                    <Chip icon={<LockIcon sx={{ fontSize: 12 }} />} size="small"
+                                        label={isExpiredBatch ? "فترة منتهية (>3 أشهر)" : "الدفعة مغلقة — تعديل فقط"} 
+                                        color="secondary" variant="filled"
+                                        sx={{ fontWeight: 800, fontSize: '0.75rem' }}
+                                    />
+                                )}
                             </Stack>
                             <Stack direction="row" spacing={1} alignItems="center">
                                 <Tooltip title={t('claimEntry.discardChanges')}>
@@ -767,11 +849,23 @@ export default function ClaimBatchEntry() {
                                         </IconButton>
                                     </span>
                                 </Tooltip>
-                                <Button variant="contained" size="small"
+                                
+                                {/* Save & Stay */}
+                                <Button variant="outlined" size="small" color="primary"
                                     startIcon={saving ? <CircularProgress size={11} color="inherit" /> : <SaveIcon sx={{ fontSize: 13 }} />}
-                                    onClick={handleSave} disabled={saving || !isDirty}
+                                    onClick={() => handleSave(false)} 
+                                    disabled={saving || !isDirty || isExpiredBatch || (currentBatch && currentBatch.status !== 'OPEN' && !editingClaimId)}
                                     sx={{ fontWeight: 800, borderRadius: 1.5, fontSize: '0.75rem', py: 0.4 }}>
-                                    {saving ? t('claimEntry.saving') : t('claimEntry.tempSave')}
+                                    {saving ? t('claimEntry.saving') : "حفظ"}
+                                </Button>
+
+                                {/* Save & New (The main button) */}
+                                <Button variant="contained" size="small" color="success"
+                                    startIcon={saving ? <CircularProgress size={11} color="inherit" /> : <AddIcon sx={{ fontSize: 13 }} />}
+                                    onClick={() => handleSave(true)} 
+                                    disabled={saving || !isDirty || isExpiredBatch || (currentBatch && currentBatch.status !== 'OPEN')}
+                                    sx={{ fontWeight: 800, borderRadius: 1.5, fontSize: '0.75rem', py: 0.4 }}>
+                                    {saving ? t('claimEntry.saving') : t('claimEntry.saveAndAdd')}
                                 </Button>
                             </Stack>
                         </Box>
@@ -792,6 +886,7 @@ export default function ClaimBatchEntry() {
                                 setManualCategoryEnabled={setManualCategoryEnabled}
                                 rootCategories={rootCategories}
                                 refetchAllLinesCoverage={refetchAllLinesCoverage}
+                                linesRef={linesRef}
                                 preAuthResults={preAuthResults}
                                 searchingPreAuth={searchingPreAuth}
                                 preAuthId={preAuthId}

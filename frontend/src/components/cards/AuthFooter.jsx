@@ -16,7 +16,7 @@ export default function AuthFooter() {
   return (
     <Container maxWidth="xl">
       <Grid container spacing={2} justifyContent="space-between">
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Stack
             direction={{ xs: 'column', md: 'row' }}
             justifyContent={{ xs: 'center', md: 'flex-start' }}
@@ -31,7 +31,7 @@ export default function AuthFooter() {
             </Typography>
           </Stack>
         </Grid>
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Stack
             direction={{ xs: 'column', md: 'row' }}
             justifyContent={{ xs: 'center', md: 'flex-end' }}

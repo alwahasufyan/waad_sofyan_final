@@ -156,7 +156,7 @@ const VisitEdit = () => {
         <MainCard>
           <Grid container spacing={3}>
             {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-              <Grid item xs={12} md={6} key={i}>
+              <Grid key={i} size={{ xs: 12, md: 6 }}>
                 <Skeleton variant="rectangular" height={56} />
               </Grid>
             ))}
@@ -196,14 +196,14 @@ const VisitEdit = () => {
         <form onSubmit={handleSubmit}>
           <Grid container spacing={3}>
             {/* Section: Basic Info */}
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Typography variant="h5" gutterBottom>
                 معلومات الزيارة الأساسية
               </Typography>
             </Grid>
 
             {/* Member - Required */}
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <FormControl fullWidth required error={!!errors.memberId}>
                 <InputLabel>المؤمَّن عليه *</InputLabel>
                 <Select value={form.memberId} onChange={handleChange('memberId')} label="المؤمَّن عليه *" disabled={membersLoading}>
@@ -223,7 +223,7 @@ const VisitEdit = () => {
             </Grid>
 
             {/* Visit Date - Required */}
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 required
@@ -238,7 +238,7 @@ const VisitEdit = () => {
             </Grid>
 
             {/* Doctor Name - Required */}
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 required
@@ -252,7 +252,7 @@ const VisitEdit = () => {
             </Grid>
 
             {/* Specialty - Optional */}
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 label="التخصص"
@@ -263,7 +263,7 @@ const VisitEdit = () => {
             </Grid>
 
             {/* Provider - Optional */}
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <FormControl fullWidth>
                 <InputLabel>مقدم الخدمة</InputLabel>
                 <Select value={form.providerId} onChange={handleChange('providerId')} label="مقدم الخدمة" disabled={providersLoading}>
@@ -278,7 +278,7 @@ const VisitEdit = () => {
             </Grid>
 
             {/* Visit Type - Optional with default */}
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <FormControl fullWidth>
                 <InputLabel>نوع الزيارة</InputLabel>
                 <Select value={form.visitType} onChange={handleChange('visitType')} label="نوع الزيارة">
@@ -292,14 +292,14 @@ const VisitEdit = () => {
             </Grid>
 
             {/* Section: Medical Info */}
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Typography variant="h5" gutterBottom sx={{ mt: 2 }}>
                 المعلومات الطبية
               </Typography>
             </Grid>
 
             {/* Diagnosis - Optional */}
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 multiline
@@ -312,7 +312,7 @@ const VisitEdit = () => {
             </Grid>
 
             {/* Treatment - Optional */}
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 multiline
@@ -325,7 +325,7 @@ const VisitEdit = () => {
             </Grid>
 
             {/* Total Amount - Optional */}
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 type="number"
@@ -340,7 +340,7 @@ const VisitEdit = () => {
             </Grid>
 
             {/* Notes - Optional */}
-            <Grid item xs={12}>
+            <Grid size={12}>
               <TextField
                 fullWidth
                 multiline
@@ -353,7 +353,7 @@ const VisitEdit = () => {
             </Grid>
 
             {/* Actions */}
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ mt: 2 }}>
                 <Button variant="outlined" startIcon={<CancelIcon />} onClick={handleCancel} disabled={loading}>
                   إلغاء

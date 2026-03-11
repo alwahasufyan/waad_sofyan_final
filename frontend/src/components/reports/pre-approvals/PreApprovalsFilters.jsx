@@ -81,7 +81,7 @@ const PreApprovalsFilters = ({
       <Grid container spacing={2}>
         {/* Employer Selector (Admin Only) */}
         {canSelectEmployer && (
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <FormControl fullWidth size="small">
               <InputLabel id="employer-filter-label">الشريك</InputLabel>
               <Select
@@ -109,7 +109,7 @@ const PreApprovalsFilters = ({
         )}
 
         {/* Provider Selector */}
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <FormControl fullWidth size="small">
             <InputLabel id="provider-filter-label">مقدم الخدمة</InputLabel>
             <Select
@@ -136,7 +136,7 @@ const PreApprovalsFilters = ({
         </Grid>
 
         {/* Status Multi-Select */}
-        <Grid item xs={12} sm={6} md={canSelectEmployer ? 3 : 4}>
+        <Grid size={{ xs: 12, sm: 6, md: canSelectEmployer ? 3 : 4 }}>
           <FormControl fullWidth size="small">
             <InputLabel id="status-filter-label">الحالة</InputLabel>
             <Select
@@ -174,7 +174,7 @@ const PreApprovalsFilters = ({
         </Grid>
 
         {/* Member Search */}
-        <Grid item xs={12} sm={6} md={canSelectEmployer ? 3 : 4}>
+        <Grid size={{ xs: 12, sm: 6, md: canSelectEmployer ? 3 : 4 }}>
           <TextField
             fullWidth
             size="small"
@@ -200,7 +200,7 @@ const PreApprovalsFilters = ({
         </Grid>
 
         {/* Date From */}
-        <Grid item xs={12} sm={6} md={2}>
+        <Grid size={{ xs: 12, sm: 6, md: 2 }}>
           <TextField
             fullWidth
             size="small"
@@ -220,7 +220,7 @@ const PreApprovalsFilters = ({
         </Grid>
 
         {/* Date To */}
-        <Grid item xs={12} sm={6} md={2}>
+        <Grid size={{ xs: 12, sm: 6, md: 2 }}>
           <TextField
             fullWidth
             size="small"

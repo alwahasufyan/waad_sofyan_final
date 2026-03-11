@@ -165,7 +165,7 @@ const EmployerCreate = () => {
           </Typography>
           <Grid container spacing={2.5}>
             {/* Code */}
-            <Grid item xs={12} md={4}>
+            <Grid size={{ xs: 12, md: 4 }}>
               <TextField
                 fullWidth
                 label={LABELS.code}
@@ -187,7 +187,7 @@ const EmployerCreate = () => {
             </Grid>
 
             {/* Name */}
-            <Grid item xs={12} md={8}>
+            <Grid size={{ xs: 12, md: 8 }}>
               <TextField
                 fullWidth
                 label={LABELS.name}
@@ -211,7 +211,7 @@ const EmployerCreate = () => {
           </Typography>
           <Grid container spacing={2.5}>
             {/* Email */}
-            <Grid item xs={12} sm={6} md={4}>
+            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
               <TextField
                 fullWidth
                 label={LABELS.email}
@@ -225,7 +225,7 @@ const EmployerCreate = () => {
             </Grid>
 
             {/* Phone */}
-            <Grid item xs={12} sm={6} md={4}>
+            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
               <TextField
                 fullWidth
                 label={LABELS.phone}
@@ -239,7 +239,7 @@ const EmployerCreate = () => {
             </Grid>
 
             {/* Active Status */}
-            <Grid item xs={12} sm={12} md={4}>
+            <Grid size={{ xs: 12, sm: 12, md: 4 }}>
               <FormControlLabel
                 control={<Switch checked={employer.active} onChange={handleChange('active')} color="primary" />}
                 label={LABELS.active}
@@ -248,7 +248,7 @@ const EmployerCreate = () => {
             </Grid>
 
             {/* Address */}
-            <Grid item xs={12}>
+            <Grid size={12}>
               <TextField
                 fullWidth
                 label={LABELS.address}

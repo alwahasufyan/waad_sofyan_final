@@ -136,7 +136,7 @@ const ClaimsStatusGrid = ({ claimsByStatusArray, loading }) => {
         {loading ? (
           <Grid container spacing={1}>
             {[1, 2, 3, 4, 5, 6, 7].map((i) => (
-              <Grid item xs={6} sm={4} md={3} key={i}>
+              <Grid key={i} size={{ xs: 6, sm: 4, md: 3 }}>
                 <Skeleton variant="rounded" height={70} />
               </Grid>
             ))}
@@ -144,7 +144,7 @@ const ClaimsStatusGrid = ({ claimsByStatusArray, loading }) => {
         ) : (
           <Grid container spacing={1.5}>
             {claimsByStatusArray.map(({ status, label, count, color }) => (
-              <Grid item xs={6} sm={4} md={3} key={status}>
+              <Grid key={status} size={{ xs: 6, sm: 4, md: 3 }}>
                 <Paper
                   variant="outlined"
                   sx={{
@@ -307,7 +307,7 @@ const EmployerDashboard = () => {
 
         {/* KPI Cards Row */}
         <Grid container spacing={3} sx={{ mb: 3 }}>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <KPICard
               title="إجمالي الأعضاء"
               value={formatNumber(totalMembers)}
@@ -319,7 +319,7 @@ const EmployerDashboard = () => {
             />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <KPICard
               title="إجمالي الزيارات"
               value={formatNumber(totalVisits)}
@@ -330,7 +330,7 @@ const EmployerDashboard = () => {
             />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <KPICard
               title="إجمالي المطالبات"
               value={formatNumber(totalClaims)}
@@ -341,7 +341,7 @@ const EmployerDashboard = () => {
             />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <KPICard
               title="المبلغ المعتمد"
               value={formatCurrency(approvedAmount)}
@@ -355,11 +355,11 @@ const EmployerDashboard = () => {
 
         {/* Second Row: Status Grid + Amount Summary */}
         <Grid container spacing={3}>
-          <Grid item xs={12} md={8}>
+          <Grid size={{ xs: 12, md: 8 }}>
             <ClaimsStatusGrid claimsByStatusArray={claimsByStatusArray} loading={claimsLoading} />
           </Grid>
 
-          <Grid item xs={12} md={4}>
+          <Grid size={{ xs: 12, md: 4 }}>
             <AmountSummaryCard approvedAmount={approvedAmount} rejectedAmount={rejectedAmount} loading={claimsLoading} />
           </Grid>
         </Grid>

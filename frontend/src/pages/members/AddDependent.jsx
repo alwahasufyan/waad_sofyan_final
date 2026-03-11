@@ -258,7 +258,7 @@ const AddDependent = () => {
 
           <Grid container spacing={2} alignItems="flex-start">
             {/* Full Name - Wider */}
-            <Grid item xs={12} md={4}>
+            <Grid size={{ xs: 12, md: 4 }}>
               <TextField
                 fullWidth
                 required
@@ -273,7 +273,7 @@ const AddDependent = () => {
             </Grid>
 
             {/* Relationship */}
-            <Grid item xs={12} md={2}>
+            <Grid size={{ xs: 12, md: 2 }}>
               <FormControl fullWidth required error={!!errors.relationship} size="small" sx={{ minWidth: 150 }}>
                 <InputLabel>القرابة</InputLabel>
                 <Select value={form.relationship} onChange={handleFieldChange('relationship')} label="القرابة">
@@ -304,7 +304,7 @@ const AddDependent = () => {
             </Grid>
 
             {/* Gender */}
-            <Grid item xs={12} md={2}>
+            <Grid size={{ xs: 12, md: 2 }}>
               <FormControl fullWidth required error={!!errors.gender} size="small" sx={{ minWidth: 130 }}>
                 <InputLabel>الجنس</InputLabel>
                 <Select value={form.gender} onChange={handleFieldChange('gender')} label="الجنس">
@@ -319,7 +319,7 @@ const AddDependent = () => {
             </Grid>
 
             {/* Birth Date */}
-            <Grid item xs={12} md={2}>
+            <Grid size={{ xs: 12, md: 2 }}>
               <DatePicker
                 label="تاريخ الميلاد *"
                 value={form.birthDate}
@@ -338,7 +338,7 @@ const AddDependent = () => {
             </Grid>
 
             {/* National ID */}
-            <Grid item xs={12} md={2}>
+            <Grid size={{ xs: 12, md: 2 }}>
               <TextField
                 fullWidth
                 label="الرقم الوطني"
@@ -351,7 +351,7 @@ const AddDependent = () => {
             </Grid>
 
             {/* Photo Upload for Dependent */}
-            <Grid item xs={12} sx={{ mt: 2 }}>
+            <Grid sx={{ mt: 2 }} size={12}>
               <Paper variant="outlined" sx={{ p: 2, bgcolor: 'grey.50', borderStyle: 'dashed' }}>
                 <Stack direction="row" spacing={3} alignItems="center">
                   <Box position="relative">
@@ -397,7 +397,7 @@ const AddDependent = () => {
             </Grid>
 
             {/* Action Button */}
-            <Grid item xs={12} md={12} sx={{ mt: 1 }}>
+            <Grid sx={{ mt: 1 }} size={{ xs: 12, md: 12 }}>
               <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
                 <Button
                   variant="contained"

@@ -259,7 +259,7 @@ const DataImportWizard = ({
           <Box sx={{ mt: 2 }}>
             {/* Smart Analysis Summary */}
             <Grid container spacing={2} sx={{ mb: 3 }}>
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <Paper variant="outlined" sx={{ p: 2 }}>
                   <Typography variant="subtitle2" color="textSecondary" gutterBottom>
                     تحليل السياق (Smart Context)
@@ -280,7 +280,7 @@ const DataImportWizard = ({
                 </Paper>
               </Grid>
               {!hideContextSelectors && (
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                   <Paper variant="outlined" sx={{ p: 2 }}>
                     <Typography variant="subtitle2" color="textSecondary" gutterBottom>
                       إعدادات الاستيراد

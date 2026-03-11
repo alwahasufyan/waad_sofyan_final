@@ -169,7 +169,7 @@ const UtilizationKPIs = ({ utilizationKpis = {}, loading = false }) => {
     <Box>
       <Grid container spacing={2}>
         {UTILIZATION_KPI_CONFIG.map((config) => (
-          <Grid item xs={12} sm={6} md={3} key={config.key}>
+          <Grid key={config.key} size={{ xs: 12, sm: 6, md: 3 }}>
             <UtilizationKPICard config={config} value={utilizationKpis[config.key] ?? 0} loading={loading} />
           </Grid>
         ))}

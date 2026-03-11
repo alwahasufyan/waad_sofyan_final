@@ -26,10 +26,10 @@ export default function TabPassword() {
 
   return (
     <Grid container spacing={3}>
-      <Grid item xs={12}>
+      <Grid size={12}>
         <MainCard title="Change Password">
           <Grid container spacing={3}>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Stack spacing={1}>
                 <Typography variant="subtitle1">Current Password</Typography>
                 <TextField
@@ -48,19 +48,19 @@ export default function TabPassword() {
                 />
               </Stack>
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Stack spacing={1}>
                 <Typography variant="subtitle1">New Password</Typography>
                 <TextField fullWidth type="password" placeholder="Enter new password" />
               </Stack>
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Stack spacing={1}>
                 <Typography variant="subtitle1">Confirm Password</Typography>
                 <TextField fullWidth type="password" placeholder="Confirm new password" />
               </Stack>
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Stack direction="row" justifyContent="flex-end" spacing={2}>
                 <Button variant="outlined" color="secondary">
                   Cancel

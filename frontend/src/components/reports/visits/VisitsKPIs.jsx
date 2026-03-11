@@ -121,7 +121,7 @@ const VisitsKPIs = ({ kpis, loading }) => {
   return (
     <Grid container spacing={2} sx={{ mb: 3 }}>
       {kpiCards.map((kpi, index) => (
-        <Grid item xs={6} sm={4} md={2.4} key={index}>
+        <Grid key={index} size={{ xs: 6, sm: 4, md: 2.4 }}>
           <KPICard title={kpi.title} value={kpi.value} subtitle={kpi.subtitle} icon={kpi.icon} color={kpi.color} loading={loading} />
         </Grid>
       ))}

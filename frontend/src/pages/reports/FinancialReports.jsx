@@ -617,7 +617,7 @@ const FinancialReports = () => {
             {/* Filters Row 1: Provider (Primary) + Status */}
             <Grid container spacing={2} alignItems="center">
               {canFilterByProvider && (
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                   <TextField
                     select
                     fullWidth
@@ -643,7 +643,7 @@ const FinancialReports = () => {
                 </Grid>
               )}
 
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <TextField select fullWidth label="الحالة" value={status} onChange={(e) => setStatus(e.target.value)} size="small">
                   {STATUS_OPTIONS.map((option) => (
                     <MenuItem key={option.value} value={option.value}>
@@ -656,7 +656,7 @@ const FinancialReports = () => {
 
             {/* Filters Row 2: Dates + Actions */}
             <Grid container spacing={2} alignItems="center">
-              <Grid item xs={12} md={3}>
+              <Grid size={{ xs: 12, md: 3 }}>
                 <TextField
                   fullWidth
                   label="من تاريخ"
@@ -667,7 +667,7 @@ const FinancialReports = () => {
                   size="small"
                 />
               </Grid>
-              <Grid item xs={12} md={3}>
+              <Grid size={{ xs: 12, md: 3 }}>
                 <TextField
                   fullWidth
                   label="إلى تاريخ"
@@ -678,7 +678,7 @@ const FinancialReports = () => {
                   size="small"
                 />
               </Grid>
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <Stack direction="row" spacing={1} justifyContent="flex-end">
                   <Button variant="outlined" color="inherit" size="small" onClick={handleResetFilters} startIcon={<ClearAllIcon />}>
                     مسح الفلاتر
@@ -757,7 +757,7 @@ const FinancialReports = () => {
             {/* Financial Summary KPIs (Tab 0) */}
             {activeTab === 0 && (
               <Grid container spacing={3} sx={{ mb: 3 }}>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                   <Card elevation={2} sx={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
                     <CardContent>
                       <Typography variant="h6" gutterBottom>
@@ -772,7 +772,7 @@ const FinancialReports = () => {
                     </CardContent>
                   </Card>
                 </Grid>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                   <Card elevation={2} sx={{ background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', color: 'white' }}>
                     <CardContent>
                       <Typography variant="h6" gutterBottom>
@@ -787,7 +787,7 @@ const FinancialReports = () => {
                     </CardContent>
                   </Card>
                 </Grid>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                   <Card elevation={2} sx={{ background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', color: 'white' }}>
                     <CardContent>
                       <Typography variant="h6" gutterBottom>
@@ -802,7 +802,7 @@ const FinancialReports = () => {
                     </CardContent>
                   </Card>
                 </Grid>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                   <Card elevation={2} sx={{ background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', color: 'white' }}>
                     <CardContent>
                       <Typography variant="h6" gutterBottom>
@@ -953,7 +953,7 @@ const FinancialReports = () => {
               {/* KPI Summary for Tab 0 */}
               {activeTab === 0 && (
                 <Grid container spacing={2} sx={{ mb: 3 }}>
-                  <Grid item xs={3}>
+                  <Grid size={3}>
                     <Paper sx={{ p: 2, textAlign: 'center' }}>
                       <Typography variant="caption">إجمالي المطالبات</Typography>
                       <Typography variant="h6" fontWeight="bold">
@@ -961,7 +961,7 @@ const FinancialReports = () => {
                       </Typography>
                     </Paper>
                   </Grid>
-                  <Grid item xs={3}>
+                  <Grid size={3}>
                     <Paper sx={{ p: 2, textAlign: 'center' }}>
                       <Typography variant="caption">إجمالي المعتمد</Typography>
                       <Typography variant="h6" fontWeight="bold">
@@ -969,7 +969,7 @@ const FinancialReports = () => {
                       </Typography>
                     </Paper>
                   </Grid>
-                  <Grid item xs={3}>
+                  <Grid size={3}>
                     <Paper sx={{ p: 2, textAlign: 'center' }}>
                       <Typography variant="caption">إجمالي المدفوع</Typography>
                       <Typography variant="h6" fontWeight="bold">
@@ -977,7 +977,7 @@ const FinancialReports = () => {
                       </Typography>
                     </Paper>
                   </Grid>
-                  <Grid item xs={3}>
+                  <Grid size={3}>
                     <Paper sx={{ p: 2, textAlign: 'center' }}>
                       <Typography variant="caption">المعلق</Typography>
                       <Typography variant="h6" fontWeight="bold">

@@ -195,7 +195,7 @@ const RejectionsAnalysis = ({ rejectionsAnalysis = {}, loading = false }) => {
       <Box>
         <Grid container spacing={2} sx={{ mb: 3 }}>
           {[1, 2, 3].map((i) => (
-            <Grid item xs={12} sm={4} key={i}>
+            <Grid key={i} size={{ xs: 12, sm: 4 }}>
               <Paper sx={{ p: 2 }}>
                 <Skeleton variant="text" width="60%" />
                 <Skeleton variant="text" width="40%" height={40} />
@@ -220,7 +220,7 @@ const RejectionsAnalysis = ({ rejectionsAnalysis = {}, loading = false }) => {
     <Box>
       {/* KPIs Row */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={4}>
+        <Grid size={{ xs: 12, sm: 4 }}>
           <KPICard
             title="إجمالي المطالبات المرفوضة"
             value={kpis.totalRejectedClaims?.toLocaleString('en-US') || '0'}
@@ -230,7 +230,7 @@ const RejectionsAnalysis = ({ rejectionsAnalysis = {}, loading = false }) => {
             loading={loading}
           />
         </Grid>
-        <Grid item xs={12} sm={4}>
+        <Grid size={{ xs: 12, sm: 4 }}>
           <KPICard
             title="مبلغ المطالبات المرفوضة"
             value={formatCurrency(kpis.rejectedAmount)}
@@ -240,7 +240,7 @@ const RejectionsAnalysis = ({ rejectionsAnalysis = {}, loading = false }) => {
             loading={loading}
           />
         </Grid>
-        <Grid item xs={12} sm={4}>
+        <Grid size={{ xs: 12, sm: 4 }}>
           <KPICard
             title="نسبة الرفض"
             value={`${kpis.rejectionRate?.toFixed(1) || '0'}%`}
@@ -270,17 +270,17 @@ const RejectionsAnalysis = ({ rejectionsAnalysis = {}, loading = false }) => {
 
       <Grid container spacing={2}>
         {/* By Policy */}
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <BreakdownTable title="حسب الوثيقة" icon={PolicyIcon} data={byPolicy} nameKey="name" loading={loading} />
         </Grid>
 
         {/* By Reason */}
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <BreakdownTable title="حسب السبب" icon={ReasonIcon} data={byReason} nameKey="reason" loading={loading} />
         </Grid>
 
         {/* By Category */}
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <BreakdownTable title="حسب فئة الخدمة" icon={CategoryIcon} data={byCategory} nameKey="category" loading={loading} />
         </Grid>
       </Grid>

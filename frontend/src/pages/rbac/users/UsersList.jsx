@@ -244,10 +244,10 @@ const UsersList = () => {
 
       <Grid container spacing={3}>
         {/* Search */}
-        <Grid item xs={12}>
+        <Grid size={12}>
           <MainCard title="البحث">
             <Grid container spacing={2} alignItems="center">
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <TextField
                   fullWidth
                   label="بحث"
@@ -257,12 +257,12 @@ const UsersList = () => {
                   onKeyDown={handleSearchKeyDown}
                 />
               </Grid>
-              <Grid item xs={12} md={2}>
+              <Grid size={{ xs: 12, md: 2 }}>
                 <Button fullWidth variant="contained" onClick={handleSearch}>
                   بحث
                 </Button>
               </Grid>
-              <Grid item xs={12} md={2}>
+              <Grid size={{ xs: 12, md: 2 }}>
                 <Button
                   fullWidth
                   variant="outlined"
@@ -280,7 +280,7 @@ const UsersList = () => {
         </Grid>
 
         {/* Users Table */}
-        <Grid item xs={12}>
+        <Grid size={12}>
           <MainCard
             content={false}
             title={

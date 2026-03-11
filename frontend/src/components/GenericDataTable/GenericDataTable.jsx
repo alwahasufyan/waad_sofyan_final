@@ -137,6 +137,8 @@ const GenericDataTable = ({
   stickyHeader = true,
   minHeight = 400,
   maxHeight = 'calc(100vh - 300px)',
+  compact = false,
+  tableSize = 'medium',
   onRowClick,
   emptyMessage = 'لا توجد بيانات',
   rowsPerPageOptions = [5, 10, 25, 50, 100]
@@ -253,6 +255,8 @@ const GenericDataTable = ({
                 sx={{
                   fontWeight: 'bold',
                   backgroundColor: 'primary.lighter',
+                  py: compact ? 1.5 : 1.5,
+                  px: compact ? 1 : 2,
                   minWidth: header.column.columnDef.minWidth || 100,
                   width: header.column.columnDef.width,
                   maxWidth: header.column.columnDef.maxWidth
@@ -344,7 +348,11 @@ const GenericDataTable = ({
             }}
           >
             {row.getVisibleCells().map((cell) => (
-              <TableCell key={cell.id} align={cell.column.columnDef.align || 'right'}>
+              <TableCell
+                key={cell.id}
+                align={cell.column.columnDef.align || 'right'}
+                sx={{ py: compact ? 1.3 : 1.2, px: compact ? 1 : 2 }}
+              >
                 {flexRender(cell.column.columnDef.cell, cell.getContext())}
               </TableCell>
             ))}
@@ -400,7 +408,7 @@ const GenericDataTable = ({
           }
         }}
       >
-        <Table stickyHeader={stickyHeader} size="medium">
+        <Table stickyHeader={stickyHeader} size={compact ? 'small' : tableSize}>
           {renderTableHeader()}
           {renderTableBody()}
         </Table>

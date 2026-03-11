@@ -558,7 +558,7 @@ const ProviderEdit = () => {
         <Typography variant="h5">البيانات الأساسية</Typography>
       </Box>
       <Grid container spacing={3}>
-        <Grid item xs={12}>
+        <Grid size={12}>
           <Controller
             name="name"
             control={providerControl}
@@ -567,21 +567,21 @@ const ProviderEdit = () => {
             )}
           />
         </Grid>
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Controller
             name="licenseNumber"
             control={providerControl}
             render={({ field }) => <TextField {...field} fullWidth required label="رقم الترخيص" disabled />}
           />
         </Grid>
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Controller
             name="taxNumber"
             control={providerControl}
             render={({ field }) => <TextField {...field} fullWidth label="الرقم الضريبي" />}
           />
         </Grid>
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Controller
             name="providerType"
             control={providerControl}
@@ -596,7 +596,7 @@ const ProviderEdit = () => {
             )}
           />
         </Grid>
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Controller
             name="networkStatus"
             control={providerControl}
@@ -611,7 +611,7 @@ const ProviderEdit = () => {
             )}
           />
         </Grid>
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Controller
             name="active"
             control={providerControl}
@@ -634,20 +634,20 @@ const ProviderEdit = () => {
         <Typography variant="h5">الموقع والتواصل</Typography>
       </Box>
       <Grid container spacing={3}>
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Controller name="city" control={providerControl} render={({ field }) => <TextField {...field} fullWidth label="المدينة" />} />
         </Grid>
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Controller name="address" control={providerControl} render={({ field }) => <TextField {...field} fullWidth label="العنوان" />} />
         </Grid>
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Controller
             name="phone"
             control={providerControl}
             render={({ field }) => <TextField {...field} fullWidth label="رقم الهاتف" />}
           />
         </Grid>
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Controller
             name="email"
             control={providerControl}
@@ -668,7 +668,7 @@ const ProviderEdit = () => {
       </Box>
       <Grid container spacing={3}>
         {/* Contract Start Date - ✅ BUG-001 FIX */}
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Controller
             name="contractStartDate"
             control={providerControl}
@@ -687,7 +687,7 @@ const ProviderEdit = () => {
         </Grid>
 
         {/* Contract End Date - ✅ BUG-001 FIX */}
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Controller
             name="contractEndDate"
             control={providerControl}
@@ -705,7 +705,7 @@ const ProviderEdit = () => {
           />
         </Grid>
 
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Controller
             name="defaultDiscountRate"
             control={providerControl}
@@ -850,7 +850,7 @@ const ProviderEdit = () => {
             </>
           ) : (
             <Grid container spacing={2}>
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <Controller
                   name="username"
                   control={newUserControl}
@@ -873,14 +873,14 @@ const ProviderEdit = () => {
                   )}
                 />
               </Grid>
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <Controller
                   name="fullName"
                   control={newUserControl}
                   render={({ field }) => <TextField {...field} fullWidth label="الاسم الكامل" />}
                 />
               </Grid>
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <Controller
                   name="password"
                   control={newUserControl}
@@ -911,7 +911,7 @@ const ProviderEdit = () => {
                   )}
                 />
               </Grid>
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <Controller
                   name="confirmPassword"
                   control={newUserControl}
@@ -929,7 +929,7 @@ const ProviderEdit = () => {
                 />
               </Grid>
               {newUserPassword && (
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <Box sx={{ mb: 1 }}>
                     <Typography variant="caption" color="text.secondary">
                       قوة كلمة المرور: <strong>{getPasswordStrength(newUserPassword).label}</strong>
@@ -949,7 +949,7 @@ const ProviderEdit = () => {
                   />
                 </Grid>
               )}
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <Button fullWidth variant="contained" onClick={handleNewUserSubmit(handleCreateAndLinkUser)}>
                   إنشاء وربط
                 </Button>

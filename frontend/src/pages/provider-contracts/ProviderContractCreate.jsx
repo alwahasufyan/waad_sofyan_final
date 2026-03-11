@@ -262,7 +262,7 @@ const ProviderContractCreate = () => {
             {/* ═════════════════════════════════════════════════════════════ */}
             {/* SECTION 1: Provider Selection */}
             {/* ═════════════════════════════════════════════════════════════ */}
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Paper elevation={0} sx={{ p: 3, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
                   <Business color="primary" />
@@ -372,7 +372,7 @@ const ProviderContractCreate = () => {
             {/* ═════════════════════════════════════════════════════════════ */}
             {/* SECTION 2: Contract Details */}
             {/* ═════════════════════════════════════════════════════════════ */}
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Paper elevation={0} sx={{ p: 3, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
                   <DateRange color="primary" />
@@ -381,7 +381,7 @@ const ProviderContractCreate = () => {
 
                 <Grid container spacing={3}>
                   {/* Auto-Generated Contract Code */}
-                  <Grid item xs={12}>
+                  <Grid size={12}>
                     <Alert severity="info" sx={{ mb: 2 }}>
                       <Typography variant="body2">
                         <strong>رمز العقد:</strong> سيتم إنشاء رمز تلقائي للعقد عند الحفظ
@@ -404,7 +404,7 @@ const ProviderContractCreate = () => {
                   </Grid>
 
                   {/* Start Date */}
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <LocalizationProvider dateAdapter={AdapterDateFns}>
                       <DatePicker
                         label="تاريخ بداية العقد *"
@@ -423,7 +423,7 @@ const ProviderContractCreate = () => {
                   </Grid>
 
                   {/* End Date */}
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <LocalizationProvider dateAdapter={AdapterDateFns}>
                       <DatePicker
                         label="تاريخ انتهاء العقد *"
@@ -444,7 +444,7 @@ const ProviderContractCreate = () => {
 
                   {/* Contract Duration Info */}
                   {contractDuration > 0 && (
-                    <Grid item xs={12}>
+                    <Grid size={12}>
                       <Alert severity="success" icon={<Info />}>
                         <Typography variant="body2">
                           مدة العقد: <strong>{contractDuration}</strong> شهر ({Math.floor(contractDuration / 12)} سنة و{' '}
@@ -460,7 +460,7 @@ const ProviderContractCreate = () => {
             {/* ═════════════════════════════════════════════════════════════ */}
             {/* SECTION 3: Pricing Model */}
             {/* ═════════════════════════════════════════════════════════════ */}
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Paper elevation={0} sx={{ p: 3, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
                   <AttachMoney color="primary" />
@@ -469,7 +469,7 @@ const ProviderContractCreate = () => {
 
                 <Grid container spacing={3}>
                   {/* Pricing Model */}
-                  <Grid item xs={12} md={formData.pricingModel === 'DISCOUNT' ? 6 : 12}>
+                  <Grid size={{ xs: 12, md: formData.pricingModel === 'DISCOUNT' ? 6 : 12 }}>
                     <FormControl fullWidth error={!!errors.pricingModel}>
                       <InputLabel>نموذج التسعير *</InputLabel>
                       <Select
@@ -498,7 +498,7 @@ const ProviderContractCreate = () => {
 
                   {/* Discount Rate (conditional) */}
                   {formData.pricingModel === 'DISCOUNT' && (
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <TextField
                         fullWidth
                         type="number"
@@ -521,12 +521,12 @@ const ProviderContractCreate = () => {
                   )}
 
                   {/* Pricing Model Info */}
-                  <Grid item xs={12}>
+                  <Grid size={12}>
                     <Alert severity="info">{PRICING_MODELS.find((m) => m.value === formData.pricingModel)?.description}</Alert>
                   </Grid>
 
                   {/* Notes */}
-                  <Grid item xs={12}>
+                  <Grid size={12}>
                     <TextField
                       fullWidth
                       multiline
@@ -546,7 +546,7 @@ const ProviderContractCreate = () => {
             {/* ═════════════════════════════════════════════════════════════ */}
             {/* Action Buttons */}
             {/* ═════════════════════════════════════════════════════════════ */}
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, pt: 2 }}>
                 <Button variant="outlined" onClick={() => navigate('/provider-contracts')} disabled={createMutation.isLoading}>
                   إلغاء

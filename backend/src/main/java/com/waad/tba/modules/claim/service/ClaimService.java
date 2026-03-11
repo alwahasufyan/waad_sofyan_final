@@ -149,6 +149,10 @@ public class ClaimService {
     // Phase 10 (2026-03-06): Provider-Employer Security Hardening
     private final com.waad.tba.modules.provider.repository.ProviderAllowedEmployerRepository providerAllowedEmployerRepository;
 
+    // Phase 11 (2026-03-11): Mandatory Monthly Batches
+    private final ClaimBatchService claimBatchService;
+    private final com.waad.tba.modules.claim.repository.ClaimBatchRepository claimBatchRepository;
+
     // Jakarta persistence for native cleanup (RESTRICT constraint bypass)
     private final jakarta.persistence.EntityManager em;
 
@@ -306,7 +310,21 @@ public class ClaimService {
         Map<Long, MedicalService> medicalServiceMap = medicalServiceRepository.findAllById(serviceIds).stream()
                 .collect(Collectors.toMap(MedicalService::getId, s -> s));
 
-        Claim claim = claimMapper.toEntity(dto, visit, provider, preAuth, medicalServiceMap);
+        // Resolve Claim Batch (Phase 11)
+        com.waad.tba.modules.claim.entity.ClaimBatch claimBatch = null;
+        if (dto.getClaimBatchId() != null) {
+            claimBatchService.validateBatchIsOpen(dto.getClaimBatchId());
+            claimBatch = claimBatchRepository.findById(dto.getClaimBatchId()).orElse(null);
+
+            if (claimBatch != null) {
+                if (!claimBatch.getProviderId().equals(provider.getId()) ||
+                        !claimBatch.getEmployerId().equals(visit.getMember().getEmployer().getId())) {
+                    throw new BusinessRuleException("الدفعة المختارة لا تتطابق مع المزود أو جهة العمل للمطالبة.");
+                }
+            }
+        }
+
+        Claim claim = claimMapper.toEntity(dto, visit, provider, preAuth, claimBatch, medicalServiceMap);
         // Status is already SETTLED by mapper as per user request
         Claim savedClaim = claimRepository.save(claim);
 
@@ -384,9 +402,18 @@ public class ClaimService {
         ClaimStatus previousStatus = claim.getStatus();
 
         // PART 2 — CLAIM SAFETY: Protect Claim Modification After Submission
-        if (claim.getStatus() != ClaimStatus.DRAFT) {
+        // PHASE 11 Update: Allow editing SETTLED/REJECTED for manual entry fixes
+        // (Backlog Flow)
+        if (claim.getStatus() != ClaimStatus.DRAFT &&
+                claim.getStatus() != ClaimStatus.SETTLED &&
+                claim.getStatus() != ClaimStatus.REJECTED) {
             throw new IllegalStateException(
-                    "Claim cannot be modified after submission. Current status: " + claim.getStatus());
+                    "لا يمكن تعديل المطالبة في حالتها الحالية: " + claim.getStatus());
+        }
+
+        // Validate Claim Batch if present (Editing restricted to OPEN batches)
+        if (claim.getClaimBatch() != null) {
+            claimBatchService.validateBatchIsOpen(claim.getClaimBatch().getId());
         }
 
         // ══════════════════════════════════════════════════════════════════════════
@@ -426,9 +453,13 @@ public class ClaimService {
 
         } else {
             // Regular update - check if edits are allowed
-            if (!claimStateMachine.canEdit(claim)) {
+            // PHASE 11: Allow SETTLED/REJECTED for manual entries
+            if (!claimStateMachine.canEdit(claim) &&
+                    claim.getStatus() != ClaimStatus.SETTLED &&
+                    claim.getStatus() != ClaimStatus.REJECTED) {
                 throw new BusinessRuleException(
-                        String.format("Cannot edit claim in %s status. Only DRAFT and NEEDS_CORRECTION allow edits.",
+                        String.format(
+                                "لا يمكن تعديل المطالبة في حالة %s. التعديل مسموح فقط للمسودات والمطالبات اليدوية.",
                                 claim.getStatus()));
             }
         }
@@ -510,6 +541,13 @@ public class ClaimService {
 
         if (dto.getRejectionReason() != null) {
             claim.setReviewerComment(dto.getRejectionReason());
+        }
+
+        if (dto.getPrimaryCategoryCode() != null) {
+            claim.setPrimaryCategoryCode(dto.getPrimaryCategoryCode());
+        }
+        if (dto.getManualCategoryEnabled() != null) {
+            claim.setManualCategoryEnabled(dto.getManualCategoryEnabled());
         }
 
         // DRAFT line edits (services/categories/quantities) with backend contract
@@ -786,7 +824,8 @@ public class ClaimService {
 
     @Transactional(readOnly = true)
     public Page<ClaimViewDto> listClaims(Long employerId, Long providerId, ClaimStatus status, LocalDate dateFrom,
-            LocalDate dateTo, int page, int size, String sortBy, String sortDir, String search) {
+            LocalDate dateTo, LocalDate createdDateFrom, LocalDate createdDateTo,
+            int page, int size, String sortBy, String sortDir, String search) {
         log.debug(
                 "📋 Listing claims with pagination. employerId={}, providerId={}, status={}, page={}, size={}, sortBy={}, sortDir={}, search={}",
                 employerId, providerId, status, page, size, sortBy, sortDir, search);
@@ -807,6 +846,11 @@ public class ClaimService {
         Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
         String keyword = (search != null && !search.trim().isEmpty()) ? search.trim() : "";
 
+        // Claim entry date filter boundaries (inclusive from, inclusive-to-day via
+        // next-day exclusive)
+        LocalDateTime createdAtFrom = createdDateFrom != null ? createdDateFrom.atStartOfDay() : null;
+        LocalDateTime createdAtTo = createdDateTo != null ? createdDateTo.plusDays(1).atStartOfDay() : null;
+
         // ══════════════════════════════════════════════════════════════════════════
         // MEDICAL REVIEWER ISOLATION: Filter by assigned providers
         // ══════════════════════════════════════════════════════════════════════════
@@ -826,13 +870,14 @@ public class ClaimService {
                     currentUser.getId(), allowedProviderIds.size());
 
             claimsPage = claimRepository.searchPagedWithFiltersAndReviewerProviders(
-                    keyword, allowedProviderIds, employerId, status, dateFrom, dateTo, pageable);
+                    keyword, allowedProviderIds, employerId, status, dateFrom, dateTo, createdAtFrom, createdAtTo,
+                    pageable);
         } else {
             // Admin/SuperAdmin - see all claims (bypass isolation)
             log.debug("✅ [BYPASS] User {} bypasses reviewer isolation", currentUser.getId());
 
             claimsPage = claimRepository.searchPagedWithFilters(
-                    keyword, employerId, providerId, status, dateFrom, dateTo, pageable);
+                    keyword, employerId, providerId, status, dateFrom, dateTo, createdAtFrom, createdAtTo, pageable);
         }
 
         return claimsPage.map(claimMapper::toViewDto);

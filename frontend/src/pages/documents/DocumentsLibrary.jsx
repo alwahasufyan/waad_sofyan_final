@@ -565,7 +565,7 @@ const DocumentsLibrary = () => {
 
             {/* Statistics Cards */}
             <Grid container spacing={2} sx={{ mb: 3 }}>
-              <Grid item xs={12} sm={6} md={2}>
+              <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                 <Card sx={{ bgcolor: 'primary.lighter' }}>
                   <CardContent>
                     <Typography variant="h4" color="primary">
@@ -577,7 +577,7 @@ const DocumentsLibrary = () => {
                   </CardContent>
                 </Card>
               </Grid>
-              <Grid item xs={12} sm={6} md={2}>
+              <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                 <Card sx={{ bgcolor: 'secondary.lighter' }}>
                   <CardContent>
                     <Typography variant="h4" color="secondary">
@@ -589,7 +589,7 @@ const DocumentsLibrary = () => {
                   </CardContent>
                 </Card>
               </Grid>
-              <Grid item xs={12} sm={6} md={2}>
+              <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                 <Card sx={{ bgcolor: 'info.lighter' }}>
                   <CardContent>
                     <Typography variant="h4" color="info.main">
@@ -601,7 +601,7 @@ const DocumentsLibrary = () => {
                   </CardContent>
                 </Card>
               </Grid>
-              <Grid item xs={12} sm={6} md={2}>
+              <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                 <Card sx={{ bgcolor: 'warning.lighter' }}>
                   <CardContent>
                     <Typography variant="h4" color="warning.main">
@@ -613,7 +613,7 @@ const DocumentsLibrary = () => {
                   </CardContent>
                 </Card>
               </Grid>
-              <Grid item xs={12} sm={6} md={2}>
+              <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                 <Card sx={{ bgcolor: 'error.lighter' }}>
                   <CardContent>
                     <Typography variant="h4" color="error.main">
@@ -625,7 +625,7 @@ const DocumentsLibrary = () => {
                   </CardContent>
                 </Card>
               </Grid>
-              <Grid item xs={12} sm={6} md={2}>
+              <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                 <Card sx={{ bgcolor: 'success.lighter' }}>
                   <CardContent>
                     <Typography variant="h4" color="success.main">
@@ -637,7 +637,7 @@ const DocumentsLibrary = () => {
                   </CardContent>
                 </Card>
               </Grid>
-              <Grid item xs={12} sm={6} md={2}>
+              <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                 <Card sx={{ bgcolor: 'warning.lighter' }}>
                   <CardContent>
                     <Typography variant="h4" color="warning.main">

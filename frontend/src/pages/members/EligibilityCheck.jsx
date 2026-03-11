@@ -169,7 +169,7 @@ const EligibilityCheck = () => {
 
       <Grid container spacing={3}>
         {/* Barcode Input Card */}
-        <Grid item xs={12}>
+        <Grid size={12}>
           <MainCard>
             <Stack spacing={3}>
               <Alert severity="info" icon={<QrCodeIcon />}>
@@ -177,7 +177,7 @@ const EligibilityCheck = () => {
               </Alert>
 
               <Grid container spacing={2} alignItems="flex-start">
-                <Grid item xs={12} md={8}>
+                <Grid size={{ xs: 12, md: 8 }}>
                   <TextField
                     fullWidth
                     label="Barcode"
@@ -194,7 +194,7 @@ const EligibilityCheck = () => {
                   />
                 </Grid>
 
-                <Grid item xs={12} md={4}>
+                <Grid size={{ xs: 12, md: 4 }}>
                   <Stack direction="row" spacing={1}>
                     <Button
                       fullWidth
@@ -222,11 +222,11 @@ const EligibilityCheck = () => {
         {familyData && (
           <>
             {/* Principal Member Card */}
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Card elevation={3}>
                 <CardContent>
                   <Grid container spacing={3}>
-                    <Grid item xs={12}>
+                    <Grid size={12}>
                       <Stack direction="row" spacing={2} alignItems="center">
                         <MemberAvatar member={familyData.principal} size={64} />
                         <Box>
@@ -246,11 +246,11 @@ const EligibilityCheck = () => {
                       </Stack>
                     </Grid>
 
-                    <Grid item xs={12}>
+                    <Grid size={12}>
                       <Divider />
                     </Grid>
 
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <Paper elevation={1} sx={{ p: 2, bgcolor: 'primary.lighter' }}>
                         <Stack direction="row" spacing={2} alignItems="center">
                           <QrCodeIcon color="primary" />
@@ -266,7 +266,7 @@ const EligibilityCheck = () => {
                       </Paper>
                     </Grid>
 
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <Paper elevation={1} sx={{ p: 2 }}>
                         <Stack direction="row" spacing={2} alignItems="center">
                           <CreditCardIcon color="secondary" />
@@ -283,14 +283,14 @@ const EligibilityCheck = () => {
                     </Grid>
 
                     {/* Financial Summary */}
-                    <Grid item xs={12}>
+                    <Grid size={12}>
                       <Typography variant="subtitle1" gutterBottom sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
                         <AccountBalanceWalletIcon fontSize="small" color="primary" />
                         الملخص المالي للمنتفع
                       </Typography>
                     </Grid>
 
-                    <Grid item xs={12} md={4}>
+                    <Grid size={{ xs: 12, md: 4 }}>
                       <Paper elevation={0} variant="outlined" sx={{ p: 1.5, bgcolor: 'success.lighter', borderLeft: '4px solid', borderLeftColor: 'success.main' }}>
                         <Stack direction="row" spacing={1.5} alignItems="center">
                           <SavingsIcon color="success" />
@@ -306,7 +306,7 @@ const EligibilityCheck = () => {
                       </Paper>
                     </Grid>
 
-                    <Grid item xs={12} md={4}>
+                    <Grid size={{ xs: 12, md: 4 }}>
                       <Paper elevation={0} variant="outlined" sx={{ p: 1.5, bgcolor: 'warning.lighter', borderLeft: '4px solid', borderLeftColor: 'warning.main' }}>
                         <Stack direction="row" spacing={1.5} alignItems="center">
                           <PaymentsIcon color="warning" />
@@ -322,7 +322,7 @@ const EligibilityCheck = () => {
                       </Paper>
                     </Grid>
 
-                    <Grid item xs={12} md={4}>
+                    <Grid size={{ xs: 12, md: 4 }}>
                       <Paper elevation={0} variant="outlined" sx={{ p: 1.5, bgcolor: 'info.lighter', borderLeft: '4px solid', borderLeftColor: 'info.main' }}>
                         <Stack direction="row" spacing={1.5} alignItems="center">
                           <TrendingUpIcon color="info" />
@@ -338,7 +338,7 @@ const EligibilityCheck = () => {
                       </Paper>
                     </Grid>
 
-                    <Grid item xs={12} md={4}>
+                    <Grid size={{ xs: 12, md: 4 }}>
                       <Stack spacing={0.5}>
                         <Typography variant="caption" color="text.secondary">
                           تاريخ الميلاد
@@ -347,7 +347,7 @@ const EligibilityCheck = () => {
                       </Stack>
                     </Grid>
 
-                    <Grid item xs={12} md={4}>
+                    <Grid size={{ xs: 12, md: 4 }}>
                       <Stack spacing={0.5}>
                         <Typography variant="caption" color="text.secondary">
                           الجنس
@@ -356,7 +356,7 @@ const EligibilityCheck = () => {
                       </Stack>
                     </Grid>
 
-                    <Grid item xs={12} md={4}>
+                    <Grid size={{ xs: 12, md: 4 }}>
                       <Stack spacing={0.5}>
                         <Typography variant="caption" color="text.secondary">
                           جهة العمل
@@ -366,14 +366,14 @@ const EligibilityCheck = () => {
                     </Grid>
 
                     {!familyData.principal?.eligible && (
-                      <Grid item xs={12}>
+                      <Grid size={12}>
                         <Alert severity="warning">
                           <strong>سبب عدم الأهلية:</strong> {familyData.principal?.eligibilityReason || 'غير محدد'}
                         </Alert>
                       </Grid>
                     )}
 
-                    <Grid item xs={12}>
+                    <Grid size={12}>
                       <Button
                         fullWidth
                         variant="contained"
@@ -392,7 +392,7 @@ const EligibilityCheck = () => {
 
             {/* Dependents Table */}
             {familyData.dependents && familyData.dependents.length > 0 && (
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <MainCard
                   title={
                     <Stack direction="row" spacing={2} alignItems="center">
@@ -489,11 +489,11 @@ const EligibilityCheck = () => {
             )}
 
             {/* Summary */}
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Card>
                 <CardContent>
                   <Grid container spacing={2}>
-                    <Grid item xs={12} md={4}>
+                    <Grid size={{ xs: 12, md: 4 }}>
                       <Box textAlign="center">
                         <Typography variant="h3" color="primary.main">
                           {familyData.totalFamilyMembers || 0}
@@ -503,7 +503,7 @@ const EligibilityCheck = () => {
                         </Typography>
                       </Box>
                     </Grid>
-                    <Grid item xs={12} md={4}>
+                    <Grid size={{ xs: 12, md: 4 }}>
                       <Box textAlign="center">
                         <Typography variant="h3" color="success.main">
                           {familyData.eligibleMembersCount || 0}
@@ -513,7 +513,7 @@ const EligibilityCheck = () => {
                         </Typography>
                       </Box>
                     </Grid>
-                    <Grid item xs={12} md={4}>
+                    <Grid size={{ xs: 12, md: 4 }}>
                       <Box textAlign="center">
                         <Typography variant="h3" color="error.main">
                           {(familyData.totalFamilyMembers || 0) - (familyData.eligibleMembersCount || 0)}

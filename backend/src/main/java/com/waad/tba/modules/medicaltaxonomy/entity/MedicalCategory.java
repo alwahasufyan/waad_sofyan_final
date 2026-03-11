@@ -57,11 +57,8 @@ public class MedicalCategory {
      * Allows a category (e.g. Lab) to belong to multiple roots (OP, IP, etc.)
      */
     @jakarta.persistence.ManyToMany(fetch = jakarta.persistence.FetchType.LAZY)
-    @jakarta.persistence.JoinTable(
-        name = "medical_category_roots",
-        joinColumns = @jakarta.persistence.JoinColumn(name = "category_id"),
-        inverseJoinColumns = @jakarta.persistence.JoinColumn(name = "root_id")
-    )
+    @jakarta.persistence.JoinTable(name = "medical_category_roots", joinColumns = @jakarta.persistence.JoinColumn(name = "category_id"), inverseJoinColumns = @jakarta.persistence.JoinColumn(name = "root_id"))
+    @Builder.Default
     private java.util.Set<MedicalCategory> roots = new java.util.HashSet<>();
 
     @Enumerated(EnumType.STRING)

@@ -65,6 +65,10 @@ public class Claim {
     @JoinColumn(name = "pre_authorization_id")
     private PreAuthorization preAuthorization;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "claim_batch_id")
+    private ClaimBatch claimBatch;
+
     // ==================== UNIFIED WORKFLOW ====================
 
     /**

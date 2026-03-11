@@ -379,10 +379,10 @@ const MedicalCategoryEdit = () => {
           <Stack spacing={3}>
             <Skeleton variant="rectangular" height={80} sx={{ borderRadius: 2 }} />
             <Grid container spacing={2}>
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <Skeleton variant="rectangular" height={100} sx={{ borderRadius: 2 }} />
               </Grid>
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <Skeleton variant="rectangular" height={100} sx={{ borderRadius: 2 }} />
               </Grid>
             </Grid>
@@ -459,7 +459,7 @@ const MedicalCategoryEdit = () => {
           />
 
           <Grid container spacing={2} sx={{ mb: 4 }}>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <CategoryTypeCard
                 type={CATEGORY_TYPE.MAIN}
                 selected={categoryType === CATEGORY_TYPE.MAIN}
@@ -467,7 +467,7 @@ const MedicalCategoryEdit = () => {
                 disabled={submitting}
               />
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <CategoryTypeCard
                 type={CATEGORY_TYPE.SUB}
                 selected={categoryType === CATEGORY_TYPE.SUB}
@@ -561,7 +561,7 @@ const MedicalCategoryEdit = () => {
 
           <Grid container spacing={3}>
             {/* Code Field (Read-Only) */}
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 label="رمز التصنيف"
@@ -581,7 +581,7 @@ const MedicalCategoryEdit = () => {
             </Grid>
 
             {/* Name Field */}
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 required
@@ -603,7 +603,7 @@ const MedicalCategoryEdit = () => {
             </Grid>
 
             {/* Context / Care-Setting Field */}
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <FormControl fullWidth>
                 <InputLabel>السياق السريري (نوع الرعاية)</InputLabel>
                 <Select
@@ -622,7 +622,7 @@ const MedicalCategoryEdit = () => {
             </Grid>
 
             {/* Active Status */}
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Paper
                 variant="outlined"
                 sx={{

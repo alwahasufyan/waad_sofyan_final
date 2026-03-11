@@ -92,7 +92,7 @@ const RolesDisplay = ({ user, allRoles, userRoleIds }) => {
           const roleName = role?.name || '';
 
           return (
-            <Grid item xs={12} sm={6} md={4} key={role?.id}>
+            <Grid key={role?.id} size={{ xs: 12, sm: 6, md: 4 }}>
               <Paper
                 elevation={isAssigned ? 3 : 0}
                 sx={{

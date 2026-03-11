@@ -80,12 +80,12 @@ const STATUS_LABELS = {
 // Helper Info Row Component
 const InfoRow = ({ label, value, valueColor }) => (
   <Grid container spacing={2} sx={{ mb: 1.5 }}>
-    <Grid item xs={12} sm={4}>
+    <Grid size={{ xs: 12, sm: 4 }}>
       <Typography variant="subtitle2" color="text.secondary">
         {label}
       </Typography>
     </Grid>
-    <Grid item xs={12} sm={8}>
+    <Grid size={{ xs: 12, sm: 8 }}>
       <Typography variant="body1" color={valueColor || 'text.primary'}>
         {value ?? '-'}
       </Typography>
@@ -314,7 +314,7 @@ const PreApprovalView = () => {
       />
       <Grid container spacing={2}>
         {/* ===================== MAIN CONTENT AREA ===================== */}
-        <Grid item xs={12} md={showDocumentPanel ? 8 : 12}>
+        <Grid size={{ xs: 12, md: showDocumentPanel ? 8 : 12 }}>
           <MainCard>
             <Stack spacing={2}>
               {/* ===================== WORKFLOW TIMELINE ===================== */}
@@ -360,7 +360,7 @@ const PreApprovalView = () => {
 
               <Grid container spacing={2}>
                 {/* ===================== BASIC INFORMATION ===================== */}
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                   <Card variant="outlined" sx={{ height: '100%' }}>
                     <CardContent>
                       <Typography variant="h6" gutterBottom>
@@ -378,7 +378,7 @@ const PreApprovalView = () => {
                 </Grid>
 
                 {/* ===================== MEDICAL INFORMATION ===================== */}
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                   <Card variant="outlined" sx={{ height: '100%' }}>
                     <CardContent>
                       <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
@@ -399,7 +399,7 @@ const PreApprovalView = () => {
                 </Grid>
 
                 {/* ===================== ATTACHMENTS SECTION ===================== */}
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <Card variant="outlined">
                     <CardContent>
                       <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
@@ -458,7 +458,7 @@ const PreApprovalView = () => {
                 </Grid>
 
                 {/* ===================== FINANCIAL INFORMATION ===================== */}
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <Card variant="outlined">
                     <CardContent>
                       <Typography variant="h6" gutterBottom>
@@ -510,7 +510,7 @@ const PreApprovalView = () => {
 
                 {/* ===================== ACTION HINT (APPROVED ONLY) ===================== */}
                 {preApproval?.status === 'APPROVED' && (
-                  <Grid item xs={12}>
+                  <Grid size={12}>
                     <Card variant="outlined" sx={{ bgcolor: 'info.lighter', borderColor: 'info.light' }}>
                       <CardContent>
                         <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between">
@@ -533,7 +533,7 @@ const PreApprovalView = () => {
                 )}
 
                 {/* ===================== AUDIT INFORMATION ===================== */}
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <Card variant="outlined">
                     <CardContent>
                       <Typography variant="h6" gutterBottom>
@@ -541,25 +541,25 @@ const PreApprovalView = () => {
                       </Typography>
                       <Divider sx={{ mb: 2 }} />
                       <Grid container spacing={2}>
-                        <Grid item xs={12} md={6}>
+                        <Grid size={{ xs: 12, md: 6 }}>
                           <InfoRow
                             label="تاريخ الإنشاء"
                             value={preApproval?.createdAt ? new Date(preApproval.createdAt).toLocaleString('ar-KW') : '-'}
                           />
                         </Grid>
-                        <Grid item xs={12} md={6}>
+                        <Grid size={{ xs: 12, md: 6 }}>
                           <InfoRow
                             label="تاريخ آخر تحديث"
                             value={preApproval?.updatedAt ? new Date(preApproval.updatedAt).toLocaleString('ar-KW') : '-'}
                           />
                         </Grid>
                         {preApproval?.createdBy && (
-                          <Grid item xs={12} md={6}>
+                          <Grid size={{ xs: 12, md: 6 }}>
                             <InfoRow label="أنشئ بواسطة" value={preApproval.createdBy} />
                           </Grid>
                         )}
                         {preApproval?.updatedBy && (
-                          <Grid item xs={12} md={6}>
+                          <Grid size={{ xs: 12, md: 6 }}>
                             <InfoRow label="آخر تحديث بواسطة" value={preApproval.updatedBy} />
                           </Grid>
                         )}
@@ -574,7 +574,7 @@ const PreApprovalView = () => {
 
         {/* ===================== DOCUMENT SIDE PANEL (SPLIT LAYOUT) ===================== */}
         {showDocumentPanel && (
-          <Grid item xs={12} md={5}>
+          <Grid size={{ xs: 12, md: 5 }}>
             <Box sx={{ position: 'sticky', top: 16, height: 'calc(100vh - 100px)' }}>
               {/* If no document selected, show list or empty state */}
               {!previewDocument ? (

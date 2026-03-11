@@ -112,7 +112,7 @@ const getErrorInfo = (error) => {
  * Follows Mantis pattern: Typography label + Typography value
  */
 const DetailRow = ({ label, value, fullWidth = false }) => (
-  <Grid item xs={12} md={fullWidth ? 12 : 6}>
+  <Grid size={{ xs: 12, md: fullWidth ? 12 : 6 }}>
     <Box sx={{ mb: 1 }}>
       <Typography variant="subtitle2" color="text.secondary" gutterBottom>
         {label}
@@ -271,7 +271,7 @@ const MedicalServiceView = () => {
 
         <Grid container spacing={3}>
           {/* Active Status */}
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Box sx={{ mb: 1 }}>
               <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                 حالة التفعيل

@@ -47,7 +47,7 @@ const BenefitPolicyFilters = ({ filters = DEFAULT_FILTERS, onFilterChange, showE
       {/* Primary Filters Row */}
       <Grid container spacing={2} alignItems="center">
         {/* Policy Search */}
-        <Grid item xs={12} sm={6} md={4}>
+        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
           <TextField
             fullWidth
             size="small"
@@ -67,7 +67,7 @@ const BenefitPolicyFilters = ({ filters = DEFAULT_FILTERS, onFilterChange, showE
         </Grid>
 
         {/* Status Filter */}
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <FormControl fullWidth size="small">
             <InputLabel>حالة الوثيقة</InputLabel>
             <Select value={filters.status} onChange={handleChange('status')} label="حالة الوثيقة" disabled={loading}>
@@ -84,7 +84,7 @@ const BenefitPolicyFilters = ({ filters = DEFAULT_FILTERS, onFilterChange, showE
         </Grid>
 
         {/* Toggle Advanced Filters */}
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Button
             variant={expanded ? 'contained' : 'outlined'}
             color="primary"
@@ -99,7 +99,7 @@ const BenefitPolicyFilters = ({ filters = DEFAULT_FILTERS, onFilterChange, showE
 
         {/* Clear Filters */}
         {hasActiveFilters && (
-          <Grid item xs={12} sm={6} md={2}>
+          <Grid size={{ xs: 12, sm: 6, md: 2 }}>
             <Button
               variant="text"
               color="error"
@@ -121,7 +121,7 @@ const BenefitPolicyFilters = ({ filters = DEFAULT_FILTERS, onFilterChange, showE
           <Grid container spacing={2}>
             {/* Employer Search (Admin only) */}
             {showEmployerFilter && (
-              <Grid item xs={12} sm={6} md={4}>
+              <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                 <TextField
                   fullWidth
                   size="small"
@@ -142,7 +142,7 @@ const BenefitPolicyFilters = ({ filters = DEFAULT_FILTERS, onFilterChange, showE
             )}
 
             {/* Date From */}
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
               <TextField
                 fullWidth
                 size="small"
@@ -156,7 +156,7 @@ const BenefitPolicyFilters = ({ filters = DEFAULT_FILTERS, onFilterChange, showE
             </Grid>
 
             {/* Date To */}
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
               <TextField
                 fullWidth
                 size="small"

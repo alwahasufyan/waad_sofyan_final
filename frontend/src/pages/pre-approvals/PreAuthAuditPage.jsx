@@ -227,7 +227,7 @@ const PreAuthAuditPage = () => {
                 <Divider sx={{ my: 2 }} />
                 <Grid container spacing={2}>
                   {/* Action Type Filter */}
-                  <Grid item xs={12} sm={6} md={3}>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <FormControl fullWidth>
                       <InputLabel>نوع الإجراء</InputLabel>
                       <Select value={filters.action} onChange={(e) => handleFilterChange('action', e.target.value)} label="نوع الإجراء">
@@ -241,7 +241,7 @@ const PreAuthAuditPage = () => {
                   </Grid>
 
                   {/* User Filter */}
-                  <Grid item xs={12} sm={6} md={3}>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <TextField
                       fullWidth
                       label="المستخدم"
@@ -252,7 +252,7 @@ const PreAuthAuditPage = () => {
                   </Grid>
 
                   {/* Start Date */}
-                  <Grid item xs={12} sm={6} md={3}>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <DatePicker
                       label="من تاريخ"
                       value={filters.startDate}
@@ -266,7 +266,7 @@ const PreAuthAuditPage = () => {
                   </Grid>
 
                   {/* End Date */}
-                  <Grid item xs={12} sm={6} md={3}>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <DatePicker
                       label="إلى تاريخ"
                       value={filters.endDate}

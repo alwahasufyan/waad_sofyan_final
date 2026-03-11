@@ -114,6 +114,7 @@ const UnifiedMedicalTable = ({
   rows: rowsProp = [],
   data: dataProp,           // alias for rows
   loading = false,
+  isLoading,                // alias for loading
   totalCount: totalCountProp = 0,
   totalItems: totalItemsProp, // alias for totalCount
 
@@ -158,6 +159,35 @@ const UnifiedMedicalTable = ({
   // Styling
   sx = {},
   tableContainerSx = {},
+
+  // Extended props accepted but handled internally (not forwarded to DOM)
+  // eslint-disable-next-line no-unused-vars
+  dataFetchFn,
+  // eslint-disable-next-line no-unused-vars
+  queryKey,
+  // eslint-disable-next-line no-unused-vars
+  enableExport,
+  // eslint-disable-next-line no-unused-vars
+  onExportExcel,
+  // eslint-disable-next-line no-unused-vars
+  defaultSort,
+  // eslint-disable-next-line no-unused-vars
+  enableAdvancedFilters,
+  // eslint-disable-next-line no-unused-vars
+  filtersConfig,
+  // eslint-disable-next-line no-unused-vars
+  onFilterChange,
+  // eslint-disable-next-line no-unused-vars
+  enableSearch,
+  // eslint-disable-next-line no-unused-vars
+  searchPlaceholder,
+  // eslint-disable-next-line no-unused-vars
+  onSearchChange,
+  // eslint-disable-next-line no-unused-vars
+  onRefresh,
+  // eslint-disable-next-line no-unused-vars
+  enablePagination,
+
   ...otherProps
 }) => {
   const theme = useTheme();
@@ -166,8 +196,16 @@ const UnifiedMedicalTable = ({
   // Resolve aliased props
   const rows = dataProp !== undefined ? dataProp : rowsProp;
   const totalCount = totalItemsProp !== undefined ? totalItemsProp : totalCountProp;
+  const resolvedLoading = isLoading !== undefined ? isLoading : loading;
   const resolvedEmptyMessage = emptyStateConfig?.title || emptyStateConfig?.description || emptyMessage;
   const ResolvedEmptyIcon = emptyStateConfig?.icon || EmptyIcon;
+
+  // Normalize columns: support DataGrid-style 'field'/'headerName' as aliases for 'id'/'label'
+  const normalizedColumns = columns.map((col) => ({
+    ...col,
+    id: col.id || col.field,
+    label: col.label || col.headerName
+  }));
 
   // Theme colors
   const headerBg = isDark ? MEDICAL_TABLE_THEME.header.dark.background : MEDICAL_TABLE_THEME.header.light.background;
@@ -186,7 +224,7 @@ const UnifiedMedicalTable = ({
   };
 
   // Calculate columns span for loading/empty states
-  const colSpan = columns.length + (renderExpandedRow ? 1 : 0);
+  const colSpan = normalizedColumns.length + (renderExpandedRow ? 1 : 0);
 
   // Expansion state
   const [expandedRows, setExpandedRows] = useState({});
@@ -200,7 +238,7 @@ const UnifiedMedicalTable = ({
 
   // Handle sort
   const handleSortRequest = (columnId) => {
-    if (onSort && columns.find((col) => col.id === columnId)?.sortable !== false) {
+    if (onSort && normalizedColumns.find((col) => col.id === columnId)?.sortable !== false) {
       const isAsc = sortBy === columnId && sortDirection === 'asc';
       onSort(columnId, isAsc ? 'desc' : 'asc');
     }
@@ -243,7 +281,7 @@ const UnifiedMedicalTable = ({
                   }}
                 />
               )}
-              {columns.map((column) => {
+              {normalizedColumns.map((column) => {
                 const isSortable = column.sortable !== false && onSort;
                 const isActive = sortBy === column.id;
 
@@ -305,7 +343,7 @@ const UnifiedMedicalTable = ({
           {/* Body */}
           <TableBody>
             {/* Loading State */}
-            {loading ? (
+            {resolvedLoading ? (
               <TableRow>
                 <TableCell colSpan={colSpan} align="center" sx={{ py: 4 }}>
                   <CircularProgress size={40} />
@@ -314,7 +352,7 @@ const UnifiedMedicalTable = ({
                   </Typography>
                 </TableCell>
               </TableRow>
-            ) : rows.length === 0 ? (
+            ) : !rows || rows.length === 0 ? (
               /* Empty State */
               <TableRow>
                 <TableCell colSpan={colSpan} align="center" sx={{ py: 4 }}>
@@ -354,7 +392,7 @@ const UnifiedMedicalTable = ({
                           )}
                         </TableCell>
                       )}
-                      {columns.map((column) => (
+                      {normalizedColumns.map((column) => (
                         <TableCell
                           key={column.id}
                           align={column.align || 'left'}
@@ -363,7 +401,11 @@ const UnifiedMedicalTable = ({
                             borderBottom: `1px solid ${alpha(theme.palette.divider, 0.8)}`
                           }}
                         >
-                          {renderCell ? renderCell(row, column, rowIndex) : row[column.id]}
+                          {column.renderCell
+                            ? column.renderCell({ row, value: row[column.id], id: column.id })
+                            : renderCell
+                              ? renderCell(row, column, rowIndex)
+                              : row[column.id]}
                         </TableCell>
                       ))}
                     </TableRow>

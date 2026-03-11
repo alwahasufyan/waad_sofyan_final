@@ -112,4 +112,10 @@ public class ClaimCreateDto {
     // ==================== COVERAGE CONTEXT ====================
     private Boolean manualCategoryEnabled;
     private String primaryCategoryCode;
+
+    /**
+     * Optional: The monthly batch this claim belongs to.
+     */
+    @Positive(message = "Claim Batch ID must be positive")
+    private Long claimBatchId;
 }

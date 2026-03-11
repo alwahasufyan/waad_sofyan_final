@@ -225,7 +225,7 @@ const SuccessDialog = ({
             >
               <Grid container spacing={2}>
                 {additionalInfo.map((info, index) => (
-                  <Grid item xs={6} key={index}>
+                  <Grid key={index} size={6}>
                     <Typography variant="caption" color="text.secondary" display="block">
                       {info.label}
                     </Typography>

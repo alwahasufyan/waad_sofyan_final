@@ -266,7 +266,7 @@ const ProviderView = () => {
         {activeTab === 0 && (
         <Grid container spacing={3}>
           {/* Basic Information */}
-          <Grid item xs={12}>
+          <Grid size={12}>
             <Paper sx={{ p: 3 }}>
               <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
                 <Badge sx={{ color: '#1890ff' }} />
@@ -274,7 +274,7 @@ const ProviderView = () => {
               </Stack>
               <Divider sx={{ mb: 2 }} />
               <Grid container spacing={2}>
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                   <Typography variant="body2" color="text.secondary">
                     الرمز التلقائي
                   </Typography>
@@ -282,7 +282,7 @@ const ProviderView = () => {
                     {provider?.id ?? '—'}
                   </Typography>
                 </Grid>
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                   <Typography variant="body2" color="text.secondary">
                     اسم مقدم الخدمة
                   </Typography>
@@ -290,7 +290,7 @@ const ProviderView = () => {
                     {providerName}
                   </Typography>
                 </Grid>
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                   <Typography variant="body2" color="text.secondary">
                     رقم الترخيص
                   </Typography>
@@ -298,7 +298,7 @@ const ProviderView = () => {
                     {provider?.licenseNumber ?? '—'}
                   </Typography>
                 </Grid>
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                   <Typography variant="body2" color="text.secondary">
                     الرقم الضريبي
                   </Typography>
@@ -306,7 +306,7 @@ const ProviderView = () => {
                     {provider?.taxNumber ?? '—'}
                   </Typography>
                 </Grid>
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                   <Typography variant="body2" color="text.secondary">
                     نوع مقدم الخدمة
                   </Typography>
@@ -318,7 +318,7 @@ const ProviderView = () => {
                     />
                   </Box>
                 </Grid>
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                   <Typography variant="body2" color="text.secondary">
                     الحالة التشغيلية
                   </Typography>
@@ -336,7 +336,7 @@ const ProviderView = () => {
           </Grid>
 
           {/* Location & Contact Information */}
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Paper sx={{ p: 3, height: '100%' }}>
               <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
                 <Phone sx={{ color: '#52c41a' }} />
@@ -344,7 +344,7 @@ const ProviderView = () => {
               </Stack>
               <Divider sx={{ mb: 2 }} />
               <Grid container spacing={2}>
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <Stack direction="row" spacing={1} alignItems="center">
                     <LocationOn sx={{ fontSize: 18, color: '#8c8c8c' }} />
                     <Typography variant="body2" color="text.secondary">
@@ -355,7 +355,7 @@ const ProviderView = () => {
                     {provider?.city ?? '—'}
                   </Typography>
                 </Grid>
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <Stack direction="row" spacing={1} alignItems="center">
                     <LocationOn sx={{ fontSize: 18, color: '#8c8c8c' }} />
                     <Typography variant="body2" color="text.secondary">
@@ -366,7 +366,7 @@ const ProviderView = () => {
                     {provider?.address ?? '—'}
                   </Typography>
                 </Grid>
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <Stack direction="row" spacing={1} alignItems="center">
                     <Phone sx={{ fontSize: 18, color: '#8c8c8c' }} />
                     <Typography variant="body2" color="text.secondary">
@@ -377,7 +377,7 @@ const ProviderView = () => {
                     {provider?.phone ?? '—'}
                   </Typography>
                 </Grid>
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <Stack direction="row" spacing={1} alignItems="center">
                     <Email sx={{ fontSize: 18, color: '#8c8c8c' }} />
                     <Typography variant="body2" color="text.secondary">
@@ -393,7 +393,7 @@ const ProviderView = () => {
           </Grid>
 
           {/* Contract Information */}
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Paper sx={{ p: 3, height: '100%' }}>
               <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
                 <VerifiedUser sx={{ color: '#faad14' }} />
@@ -401,7 +401,7 @@ const ProviderView = () => {
               </Stack>
               <Divider sx={{ mb: 2 }} />
               <Grid container spacing={2}>
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <Typography variant="body2" color="text.secondary">
                     تاريخ بداية العقد
                   </Typography>
@@ -409,7 +409,7 @@ const ProviderView = () => {
                     {provider?.contractStartDate ?? '—'}
                   </Typography>
                 </Grid>
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <Typography variant="body2" color="text.secondary">
                     تاريخ نهاية العقد
                   </Typography>
@@ -417,7 +417,7 @@ const ProviderView = () => {
                     {provider?.contractEndDate ?? '—'}
                   </Typography>
                 </Grid>
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <Typography variant="body2" color="text.secondary">
                     نسبة الخصم الافتراضية
                   </Typography>
@@ -425,7 +425,7 @@ const ProviderView = () => {
                     {provider?.defaultDiscountRate ? `${provider.defaultDiscountRate}%` : '—'}
                   </Typography>
                 </Grid>
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <Typography variant="body2" color="text.secondary">
                     تاريخ الإنشاء
                   </Typography>
@@ -433,7 +433,7 @@ const ProviderView = () => {
                     {provider?.createdAt ? new Date(provider.createdAt).toLocaleDateString('en-US') : '—'}
                   </Typography>
                 </Grid>
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <Typography variant="body2" color="text.secondary">
                     آخر تحديث
                   </Typography>
@@ -446,7 +446,7 @@ const ProviderView = () => {
           </Grid>
 
           {/* Provider Contracts */}
-          <Grid item xs={12}>
+          <Grid size={12}>
             <Paper sx={{ p: 3 }}>
               <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
                 <VerifiedUser sx={{ color: '#1890ff' }} />

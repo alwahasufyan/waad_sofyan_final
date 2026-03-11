@@ -24,7 +24,7 @@ export default function Forbidden403() {
       <ModernPageHeader title="غير مسموح بالدخول" subtitle="ليس لديك الصلاحية للوصول إلى هذه الصفحة" />
 
       <Grid container spacing={3}>
-        <Grid item xs={12}>
+        <Grid size={12}>
           <ModernEmptyState
             icon={LockOutlined}
             title="وصول محظور (403)"
@@ -33,7 +33,7 @@ export default function Forbidden403() {
           />
         </Grid>
 
-        <Grid item xs={12}>
+        <Grid size={12}>
           <Stack direction="row" spacing={2} justifyContent="center" sx={{ mt: 2 }}>
             <Button variant="contained" color="primary" size="large" onClick={handleGoBack}>
               الرجوع للوحة التحكم

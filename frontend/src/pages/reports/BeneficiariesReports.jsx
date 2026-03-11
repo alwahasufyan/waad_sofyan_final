@@ -516,7 +516,7 @@ const BeneficiariesReports = () => {
 
           <Grid container spacing={2}>
             {/* 1. Partner Filter */}
-            <Grid item xs={12} md={4}>
+            <Grid size={{ xs: 12, md: 4 }}>
               <EmployerFilterSelector
                 selectedEmployerId={selectedEmployerId}
                 onEmployerChange={(emp) => {
@@ -535,7 +535,7 @@ const BeneficiariesReports = () => {
             </Grid>
 
             {/* 2. Smart Search */}
-            <Grid item xs={12} md={4}>
+            <Grid size={{ xs: 12, md: 4 }}>
               <TextField
                 fullWidth
                 label="بحث ذكي (الاسم، البطاقة، الهوية)"
@@ -554,7 +554,7 @@ const BeneficiariesReports = () => {
             </Grid>
 
             {/* 3. Member Type */}
-            <Grid item xs={12} md={2}>
+            <Grid size={{ xs: 12, md: 2 }}>
               <TextField
                 select
                 fullWidth
@@ -570,7 +570,7 @@ const BeneficiariesReports = () => {
             </Grid>
 
             {/* 4. Status */}
-            <Grid item xs={12} md={2}>
+            <Grid size={{ xs: 12, md: 2 }}>
               <TextField
                 select
                 fullWidth
@@ -587,7 +587,7 @@ const BeneficiariesReports = () => {
             </Grid>
 
             {/* 5. Date From */}
-            <Grid item xs={12} md={3}>
+            <Grid size={{ xs: 12, md: 3 }}>
               <TextField
                 type="date"
                 fullWidth
@@ -600,7 +600,7 @@ const BeneficiariesReports = () => {
             </Grid>
 
             {/* 6. Date To */}
-            <Grid item xs={12} md={3}>
+            <Grid size={{ xs: 12, md: 3 }}>
               <TextField
                 type="date"
                 fullWidth
@@ -612,7 +612,7 @@ const BeneficiariesReports = () => {
               />
             </Grid>
 
-            <Grid item xs={12} md={6} sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, alignItems: 'center' }}>
+            <Grid sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, alignItems: 'center' }} size={{ xs: 12, md: 6 }}>
               <Button variant="outlined" color="inherit" onClick={handleResetFilters} startIcon={<RefreshIcon />}>
                 إعادة تعيين
               </Button>
@@ -978,7 +978,7 @@ const SingleBeneficiaryReport = ({ member, financialStats, loadingStats, onBack 
 
         <Grid container spacing={4}>
           {/* Left Col: Member Info */}
-          <Grid item xs={12} md={5}>
+          <Grid size={{ xs: 12, md: 5 }}>
             <MainCard title="البيانات الشخصية والتعريفية">
               <Stack spacing={2}>
                 <Box display="flex" alignItems="center" gap={2}>
@@ -1063,10 +1063,10 @@ const SingleBeneficiaryReport = ({ member, financialStats, loadingStats, onBack 
           </Grid>
 
           {/* Right Col: Financial Summary */}
-          <Grid item xs={12} md={7}>
+          <Grid size={{ xs: 12, md: 7 }}>
             <MainCard title="الملخص المالي (للسنة الحالية)" secondary={<Chip label="للقراءة فقط" size="small" variant="outlined" />}>
               <Grid container spacing={2}>
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <SummaryCard
                     title="إجمالي المطالبات"
                     value={formatCurrency(financialStats?.totalRequested || 0)}
@@ -1074,7 +1074,7 @@ const SingleBeneficiaryReport = ({ member, financialStats, loadingStats, onBack 
                     color="primary"
                   />
                 </Grid>
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <SummaryCard
                     title="المبالغ المعتمدة"
                     value={formatCurrency(financialStats?.totalNetPayable || 0)}
@@ -1082,7 +1082,7 @@ const SingleBeneficiaryReport = ({ member, financialStats, loadingStats, onBack 
                     color="success"
                   />
                 </Grid>
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <SummaryCard
                     title="مبلغ التحمل (Co-Pay)"
                     value={formatCurrency(financialStats?.totalPatientCoPay || 0)}
@@ -1090,7 +1090,7 @@ const SingleBeneficiaryReport = ({ member, financialStats, loadingStats, onBack 
                     color="warning"
                   />
                 </Grid>
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <SummaryCard
                     title="المتبقي"
                     value={formatCurrency(financialStats?.remainingBalance || 0)}

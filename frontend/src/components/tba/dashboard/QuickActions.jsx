@@ -67,7 +67,7 @@ export default function QuickActions() {
           const Icon = action.icon;
 
           return (
-            <Grid item xs={12} md={4} key={action.title}>
+            <Grid key={action.title} size={{ xs: 12, md: 4 }}>
               <Card
                 component={Link}
                 to={action.link}

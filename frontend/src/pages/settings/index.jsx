@@ -108,7 +108,7 @@ const SettingsPage = () => {
       {/* Settings Grid */}
       <Grid container spacing={3} sx={{ mt: 2 }}>
         {availableSections.map((section) => (
-          <Grid item xs={12} sm={6} md={4} key={section.id}>
+          <Grid key={section.id} size={{ xs: 12, sm: 6, md: 4 }}>
             <SettingsCard
               icon={section.icon}
               title={section.title}

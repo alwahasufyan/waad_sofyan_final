@@ -110,6 +110,18 @@ public class ClaimViewDto {
     private BigDecimal approvedAmount;
     private BigDecimal refusedAmount;
     private BigDecimal differenceAmount;
+
+    // ========== Provider Contract Fields ==========
+    
+    /**
+     * نسبة الخصم بعقد مقدم الخدمة
+     */
+    private BigDecimal providerDiscountPercent;
+    
+    /**
+     * قيمة الخصم بناءً على النسبة
+     */
+    private BigDecimal providerDiscountAmount;
     
     // ========== Financial Snapshot (MVP Phase) ==========
     
@@ -266,4 +278,7 @@ public class ClaimViewDto {
     private String primaryCategoryCode;
     private String primaryCategoryName;
 
+    // Monthly Batch Information
+    private Long claimBatchId;
+    private String claimBatchCode;
 }

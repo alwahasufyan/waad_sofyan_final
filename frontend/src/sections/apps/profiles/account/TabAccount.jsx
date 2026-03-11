@@ -13,22 +13,22 @@ import MainCard from 'components/MainCard';
 export default function TabAccount() {
   return (
     <Grid container spacing={3}>
-      <Grid item xs={12}>
+      <Grid size={12}>
         <MainCard title="Account Settings">
           <Grid container spacing={3}>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <Stack spacing={1}>
                 <Typography variant="subtitle1">Username</Typography>
                 <TextField fullWidth placeholder="Enter username" disabled />
               </Stack>
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <Stack spacing={1}>
                 <Typography variant="subtitle1">Account Status</Typography>
                 <TextField fullWidth value="Active" disabled />
               </Stack>
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Stack direction="row" justifyContent="flex-end" spacing={2}>
                 <Button variant="outlined" color="secondary">
                   Cancel

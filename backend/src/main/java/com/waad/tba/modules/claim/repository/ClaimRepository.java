@@ -90,10 +90,12 @@ public interface ClaimRepository extends JpaRepository<Claim, Long> {
                         "AND (:status IS NULL OR c.status = :status) " +
                         "AND (CAST(:dateFrom AS date) IS NULL OR c.serviceDate >= :dateFrom) " +
                         "AND (CAST(:dateTo AS date) IS NULL OR c.serviceDate <= :dateTo) " +
+                        "AND (:createdAtFrom IS NULL OR c.createdAt >= :createdAtFrom) " +
+                        "AND (:createdAtTo IS NULL OR c.createdAt < :createdAtTo) " +
                         "AND (LOWER(c.providerName) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
                         "OR LOWER(c.diagnosisDescription) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
                         "OR LOWER(c.member.fullName) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-                        "OR LOWER(c.member.civilId) LIKE LOWER(CONCAT('%', :keyword, '%')))", countQuery = "SELECT COUNT(c) FROM Claim c WHERE c.active = true AND (:employerId IS NULL OR c.member.employer.id = :employerId) AND (:providerId IS NULL OR c.providerId = :providerId) AND (:status IS NULL OR c.status = :status) AND (CAST(:dateFrom AS date) IS NULL OR c.serviceDate >= :dateFrom) AND (CAST(:dateTo AS date) IS NULL OR c.serviceDate <= :dateTo) AND (LOWER(c.providerName) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(c.diagnosisDescription) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(c.member.fullName) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(c.member.civilId) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+                        "OR LOWER(c.member.civilId) LIKE LOWER(CONCAT('%', :keyword, '%')))", countQuery = "SELECT COUNT(c) FROM Claim c WHERE c.active = true AND (:employerId IS NULL OR c.member.employer.id = :employerId) AND (:providerId IS NULL OR c.providerId = :providerId) AND (:status IS NULL OR c.status = :status) AND (CAST(:dateFrom AS date) IS NULL OR c.serviceDate >= :dateFrom) AND (CAST(:dateTo AS date) IS NULL OR c.serviceDate <= :dateTo) AND (:createdAtFrom IS NULL OR c.createdAt >= :createdAtFrom) AND (:createdAtTo IS NULL OR c.createdAt < :createdAtTo) AND (LOWER(c.providerName) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(c.diagnosisDescription) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(c.member.fullName) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(c.member.civilId) LIKE LOWER(CONCAT('%', :keyword, '%')))")
         Page<Claim> searchPagedWithFilters(
                         @Param("keyword") String keyword,
                         @Param("employerId") Long employerId,
@@ -101,6 +103,8 @@ public interface ClaimRepository extends JpaRepository<Claim, Long> {
                         @Param("status") com.waad.tba.modules.claim.entity.ClaimStatus status,
                         @Param("dateFrom") java.time.LocalDate dateFrom,
                         @Param("dateTo") java.time.LocalDate dateTo,
+                        @Param("createdAtFrom") java.time.LocalDateTime createdAtFrom,
+                        @Param("createdAtTo") java.time.LocalDateTime createdAtTo,
                         Pageable pageable);
 
         /**
@@ -816,7 +820,8 @@ public interface ClaimRepository extends JpaRepository<Claim, Long> {
                         "               OR (c.status = com.waad.tba.modules.claim.entity.ClaimStatus.DRAFT AND c.approvedAmount IS NOT NULL AND c.approvedAmount > 0) "
                         +
                         "               THEN c.refusedAmount ELSE 0 END), 0), " +
-                        "COALESCE(SUM(CASE WHEN c.netProviderAmount IS NOT NULL THEN c.netProviderAmount ELSE 0 END), 0), " +
+                        "COALESCE(SUM(CASE WHEN c.netProviderAmount IS NOT NULL THEN c.netProviderAmount ELSE 0 END), 0), "
+                        +
                         "COUNT(CASE WHEN c.status IN (com.waad.tba.modules.claim.entity.ClaimStatus.APPROVED, com.waad.tba.modules.claim.entity.ClaimStatus.SETTLED, com.waad.tba.modules.claim.entity.ClaimStatus.BATCHED) THEN 1 END), "
                         +
                         "COUNT(CASE WHEN c.status = com.waad.tba.modules.claim.entity.ClaimStatus.SETTLED THEN 1 END) "
@@ -1213,6 +1218,8 @@ public interface ClaimRepository extends JpaRepository<Claim, Long> {
                         "AND (:status IS NULL OR c.status = :status) " +
                         "AND (CAST(:dateFrom AS date) IS NULL OR c.serviceDate >= :dateFrom) " +
                         "AND (CAST(:dateTo AS date) IS NULL OR c.serviceDate <= :dateTo) " +
+                        "AND (:createdAtFrom IS NULL OR c.createdAt >= :createdAtFrom) " +
+                        "AND (:createdAtTo IS NULL OR c.createdAt < :createdAtTo) " +
                         "AND (LOWER(c.providerName) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
                         "OR LOWER(c.diagnosisDescription) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
                         "OR LOWER(m.fullName) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
@@ -1223,6 +1230,8 @@ public interface ClaimRepository extends JpaRepository<Claim, Long> {
                                         "AND (:status IS NULL OR c.status = :status) " +
                                         "AND (CAST(:dateFrom AS date) IS NULL OR c.serviceDate >= :dateFrom) " +
                                         "AND (CAST(:dateTo AS date) IS NULL OR c.serviceDate <= :dateTo) " +
+                                        "AND (:createdAtFrom IS NULL OR c.createdAt >= :createdAtFrom) " +
+                                        "AND (:createdAtTo IS NULL OR c.createdAt < :createdAtTo) " +
                                         "AND (LOWER(c.providerName) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
                                         "OR LOWER(c.diagnosisDescription) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
                                         "OR LOWER(m.fullName) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
@@ -1234,6 +1243,8 @@ public interface ClaimRepository extends JpaRepository<Claim, Long> {
                         @Param("status") com.waad.tba.modules.claim.entity.ClaimStatus status,
                         @Param("dateFrom") java.time.LocalDate dateFrom,
                         @Param("dateTo") java.time.LocalDate dateTo,
+                        @Param("createdAtFrom") java.time.LocalDateTime createdAtFrom,
+                        @Param("createdAtTo") java.time.LocalDateTime createdAtTo,
                         Pageable pageable);
 
         /**

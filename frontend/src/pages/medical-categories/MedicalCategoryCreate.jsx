@@ -386,7 +386,7 @@ const MedicalCategoryCreate = () => {
           <SectionHeader icon={AccountTreeIcon} title="نوع التصنيف" subtitle="اختر نوع التصنيف الذي تريد إنشاءه" color="primary" />
 
           <Grid container spacing={2} sx={{ mb: 4 }}>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <CategoryTypeCard
                 type={CATEGORY_TYPE.MAIN}
                 selected={categoryType === CATEGORY_TYPE.MAIN}
@@ -394,7 +394,7 @@ const MedicalCategoryCreate = () => {
                 disabled={submitting}
               />
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <CategoryTypeCard
                 type={CATEGORY_TYPE.SUB}
                 selected={categoryType === CATEGORY_TYPE.SUB}
@@ -475,7 +475,7 @@ const MedicalCategoryCreate = () => {
 
           <Grid container spacing={3}>
             {/* Code Field */}
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 required
@@ -502,7 +502,7 @@ const MedicalCategoryCreate = () => {
             </Grid>
 
             {/* Name Field */}
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 required
@@ -524,7 +524,7 @@ const MedicalCategoryCreate = () => {
             </Grid>
 
             {/* Context / Care-Setting Field */}
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <FormControl fullWidth>
                 <InputLabel>السياق السريري (نوع الرعاية)</InputLabel>
                 <Select
@@ -543,7 +543,7 @@ const MedicalCategoryCreate = () => {
             </Grid>
 
             {/* Active Status */}
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Paper
                 variant="outlined"
                 sx={{

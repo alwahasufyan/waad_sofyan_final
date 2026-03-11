@@ -26,14 +26,14 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UpdateClaimDataRequest {
-    
+
     @Size(max = 255, message = "Doctor name must not exceed 255 characters")
     private String doctorName;
-    
+
     @NotBlank(message = "Diagnosis code is required")
     @Size(max = 20, message = "Diagnosis code must not exceed 20 characters")
     private String diagnosisCode;
-    
+
     @Size(max = 500, message = "Diagnosis description must not exceed 500 characters")
     private String diagnosisDescription;
 
@@ -42,7 +42,7 @@ public class UpdateClaimDataRequest {
 
     private String complaint;
     private String rejectionReason;
-    
+
     private Long preAuthorizationId;
 
     /**
@@ -50,6 +50,12 @@ public class UpdateClaimDataRequest {
      */
     @Valid
     private List<ClaimLineRequest> lines;
+
+    /**
+     * Manual category selection — provider can override the derived category
+     */
+    private String primaryCategoryCode;
+    private Boolean manualCategoryEnabled;
 
     @Data
     @Builder

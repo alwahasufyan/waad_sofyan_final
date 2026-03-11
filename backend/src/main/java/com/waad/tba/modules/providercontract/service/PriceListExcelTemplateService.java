@@ -5,21 +5,10 @@ import com.waad.tba.common.excel.dto.ExcelImportResult.ImportError;
 import com.waad.tba.common.excel.dto.ExcelImportResult.ImportError.ErrorType;
 import com.waad.tba.common.excel.dto.ExcelImportResult.ImportSummary;
 import com.waad.tba.common.exception.BusinessRuleException;
-import com.waad.tba.modules.medicaltaxonomy.entity.MedicalCategory;
-import com.waad.tba.modules.medicaltaxonomy.entity.MedicalService;
-import com.waad.tba.modules.medicaltaxonomy.entity.MedicalServiceCategory;
-import com.waad.tba.modules.medicaltaxonomy.repository.MedicalCategoryRepository;
-import com.waad.tba.modules.medicaltaxonomy.repository.MedicalServiceCategoryRepository;
-import com.waad.tba.modules.medicaltaxonomy.repository.MedicalServiceRepository;
 import com.waad.tba.modules.providercontract.entity.ProviderContract;
 import com.waad.tba.modules.providercontract.entity.ProviderContractPricingItem;
 import com.waad.tba.modules.providercontract.repository.ProviderContractPricingItemRepository;
 import com.waad.tba.modules.providercontract.repository.ProviderContractRepository;
-import com.waad.tba.modules.medical.entity.ProviderRawService;
-import com.waad.tba.modules.medical.entity.ProviderServiceMapping;
-import com.waad.tba.modules.medical.enums.MappingStatus;
-import com.waad.tba.modules.medical.repository.ProviderRawServiceRepository;
-import com.waad.tba.modules.medical.repository.ProviderServiceMappingRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
@@ -33,27 +22,19 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.regex.Pattern;
 
 /**
- * Price List Excel Template Service - SIMPLIFIED VERSION
- * 
- * Purpose: Generate and import pricing items for provider contracts
- * 
- * SIMPLIFIED DESIGN (2026-01-14):
- * - Only ONE mandatory column: service_name
- * - Optional: unit_price, quantity, notes
- * - NO medical service lookup required
- * - NO complex validation
- * - Currency is system default (LYD)
- * 
- * Template Structure:
- * - Sheet: Pricing_Template
- * - Columns: service_name (required), unit_price, quantity, notes
- * 
- * @version 3.0
- * @since 2026-01-14
+ * Generates and imports Excel price-list templates for provider contracts.
+ *
+ * Template columns:
+ * service_name (required) | service_code | standard_price | contract_price
+ * main_category | sub_category | specialty | notes
  */
 @Slf4j
 @Service
@@ -62,12 +43,11 @@ public class PriceListExcelTemplateService {
 
     private final ProviderContractRepository contractRepository;
     private final ProviderContractPricingItemRepository pricingRepository;
-    private final MedicalServiceRepository medicalServiceRepository;
     private final PlatformTransactionManager transactionManager;
 
     private static final String SHEET_NAME = "Pricing_Template";
 
-    // Column indices (0-based) - simplified upload template
+    // Template column indices (0-based)
     private static final int COL_SERVICE_NAME = 0;
     private static final int COL_SERVICE_CODE = 1;
     private static final int COL_BASE_PRICE = 2;
@@ -77,36 +57,37 @@ public class PriceListExcelTemplateService {
     private static final int COL_SPECIALTY = 6;
     private static final int COL_NOTES = 7;
 
+    // Max field lengths (must match DB column constraints)
+    private static final int MAX_SERVICE_NAME = 255;
+    private static final int MAX_SERVICE_CODE = 50;
+    private static final int MAX_CATEGORY = 255;
+    private static final int MAX_NOTES = 2000;
+
+    /**
+     * Pattern to extract service codes embedded in names, e.g. "Incision WE-001" →
+     * "WE-001".
+     */
+    private static final Pattern CODE_IN_NAME_PATTERN = Pattern.compile("[A-Z]{2,4}-[A-Z0-9-]+");
+
     // ═══════════════════════════════════════════════════════════════════════════
-    // TEMPLATE GENERATION - SIMPLIFIED
+    // TEMPLATE GENERATION
     // ═══════════════════════════════════════════════════════════════════════════
 
     /**
-     * Generate simple Price List import template
-     * 
-     * Template is generated ALWAYS - no dependencies on existing data
-     * 
-     * @param contractId Contract ID (for validation only)
-     * @return Excel template bytes
+     * Generate an Excel import template for the given contract.
+     * Only validates contract existence; template content is static.
      */
     @Transactional(readOnly = true)
     public byte[] generateTemplate(Long contractId) throws IOException {
-        log.info("[PriceListTemplate] Generating simple template for contract ID: {}", contractId);
-
-        // 1. Validate contract exists (returns 400 if not found)
         if (contractId == null) {
             throw new BusinessRuleException("معرف العقد غير صالح");
         }
-
         ProviderContract contract = contractRepository.findById(contractId)
-                .orElseThrow(() -> new BusinessRuleException("العقد غير موجود - Invalid contractId: " + contractId));
-
-        // Check if inactive (soft deleted)
+                .orElseThrow(() -> new BusinessRuleException("العقد غير موجود: " + contractId));
         if (Boolean.FALSE.equals(contract.getActive())) {
             throw new BusinessRuleException("لا يمكن استيراد الأسعار لعقد غير نشط");
         }
 
-        // 2. Generate template (NO database dependencies)
         try (XSSFWorkbook workbook = new XSSFWorkbook()) {
             // Create main sheet
             XSSFSheet sheet = workbook.createSheet(SHEET_NAME);
@@ -303,28 +284,17 @@ public class PriceListExcelTemplateService {
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // IMPORT FROM EXCEL - SIMPLIFIED
+    // IMPORT FROM EXCEL
     // ═══════════════════════════════════════════════════════════════════════════
 
     /**
-     * Import pricing items from Excel template - SIMPLIFIED
-     * 
-     * Rules:
-     * - service_name is REQUIRED
-     * - unit_price defaults to 0 if empty
-     * - quantity defaults to 0 if empty
-     * - Empty rows are skipped
-     * - No medical service lookup - just text storage
-     * 
-     * ARCHITECTURAL FIX (2026-03-01):
-     * - Uses @Transactional for the entire batch
-     * - Each row is wrapped in try-catch so one bad row doesn't kill the import
-     * - Repository lookups use findFirstBy* to handle duplicate names safely
-     * - syncProviderRawAndMapping is wrapped in its own try-catch (non-critical)
+     * Import pricing items from the Excel template.
+     * Each row is processed in its own transaction; one bad row never kills the
+     * batch.
      */
     public ExcelImportResult importFromExcel(Long contractId, MultipartFile file) {
-        log.info("[PriceListImport] Starting import for contract ID: {} from file: {}",
-                contractId, file.getOriginalFilename());
+        String safeFileName = file != null ? file.getOriginalFilename().replaceAll("[\\r\\n]", "_") : "null";
+        log.info("[PriceListImport] Starting import for contract ID: {} from file: {}", contractId, safeFileName);
 
         TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
 
@@ -338,13 +308,15 @@ public class PriceListExcelTemplateService {
                 .build();
         List<ImportError> errors = new ArrayList<>();
 
-        // Validate file
         if (file == null || file.isEmpty()) {
             return buildErrorResult(summary, errors, "الملف فارغ");
         }
+        if (contractId == null) {
+            throw new BusinessRuleException("معرف العقد غير صالح");
+        }
 
         // Validate contract
-        ProviderContract contract = contractRepository.findById(Objects.requireNonNull(contractId))
+        ProviderContract contract = contractRepository.findById(contractId)
                 .orElseThrow(() -> new BusinessRuleException("العقد غير موجود"));
 
         if (Boolean.FALSE.equals(contract.getActive())) {
@@ -407,9 +379,6 @@ public class PriceListExcelTemplateService {
                                     errors);
 
                             if (pricing != null) {
-                                // Truncate long strings
-                                truncateStrings(pricing);
-
                                 boolean updated = upsertPricingItem(contract, pricing);
                                 if (updated) {
                                     summary.setUpdated(summary.getUpdated() + 1);
@@ -464,7 +433,7 @@ public class PriceListExcelTemplateService {
     private Map<String, Integer> findColumnIndices(Row headerRow) {
         Map<String, Integer> indices = new HashMap<>();
 
-        for (int i = 0; i <= headerRow.getLastCellNum(); i++) {
+        for (int i = 0; i < headerRow.getLastCellNum(); i++) {
             Cell cell = headerRow.getCell(i);
             if (cell == null)
                 continue;
@@ -483,19 +452,17 @@ public class PriceListExcelTemplateService {
             // Prices detection
             else if (value.contains("base_price") || value.contains("السعر الأساسي") || value.contains("standard")) {
                 indices.put("base_price", i);
-            }
-            else if (value.contains("contract_price") || value.contains("سعر العقد") || value.contains("unit_price") 
+            } else if (value.contains("contract_price") || value.contains("سعر العقد") || value.contains("unit_price")
                     || value.contains("السعر") || value.equals("price")) {
                 indices.put("contract_price", i);
             }
             // category/classification detection
             else if (value.contains("main_category") || value.contains("التصنيف الرئيسي")) {
                 indices.put("main_category", i);
-            }
-            else if (value.contains("sub_category") || value.contains("التصنيف الفرعي") || value.equals("البند") || value.contains("sub_cat")) {
+            } else if (value.contains("sub_category") || value.contains("التصنيف الفرعي") || value.equals("البند")
+                    || value.contains("sub_cat")) {
                 indices.put("sub_category", i);
-            }
-            else if (value.contains("category") || value.contains("classification") || value.contains("تصنيف")
+            } else if (value.contains("category") || value.contains("classification") || value.contains("تصنيف")
                     || value.contains("فئة")) {
                 indices.put("provider_category", i);
             }
@@ -535,7 +502,7 @@ public class PriceListExcelTemplateService {
             Map<String, Integer> columnIndices,
             ProviderContract contract,
             List<ImportError> errors) {
-        
+
         // --- 1. Extract Service Name (REQUIRED) ---
         Integer serviceNameIdx = columnIndices.get("service_name");
         String serviceName = serviceNameIdx != null ? getCellStringValue(row.getCell(serviceNameIdx)) : null;
@@ -556,28 +523,37 @@ public class PriceListExcelTemplateService {
                 serviceCode = truncate(excelCode.trim(), 50);
             }
         }
-        if (serviceCode == null) serviceCode = extractCodeFromName(serviceName);
+        if (serviceCode == null)
+            serviceCode = extractCodeFromName(serviceName);
 
         BigDecimal basePrice = null;
         Integer basePriceIdx = columnIndices.get("base_price");
-        if (basePriceIdx != null) basePrice = readBigDecimal(row.getCell(basePriceIdx), rowNum);
+        if (basePriceIdx != null)
+            basePrice = readBigDecimal(row.getCell(basePriceIdx), rowNum);
 
         BigDecimal contractPrice = null;
         Integer contractPriceIdx = columnIndices.get("contract_price");
-        if (contractPriceIdx != null) contractPrice = readBigDecimal(row.getCell(contractPriceIdx), rowNum);
+        if (contractPriceIdx != null)
+            contractPrice = readBigDecimal(row.getCell(contractPriceIdx), rowNum);
 
-        if (basePrice == null && contractPrice != null) basePrice = contractPrice;
-        else if (contractPrice == null && basePrice != null) contractPrice = basePrice;
-        
-        if (basePrice == null) basePrice = BigDecimal.ZERO;
-        if (contractPrice == null) contractPrice = BigDecimal.ZERO;
+        if (basePrice == null && contractPrice != null)
+            basePrice = contractPrice;
+        else if (contractPrice == null && basePrice != null)
+            contractPrice = basePrice;
+
+        if (basePrice == null)
+            basePrice = BigDecimal.ZERO;
+        if (contractPrice == null)
+            contractPrice = BigDecimal.ZERO;
 
         String categoryName = null;
         Integer categoryIdx = columnIndices.get("main_category");
-        if (categoryIdx == null) categoryIdx = columnIndices.get("provider_category");
+        if (categoryIdx == null)
+            categoryIdx = columnIndices.get("provider_category");
         if (categoryIdx != null) {
             categoryName = getCellStringValue(row.getCell(categoryIdx));
-            if (categoryName != null) categoryName = truncate(categoryName.trim(), 255);
+            if (categoryName != null)
+                categoryName = truncate(categoryName.trim(), 255);
         }
 
         // If no main category, try sub-category
@@ -585,22 +561,15 @@ public class PriceListExcelTemplateService {
             Integer subCategoryIdx = columnIndices.get("sub_category");
             if (subCategoryIdx != null) {
                 categoryName = getCellStringValue(row.getCell(subCategoryIdx));
-                if (categoryName != null) categoryName = truncate(categoryName.trim(), 255);
+                if (categoryName != null)
+                    categoryName = truncate(categoryName.trim(), 255);
             }
         }
 
         Integer notesIdx = columnIndices.get("notes");
         String notes = notesIdx != null ? getCellStringValue(row.getCell(notesIdx)) : null;
-        if (notes != null) notes = truncate(notes.trim(), 2000);
-
-        // --- 3. Optional: Link to Unified Catalog (Dictionary) ---
-        MedicalService medicalService = null;
-        if (serviceCode != null) {
-            medicalService = medicalServiceRepository.findByCode(serviceCode).orElse(null);
-        }
-        if (medicalService == null) {
-            medicalService = medicalServiceRepository.findFirstByName(serviceName).orElse(null);
-        }
+        if (notes != null)
+            notes = truncate(notes.trim(), MAX_NOTES);
 
         return ProviderContractPricingItem.builder()
                 .contract(contract)
@@ -610,15 +579,29 @@ public class PriceListExcelTemplateService {
                 .basePrice(basePrice)
                 .contractPrice(contractPrice)
                 .notes(notes)
-                .medicalService(medicalService)
                 .active(true)
                 .build();
     }
 
+    /**
+     * Insert or update a pricing item by service code (preferred) then service
+     * name.
+     * Searches all active items regardless of mapping status.
+     *
+     * @return true if an existing record was updated, false if a new one was
+     *         created
+     */
     private boolean upsertPricingItem(ProviderContract contract, ProviderContractPricingItem draft) {
-        // Find by service name within this contract
-        Optional<ProviderContractPricingItem> existing = pricingRepository
-                .findActiveUnmappedByContractAndServiceName(contract.getId(), draft.getServiceName());
+        Optional<ProviderContractPricingItem> existing = Optional.empty();
+
+        if (draft.getServiceCode() != null) {
+            existing = pricingRepository
+                    .findByContractIdAndServiceCodeActiveTrue(contract.getId(), draft.getServiceCode());
+        }
+        if (existing.isEmpty()) {
+            existing = pricingRepository
+                    .findByContractIdAndServiceNameActiveTrue(contract.getId(), draft.getServiceName());
+        }
 
         if (existing.isPresent()) {
             ProviderContractPricingItem item = existing.get();
@@ -627,8 +610,6 @@ public class PriceListExcelTemplateService {
             item.setBasePrice(draft.getBasePrice());
             item.setContractPrice(draft.getContractPrice());
             item.setNotes(draft.getNotes());
-            item.setMedicalService(draft.getMedicalService());
-            item.setActive(true);
             pricingRepository.save(item);
             return true;
         }
@@ -637,32 +618,15 @@ public class PriceListExcelTemplateService {
         return false;
     }
 
-    private void applyImportValues(ProviderContractPricingItem target, ProviderContractPricingItem source) {
-        target.setServiceName(source.getServiceName());
-        target.setServiceCode(source.getServiceCode());
-        target.setCategoryName(source.getCategoryName());
-        target.setContractPrice(source.getContractPrice());
-        target.setQuantity(source.getQuantity());
-        target.setNotes(source.getNotes());
-        target.setActive(true);
-    }
-
     /**
-     * Extracts a service code from a name string (e.g., "Incision WE-001" ->
-     * "WE-001")
+     * Extracts an embedded service code from a name, e.g. "Incision WE-001" →
+     * "WE-001".
      */
     private String extractCodeFromName(String name) {
         if (name == null || name.isBlank())
             return null;
-
-        // Patterns: SP-XXXX, MC-XXXX, WE-XXXX, SRV-XXXX
-        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("[A-Z]{2,4}-[A-Z0-9-]+");
-        java.util.regex.Matcher matcher = pattern.matcher(name);
-
-        if (matcher.find()) {
-            return matcher.group();
-        }
-        return null;
+        java.util.regex.Matcher m = CODE_IN_NAME_PATTERN.matcher(name);
+        return m.find() ? m.group() : null;
     }
 
     private BigDecimal readBigDecimal(Cell cell, int rowNum) {
@@ -724,19 +688,9 @@ public class PriceListExcelTemplateService {
                 .build();
     }
 
-
-    private String truncate(String text, int length) {
+    private String truncate(String text, int maxLen) {
         if (text == null)
             return null;
-        return text.length() <= length ? text : text.substring(0, length);
-    }
-
-    private void truncateStrings(ProviderContractPricingItem item) {
-        if (item.getServiceName() != null && item.getServiceName().length() > 500) {
-            item.setServiceName(item.getServiceName().substring(0, 500));
-        }
-        if (item.getNotes() != null && item.getNotes().length() > 500) {
-            item.setNotes(item.getNotes().substring(0, 500));
-        }
+        return text.length() <= maxLen ? text : text.substring(0, maxLen);
     }
 }

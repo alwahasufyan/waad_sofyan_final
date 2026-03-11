@@ -27,7 +27,8 @@ import {
   PriceCheck as PriceCheckIcon,
   BarChart as BarChartIcon,
   ErrorOutline as ErrorOutlineIcon,
-  AccountTree as AccountTreeIcon
+  AccountTree as AccountTreeIcon,
+  AccountBalanceWallet as AccountBalanceWalletIcon
 } from '@mui/icons-material';
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -460,16 +461,31 @@ const menuItem = [
         children: [
           {
             id: 'provider-accounts',
-            title: 'حسابات مقدمي الخدمة',
-            titleEn: 'Provider Accounts',
+            title: 'مطالبات التسوية لمقدمي الخدمة',
+            titleEn: 'Provider Settlement Claims',
             type: 'item',
             url: '/settlement/provider-accounts',
             icon: BusinessIcon,
             resource: 'provider_accounts',
             action: 'view',
             chip: {
-              label: 'جديد',
+              label: 'معدل',
               color: 'primary',
+              size: 'small'
+            }
+          },
+          {
+            id: 'provider-payments',
+            title: 'الدفعات المالية لمقدمي الخدمة',
+            titleEn: 'Provider Financial Payments',
+            type: 'item',
+            url: '/settlement/provider-payments',
+            icon: AccountBalanceWalletIcon,
+            resource: 'provider_accounts',
+            action: 'view',
+            chip: {
+              label: 'جديد',
+              color: 'success',
               size: 'small'
             }
           },

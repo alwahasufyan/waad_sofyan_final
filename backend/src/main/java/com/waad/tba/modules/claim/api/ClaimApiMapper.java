@@ -108,6 +108,8 @@ public class ClaimApiMapper {
                                 .diagnosisDescription(request.getDiagnosisDescription())
                                 .complaint(request.getComplaint())
                                 .rejectionReason(request.getRejectionReason())
+                                .primaryCategoryCode(request.getPrimaryCategoryCode())
+                                .manualCategoryEnabled(request.getManualCategoryEnabled())
                                 .preAuthorizationId(request.getPreAuthorizationId())
                                 .lines(request.getLines() != null ? request.getLines().stream()
                                                 .map(line -> ClaimLineDto.builder()
@@ -121,7 +123,8 @@ public class ClaimApiMapper {
                                                                 .unitPrice(line.getUnitPrice() != null
                                                                                 ? line.getUnitPrice()
                                                                                 : line.getGrossAmount())
-                                                                .refusedAmount(line.getRefusedAmount())
+                                                                // refusedAmount from client is never trusted; backend
+                                                                // recomputes it
                                                                 .rejected(line.getRejected())
                                                                 .rejectionReason(line.getRejectionReason())
                                                                 .build())

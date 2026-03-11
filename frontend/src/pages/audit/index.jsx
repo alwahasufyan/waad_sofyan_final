@@ -445,7 +445,7 @@ const AuditPage = () => {
         {/* Statistics Cards */}
         {canViewStats() && (
           <Grid container spacing={2} sx={{ mb: 3 }}>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
               <StatCard
                 title="إجمالي الإجراءات"
                 value={stats?.totalActions}
@@ -454,7 +454,7 @@ const AuditPage = () => {
                 loading={statsLoading}
               />
             </Grid>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
               <StatCard
                 title="موافقات"
                 value={stats?.approvals}
@@ -463,10 +463,10 @@ const AuditPage = () => {
                 loading={statsLoading}
               />
             </Grid>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
               <StatCard title="رفض" value={stats?.rejections} color="error.main" icon={<Timeline color="error" />} loading={statsLoading} />
             </Grid>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
               <StatCard title="تعديلات" value={stats?.updates} color="info.main" icon={<Timeline color="info" />} loading={statsLoading} />
             </Grid>
           </Grid>

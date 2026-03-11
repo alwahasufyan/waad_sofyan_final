@@ -117,7 +117,7 @@ const BenefitPolicyInsights = ({ insights = {}, loading = false }) => {
   return (
     <Grid container spacing={2}>
       {/* Policies by Status Distribution */}
-      <Grid item xs={12} md={6} lg={3}>
+      <Grid size={{ xs: 12, md: 6, lg: 3 }}>
         <InsightCard title="توزيع الوثائق حسب الحالة" titleEn="Policies by Status" icon={PieChartIcon} loading={loading}>
           {policiesByStatus.length === 0 ? (
             <Typography variant="body2" color="text.secondary">
@@ -134,7 +134,7 @@ const BenefitPolicyInsights = ({ insights = {}, loading = false }) => {
       </Grid>
 
       {/* Top 5 Policies by Members */}
-      <Grid item xs={12} md={6} lg={3}>
+      <Grid size={{ xs: 12, md: 6, lg: 3 }}>
         <InsightCard title="أكثر الوثائق استخداماً" titleEn="Top 5 Policies by Members" icon={TrendingIcon} loading={loading}>
           {topPoliciesByMembers.length === 0 ? (
             <Typography variant="body2" color="text.secondary">
@@ -149,7 +149,7 @@ const BenefitPolicyInsights = ({ insights = {}, loading = false }) => {
       </Grid>
 
       {/* Coverage by Employer */}
-      <Grid item xs={12} md={6} lg={3}>
+      <Grid size={{ xs: 12, md: 6, lg: 3 }}>
         <InsightCard title="التغطية حسب الشريك" titleEn="Coverage by Employer" icon={BusinessIcon} loading={loading}>
           {coverageByEmployer.length === 0 ? (
             <Typography variant="body2" color="text.secondary">
@@ -170,7 +170,7 @@ const BenefitPolicyInsights = ({ insights = {}, loading = false }) => {
       </Grid>
 
       {/* Unused Policies - Warning Section */}
-      <Grid item xs={12} md={6} lg={3}>
+      <Grid size={{ xs: 12, md: 6, lg: 3 }}>
         <InsightCard title="وثائق بدون أعضاء" titleEn="Unused Policies" icon={WarningIcon} loading={loading}>
           {unusedPolicies.length === 0 ? (
             <Typography variant="body2" color="success.main">

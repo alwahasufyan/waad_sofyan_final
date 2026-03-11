@@ -212,7 +212,7 @@ const MedicalServicesPage = () => {
 
       <Grid container spacing={2} mb={3}>
         {statCards.map((card) => (
-          <Grid item xs={12} sm={6} md={4} lg={2} key={card.key}>
+          <Grid key={card.key} size={{ xs: 12, sm: 6, md: 4, lg: 2 }}>
             <Card variant="outlined">
               <CardContent>
                 <Typography variant="caption" color="text.secondary">
@@ -228,7 +228,7 @@ const MedicalServicesPage = () => {
       </Grid>
 
       <Grid container spacing={2}>
-        <Grid item xs={12} md={7}>
+        <Grid size={{ xs: 12, md: 7 }}>
           <Paper variant="outlined" sx={{ p: 2 }}>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} mb={2} alignItems="flex-end">
               <Autocomplete
@@ -336,7 +336,7 @@ const MedicalServicesPage = () => {
           </Paper>
         </Grid>
 
-        <Grid item xs={12} md={5}>
+        <Grid size={{ xs: 12, md: 5 }}>
           <Paper variant="outlined" sx={{ p: 2 }}>
             <Typography variant="h6" fontWeight={700} mb={2}>
               إجراءات الربط

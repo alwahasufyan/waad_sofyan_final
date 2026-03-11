@@ -123,7 +123,7 @@ const PreAuthDashboard = () => {
       {/* Main Content */}
       <Grid container spacing={2}>
         {/* Row 1: Stats Cards */}
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatsCard
             title="إجمالي الطلبات"
             value={stats?.totalRequests || 0}
@@ -133,7 +133,7 @@ const PreAuthDashboard = () => {
           />
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatsCard
             title="المعتمدة"
             value={stats?.totalApproved || 0}
@@ -143,16 +143,16 @@ const PreAuthDashboard = () => {
           />
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatsCard title="المرفوضة" value={stats?.totalRejected || 0} change={stats?.rejectedChangePercent} icon={Cancel} color="error" />
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatsCard title="نسبة الموافقة" value={calculateApprovalRate()} icon={CheckCircle} color="info" suffix="%" />
         </Grid>
 
         {/* Row 2: Amount Stats */}
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Card variant="outlined">
             <CardContent sx={{ py: 2 }}>
               <Stack direction="row" alignItems="center" justifyContent="space-between">
@@ -169,7 +169,7 @@ const PreAuthDashboard = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Card variant="outlined">
             <CardContent sx={{ py: 2 }}>
               <Stack direction="row" alignItems="center" justifyContent="space-between">
@@ -186,7 +186,7 @@ const PreAuthDashboard = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Card variant="outlined">
             <CardContent sx={{ py: 2 }}>
               <Stack direction="row" alignItems="center" justifyContent="space-between">
@@ -205,26 +205,26 @@ const PreAuthDashboard = () => {
         </Grid>
 
         {/* Row 3: Charts */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <StatusDistributionChart data={dashboard?.statusDistribution || []} loading={dashboardLoading} />
         </Grid>
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <ExpiringSoonAlerts data={expiringSoon} loading={expiringSoonLoading} withinDays={7} />
         </Grid>
 
         {/* Row 4: Trends + High Priority */}
-        <Grid item xs={12} lg={8}>
+        <Grid size={{ xs: 12, lg: 8 }}>
           <TrendsChart data={dashboard?.trends || []} loading={dashboardLoading} days={trendDays} />
         </Grid>
-        <Grid item xs={12} lg={4}>
+        <Grid size={{ xs: 12, lg: 4 }}>
           <HighPriorityQueue data={queue} loading={queueLoading} onView={handleViewRequest} onEdit={handleEditRequest} />
         </Grid>
 
         {/* Row 5: Top Providers + Recent Activity */}
-        <Grid item xs={12} md={7}>
+        <Grid size={{ xs: 12, md: 7 }}>
           <TopProvidersChart data={dashboard?.topProviders || []} loading={dashboardLoading} limit={topProvidersLimit} />
         </Grid>
-        <Grid item xs={12} md={5}>
+        <Grid size={{ xs: 12, md: 5 }}>
           <RecentActivityTimeline data={dashboard?.recentActivity || []} loading={dashboardLoading} limit={10} />
         </Grid>
       </Grid>

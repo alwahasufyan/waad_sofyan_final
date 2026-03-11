@@ -80,43 +80,42 @@ public class ClaimController {
      * Prevents PropertyReferenceException from invalid sort fields
      */
     private static final Set<String> ALLOWED_SORT_FIELDS = Set.of(
-        "id", "createdAt", "updatedAt", "status", "requestedAmount",
-        "approvedAmount", "serviceDate", "providerName", "memberName"
-    );
+            "id", "createdAt", "updatedAt", "status", "requestedAmount",
+            "approvedAmount", "serviceDate", "providerName", "memberName");
 
     @PostMapping
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'MEDICAL_REVIEWER', 'DATA_ENTRY', 'PROVIDER_STAFF')")
     @Operation(summary = "Create claim", description = "Create a new claim from visit. All amounts calculated by backend from provider contract.")
     public ResponseEntity<ApiResponse<ClaimResponse>> createClaim(@Valid @RequestBody CreateClaimRequest apiRequest) {
-        log.info("📥 [CLAIM-API] Incoming create request: visitId={}, lines={}", 
-                 apiRequest.getVisitId(), 
-                 apiRequest.getLines() != null ? apiRequest.getLines().size() : 0);
-        
+        log.info("📥 [CLAIM-API] Incoming create request: visitId={}, lines={}",
+                apiRequest.getVisitId(),
+                apiRequest.getLines() != null ? apiRequest.getLines().size() : 0);
+
         // 🔒 FEATURE-FLAG-GUARD (Phase 10)
         featureGuard.requireProviderPortal();
 
         try {
             // Convert API v1 request to internal DTO
             ClaimViewDto claim = claimService.createClaim(apiMapper.toCreateDto(apiRequest));
-            
-            log.info("✅ [CLAIM-API] Claim created successfully: id={}, status={}, amount={}", 
-                     claim.getId(), claim.getStatus(), claim.getRequestedAmount());
-            
+
+            log.info("✅ [CLAIM-API] Claim created successfully: id={}, status={}, amount={}",
+                    claim.getId(), claim.getStatus(), claim.getRequestedAmount());
+
             // Convert internal DTO to API v1 response
             ClaimResponse response = apiMapper.toResponse(claim);
-            
+
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(ApiResponse.success("Claim created successfully", response));
         } catch (Exception e) {
-            log.error("❌ [CLAIM-API] Failed to create claim: visitId={}, error={}", 
-                      apiRequest.getVisitId(), e.getMessage(), e);
+            log.error("❌ [CLAIM-API] Failed to create claim: visitId={}, error={}",
+                    apiRequest.getVisitId(), e.getMessage(), e);
             throw e;
         }
     }
 
     /**
      * @deprecated Use /claims/{id}/data or /claims/{id}/review instead
-     * This endpoint is DISABLED for security reasons.
+     *             This endpoint is DISABLED for security reasons.
      */
     @Deprecated
     @Hidden // Hide from Swagger/OpenAPI documentation
@@ -126,12 +125,12 @@ public class ClaimController {
     public ResponseEntity<ApiResponse<ClaimResponse>> updateClaim(
             @PathVariable("id") Long id,
             @Valid @RequestBody UpdateClaimRequest apiRequest) {
-        
-        // SECURITY: This endpoint is disabled to prevent bypassing role-based field restrictions
+
+        // SECURITY: This endpoint is disabled to prevent bypassing role-based field
+        // restrictions
         throw new UnsupportedOperationException(
-            "This endpoint is deprecated and disabled. " +
-            "Use PUT /claims/{id}/data for data edits or PUT /claims/{id}/review for review actions."
-        );
+                "This endpoint is deprecated and disabled. " +
+                        "Use PUT /claims/{id}/data for data edits or PUT /claims/{id}/review for review actions.");
     }
 
     /**
@@ -147,14 +146,14 @@ public class ClaimController {
             @PathVariable("id") Long id,
             @Valid @RequestBody UpdateClaimDataRequest apiRequest) {
         log.info("📝 Updating claim data {}", id);
-        
+
         // 🔒 FEATURE-FLAG-GUARD (Phase 10)
         featureGuard.requireProviderPortal();
 
         try {
             ClaimViewDto claim = claimService.updateClaimData(id, apiMapper.toDataUpdateDto(apiRequest));
             ClaimResponse response = apiMapper.toResponse(claim);
-            
+
             return ResponseEntity.ok(ApiResponse.success("Claim data updated successfully", response));
         } catch (Exception e) {
             log.error("❌ [CLAIM-API] Failed to update claim data: id={}, error={}", id, e.getMessage(), e);
@@ -178,12 +177,13 @@ public class ClaimController {
         log.info("🧐 Reviewing claim {}", id);
 
         // NOTE: Review is an INTERNAL operation by MEDICAL_REVIEWER/SUPER_ADMIN.
-        // It is NOT gated by feature flags (those only affect provider-facing submission channels).
+        // It is NOT gated by feature flags (those only affect provider-facing
+        // submission channels).
 
         try {
             ClaimViewDto claim = claimService.reviewClaim(id, apiMapper.toReviewDto(apiRequest));
             ClaimResponse response = apiMapper.toResponse(claim);
-            
+
             return ResponseEntity.ok(ApiResponse.success("Claim reviewed successfully", response));
         } catch (Exception e) {
             log.error("❌ [CLAIM-API] Failed to review claim: id={}, error={}", id, e.getMessage(), e);
@@ -202,14 +202,14 @@ public class ClaimController {
     @Operation(summary = "Submit claim", description = "Submit a DRAFT claim for review. Transitions state to SUBMITTED.")
     public ResponseEntity<ApiResponse<ClaimResponse>> submitClaim(@PathVariable("id") Long id) {
         log.info("🛫 Submitting claim {}", id);
-        
+
         // 🔒 FEATURE-FLAG-GUARD (Phase 10)
         featureGuard.requireDirectClaimSubmission();
 
         try {
             ClaimViewDto claim = claimService.submitClaim(id);
             ClaimResponse response = apiMapper.toResponse(claim);
-            
+
             return ResponseEntity.ok(ApiResponse.success("Claim submitted successfully", response));
         } catch (Exception e) {
             log.error("❌ [CLAIM-API] Failed to submit claim: id={}, error={}", id, e.getMessage(), e);
@@ -235,20 +235,23 @@ public class ClaimController {
             @RequestParam(name = "status", required = false) ClaimStatus status,
             @RequestParam(name = "dateFrom", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
             @RequestParam(name = "dateTo", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+            @RequestParam(name = "createdDateFrom", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate createdDateFrom,
+            @RequestParam(name = "createdDateTo", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate createdDateTo,
             @RequestParam(name = "page", defaultValue = "1") int page,
             @RequestParam(name = "size", defaultValue = "20") int size,
             @RequestParam(name = "sortBy", defaultValue = "createdAt") String sortBy,
             @RequestParam(name = "sortDir", defaultValue = "desc") String sortDir,
             @RequestParam(name = "search", required = false) String search) {
-        
+
         // Validate and sanitize sortBy field to prevent PropertyReferenceException
         if (!ALLOWED_SORT_FIELDS.contains(sortBy)) {
             log.warn("Invalid sort field requested: '{}', falling back to default 'createdAt'", sortBy);
             sortBy = "createdAt";
         }
-        
+
         Page<ClaimViewDto> claimsPage = claimService.listClaims(
-                employerId, providerId, status, dateFrom, dateTo, Math.max(0, page - 1), size, sortBy, sortDir, search);
+                employerId, providerId, status, dateFrom, dateTo, createdDateFrom, createdDateTo,
+                Math.max(0, page - 1), size, sortBy, sortDir, search);
 
         ClaimListResponse response = apiMapper.toListResponse(claimsPage);
 
@@ -293,7 +296,8 @@ public class ClaimController {
     @GetMapping("/pre-authorization/{preAuthorizationId}")
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get claims by pre-authorization", description = "Retrieve all claims linked to a pre-authorization")
-    public ResponseEntity<ApiResponse<List<ClaimResponse>>> getClaimsByPreAuthorization(@PathVariable("preAuthorizationId") Long preAuthorizationId) {
+    public ResponseEntity<ApiResponse<List<ClaimResponse>>> getClaimsByPreAuthorization(
+            @PathVariable("preAuthorizationId") Long preAuthorizationId) {
         List<ClaimViewDto> claims = claimService.getClaimsByPreAuthorization(preAuthorizationId);
         List<ClaimResponse> responses = claims.stream()
                 .map(apiMapper::toResponse)
@@ -345,28 +349,27 @@ public class ClaimController {
      * 
      * Validates:
      * - Coverage limits (via CoverageValidationService)
-     * - Financial snapshot equation: RequestedAmount = PatientCoPay + NetProviderAmount
+     * - Financial snapshot equation: RequestedAmount = PatientCoPay +
+     * NetProviderAmount
      */
     @PostMapping("/{id:\\d+}/approve")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'MEDICAL_REVIEWER')")
-    @Operation(
-        summary = "Approve claim (async)", 
-        description = "Request claim approval. Returns immediately with APPROVAL_IN_PROGRESS status. " +
-                      "Poll /api/v1/claims/{id} for final result. " +
-                      "⚠️ CRITICAL: Approved amount is CALCULATED BY BACKEND, not from request."
-    )
+    @Operation(summary = "Approve claim (async)", description = "Request claim approval. Returns immediately with APPROVAL_IN_PROGRESS status. "
+            +
+            "Poll /api/v1/claims/{id} for final result. " +
+            "⚠️ CRITICAL: Approved amount is CALCULATED BY BACKEND, not from request.")
     public ResponseEntity<ApiResponse<ClaimResponse>> approveClaim(
             @PathVariable("id") Long id,
             @Valid @RequestBody ApproveClaimRequest apiRequest) {
-        
+
         // Convert API v1 request to internal DTO
         // ⚠️ CRITICAL: This conversion does NOT include approvedAmount
         // Backend service layer calculates the approved amount
         ClaimViewDto claim = claimService.requestApproval(id, apiMapper.toApproveDto(apiRequest));
-        
+
         // Convert internal DTO to API v1 response
         ClaimResponse response = apiMapper.toResponse(claim);
-        
+
         return ResponseEntity.ok(ApiResponse.success("جاري معالجة الموافقة...", response));
     }
 
@@ -385,7 +388,6 @@ public class ClaimController {
         return ResponseEntity.ok(ApiResponse.success("تم رفض المطالبة", response));
     }
 
-
     /**
      * Return a claim for additional information.
      * Transitions: UNDER_REVIEW → RETURNED_FOR_INFO
@@ -402,7 +404,7 @@ public class ClaimController {
             @PathVariable("id") Long id,
             @Valid @RequestBody ReturnForInfoClaimRequest apiRequest) {
         log.info("↩️ Returning claim {} for info", id);
-        
+
         // 🔒 FEATURE-FLAG-GUARD (Phase 10)
         featureGuard.requireProviderPortal();
 
@@ -544,8 +546,8 @@ public class ClaimController {
             @RequestParam(name = "dateFrom", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
             @RequestParam(name = "dateTo", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo) {
 
-        FinancialSummaryDto summary = claimService.getFinancialSummary(employerId, providerId, status, dateFrom, dateTo);
+        FinancialSummaryDto summary = claimService.getFinancialSummary(employerId, providerId, status, dateFrom,
+                dateTo);
         return ResponseEntity.ok(ApiResponse.success("Financial summary retrieved successfully", summary));
     }
 }
-

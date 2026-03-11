@@ -49,7 +49,7 @@ const BenefitPackageView = () => {
         <MainCard>
           <Grid container spacing={3}>
             {[1, 2, 3, 4, 5, 6].map((i) => (
-              <Grid item xs={12} md={6} key={i}>
+              <Grid key={i} size={{ xs: 12, md: 6 }}>
                 <Skeleton variant="rectangular" height={60} />
               </Grid>
             ))}
@@ -97,14 +97,14 @@ const BenefitPackageView = () => {
       <MainCard>
         <Grid container spacing={3}>
           {/* Basic Information */}
-          <Grid item xs={12}>
+          <Grid size={12}>
             <Typography variant="h5" gutterBottom>
               المعلومات الأساسية
             </Typography>
             <Divider sx={{ mb: 2 }} />
           </Grid>
 
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Paper variant="outlined" sx={{ p: 2 }}>
               <Typography variant="caption" color="text.secondary">
                 الكود
@@ -115,7 +115,7 @@ const BenefitPackageView = () => {
             </Paper>
           </Grid>
 
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Paper variant="outlined" sx={{ p: 2 }}>
               <Typography variant="caption" color="text.secondary">
                 الاسم
@@ -126,7 +126,7 @@ const BenefitPackageView = () => {
             </Paper>
           </Grid>
 
-          <Grid item xs={12}>
+          <Grid size={12}>
             <Paper variant="outlined" sx={{ p: 2 }}>
               <Typography variant="caption" color="text.secondary">
                 الوصف
@@ -136,14 +136,14 @@ const BenefitPackageView = () => {
           </Grid>
 
           {/* Coverage & Validity */}
-          <Grid item xs={12}>
+          <Grid size={12}>
             <Typography variant="h5" gutterBottom sx={{ mt: 2 }}>
               التغطية والصلاحية
             </Typography>
             <Divider sx={{ mb: 2 }} />
           </Grid>
 
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Paper variant="outlined" sx={{ p: 2 }}>
               <Typography variant="caption" color="text.secondary">
                 حد التغطية
@@ -154,7 +154,7 @@ const BenefitPackageView = () => {
             </Paper>
           </Grid>
 
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Paper variant="outlined" sx={{ p: 2 }}>
               <Typography variant="caption" color="text.secondary">
                 صلاحية الباقة
@@ -166,14 +166,14 @@ const BenefitPackageView = () => {
           </Grid>
 
           {/* Medical Packages */}
-          <Grid item xs={12}>
+          <Grid size={12}>
             <Typography variant="h5" gutterBottom sx={{ mt: 2 }}>
               الباقات الطبية المشمولة
             </Typography>
             <Divider sx={{ mb: 2 }} />
           </Grid>
 
-          <Grid item xs={12}>
+          <Grid size={12}>
             {Array.isArray(pkg.medicalPackages) && pkg.medicalPackages.length > 0 ? (
               <TableContainer component={Paper} variant="outlined">
                 <Table>
@@ -213,14 +213,14 @@ const BenefitPackageView = () => {
           </Grid>
 
           {/* Status */}
-          <Grid item xs={12}>
+          <Grid size={12}>
             <Typography variant="h5" gutterBottom sx={{ mt: 2 }}>
               الحالة
             </Typography>
             <Divider sx={{ mb: 2 }} />
           </Grid>
 
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Paper variant="outlined" sx={{ p: 2 }}>
               <Typography variant="caption" color="text.secondary">
                 حالة الباقة
@@ -232,14 +232,14 @@ const BenefitPackageView = () => {
           </Grid>
 
           {/* System Metadata */}
-          <Grid item xs={12}>
+          <Grid size={12}>
             <Typography variant="h5" gutterBottom sx={{ mt: 2 }}>
               معلومات النظام
             </Typography>
             <Divider sx={{ mb: 2 }} />
           </Grid>
 
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Paper variant="outlined" sx={{ p: 2 }}>
               <Typography variant="caption" color="text.secondary">
                 تاريخ الإنشاء
@@ -248,7 +248,7 @@ const BenefitPackageView = () => {
             </Paper>
           </Grid>
 
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Paper variant="outlined" sx={{ p: 2 }}>
               <Typography variant="caption" color="text.secondary">
                 تاريخ آخر تحديث
@@ -257,7 +257,7 @@ const BenefitPackageView = () => {
             </Paper>
           </Grid>
 
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Paper variant="outlined" sx={{ p: 2 }}>
               <Typography variant="caption" color="text.secondary">
                 أنشئ بواسطة
@@ -266,7 +266,7 @@ const BenefitPackageView = () => {
             </Paper>
           </Grid>
 
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Paper variant="outlined" sx={{ p: 2 }}>
               <Typography variant="caption" color="text.secondary">
                 آخر تحديث بواسطة

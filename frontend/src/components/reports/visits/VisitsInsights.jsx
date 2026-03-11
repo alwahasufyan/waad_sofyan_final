@@ -91,7 +91,7 @@ const VisitsInsights = ({ insights, loading }) => {
   return (
     <Grid container spacing={2} sx={{ mt: 2 }}>
       {/* Top 5 Providers */}
-      <Grid item xs={12} md={4}>
+      <Grid size={{ xs: 12, md: 4 }}>
         <InsightCard
           title="أكثر 5 مقدمي خدمة زيارةً"
           icon={LocalHospitalIcon}
@@ -103,7 +103,7 @@ const VisitsInsights = ({ insights, loading }) => {
       </Grid>
 
       {/* Top 5 Services */}
-      <Grid item xs={12} md={4}>
+      <Grid size={{ xs: 12, md: 4 }}>
         <InsightCard
           title="أكثر 5 خدمات استخدامًا"
           icon={MedicalServicesIcon}
@@ -115,7 +115,7 @@ const VisitsInsights = ({ insights, loading }) => {
       </Grid>
 
       {/* Top 10 Members */}
-      <Grid item xs={12} md={4}>
+      <Grid size={{ xs: 12, md: 4 }}>
         <InsightCard
           title="أكثر 10 أعضاء زيارةً"
           icon={PersonIcon}

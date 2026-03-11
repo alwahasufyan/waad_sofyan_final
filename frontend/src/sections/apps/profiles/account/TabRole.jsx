@@ -13,16 +13,16 @@ import MainCard from 'components/MainCard';
 export default function TabRole() {
   return (
     <Grid container spacing={3}>
-      <Grid item xs={12}>
+      <Grid size={12}>
         <MainCard title="Role & Permissions">
           <Grid container spacing={3}>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Stack spacing={1}>
                 <Typography variant="subtitle1">Current Role</Typography>
                 <TextField fullWidth value="Administrator" disabled />
               </Stack>
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Stack spacing={1}>
                 <Typography variant="subtitle1">Permissions</Typography>
                 <Stack direction="row" spacing={1} flexWrap="wrap">

@@ -65,7 +65,6 @@ import { DataGrid } from '@mui/x-data-grid';
 import MainCard from 'components/MainCard';
 import UnifiedPageHeader from 'components/UnifiedPageHeader';
 import PermissionGuard from 'components/PermissionGuard';
-import SettlementPrintReport from './components/SettlementPrintReport';
 
 // Services
 import { settlementBatchesService } from 'services/api/settlement.service';
@@ -186,7 +185,7 @@ const BatchSummaryCard = ({ batch, isLoading }) => {
             <Skeleton variant="text" width="60%" height={40} />
             <Grid container spacing={3}>
               {[1, 2, 3, 4].map((i) => (
-                <Grid item xs={12} sm={6} md={3} key={i}>
+                <Grid key={i} size={{ xs: 12, sm: 6, md: 3 }}>
                   <Skeleton variant="rectangular" height={100} />
                 </Grid>
               ))}
@@ -232,7 +231,7 @@ const BatchSummaryCard = ({ batch, isLoading }) => {
         {/* Financial Summary */}
         <Grid container spacing={3}>
           {/* Total Amount */}
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Paper elevation={0} sx={{ p: 2, bgcolor: 'primary.lighter', borderRadius: 2, textAlign: 'center' }}>
               <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                 إجمالي المبلغ
@@ -244,7 +243,7 @@ const BatchSummaryCard = ({ batch, isLoading }) => {
           </Grid>
 
           {/* Claims Count */}
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Paper elevation={0} sx={{ p: 2, bgcolor: 'info.lighter', borderRadius: 2, textAlign: 'center' }}>
               <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                 عدد المطالبات
@@ -259,7 +258,7 @@ const BatchSummaryCard = ({ batch, isLoading }) => {
           </Grid>
 
           {/* Created Date */}
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Paper elevation={0} sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 2, textAlign: 'center' }}>
               <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                 تاريخ الإنشاء
@@ -271,7 +270,7 @@ const BatchSummaryCard = ({ batch, isLoading }) => {
           </Grid>
 
           {/* Paid Date (if applicable) */}
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Paper
               elevation={0}
               sx={{
@@ -422,9 +421,29 @@ const SettlementBatchView = () => {
     navigate(`/settlement/batches/${batchId}/add-claims`);
   }, [navigate, batchId]);
 
-  const handlePrint = useCallback(() => {
-    window.print();
-  }, []);
+  const handlePrint = useCallback(async () => {
+    try {
+      const { blob, filename } = await settlementBatchesService.downloadOfficialPdf(batchId);
+      const url = window.URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = filename || `settlement-${batchId}.pdf`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.URL.revokeObjectURL(url);
+
+      openSnackbar({
+        message: 'تم تنزيل التقرير الرسمي بنجاح',
+        variant: 'success'
+      });
+    } catch (error) {
+      openSnackbar({
+        message: error.message || 'فشل في تنزيل التقرير الرسمي',
+        variant: 'error'
+      });
+    }
+  }, [batchId]);
 
   // ========================================
   // TABLE COLUMNS
@@ -553,7 +572,7 @@ const SettlementBatchView = () => {
         </PermissionGuard>
       )}
 
-      <Tooltip title="طباعة التسوية">
+      <Tooltip title="تنزيل التقرير الرسمي PDF">
         <IconButton onClick={handlePrint} color="secondary">
           <PrintIcon />
         </IconButton>
@@ -596,9 +615,6 @@ const SettlementBatchView = () => {
   return (
     <PermissionGuard resource="settlements" action="view" fallback={<Alert severity="error">ليس لديك صلاحية لعرض هذه الصفحة</Alert>}>
       <Box>
-        {/* INVISIBLE PRINT COMPONENT */}
-        <SettlementPrintReport batch={batchData} items={processedItems} />
-
         {/* Page Header */}
         <UnifiedPageHeader
           title="تفاصيل دفعة التسوية"

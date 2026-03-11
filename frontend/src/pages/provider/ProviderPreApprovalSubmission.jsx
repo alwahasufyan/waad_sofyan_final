@@ -751,19 +751,19 @@ const ProviderPreApprovalSubmission = () => {
         {/* ═══════════════════════ ROW 1: VISIT & MEMBER INFO ═══════════════════════ */}
         <Grid container spacing={3}>
           {/* Visit Info Card */}
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <InfoCard bgcolor={(theme) => alpha(theme.palette.info.main, 0.04)}>
               <SectionHeader icon={VisitIcon} title={LABELS.visitInfo} subtitle="معلومات الزيارة المرتبطة (للقراءة فقط)" color="info" />
               <Divider sx={{ mb: 2.5 }} />
 
               <Grid container spacing={2}>
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <ReadOnlyField icon={BadgeIcon} label="رقم الزيارة" value={`#${visitData.visitId}`} highlight />
                 </Grid>
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <ReadOnlyField icon={CalendarIcon} label="تاريخ الزيارة" value={visitData.visitDate} />
                 </Grid>
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <Box sx={{ mb: 2 }}>
                     <Typography
                       variant="caption"
@@ -788,7 +788,7 @@ const ProviderPreApprovalSubmission = () => {
                     />
                   </Box>
                 </Grid>
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <ReadOnlyField
                     icon={BusinessIcon}
                     label="مقدم الخدمة"
@@ -804,22 +804,22 @@ const ProviderPreApprovalSubmission = () => {
           </Grid>
 
           {/* Member Info Card */}
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <InfoCard bgcolor={(theme) => alpha(theme.palette.success.main, 0.04)}>
               <SectionHeader icon={PersonIcon} title={LABELS.memberInfo} subtitle="بيانات المؤمن عليه (للقراءة فقط)" color="success" />
               <Divider sx={{ mb: 2.5 }} />
 
               <Grid container spacing={2}>
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <ReadOnlyField icon={PersonIcon} label="اسم المؤمن عليه" value={visitData.memberName} highlight />
                 </Grid>
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <ReadOnlyField label="الرقم المدني" value={visitData.memberCivilId} />
                 </Grid>
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <ReadOnlyField icon={CardIcon} label="رقم البطاقة التأمينية" value={visitData.cardNumber} />
                 </Grid>
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <ReadOnlyField icon={BusinessIcon} label="جهة العمل / الوثيقة" value={visitData.employer} />
                 </Grid>
               </Grid>
@@ -1124,7 +1124,7 @@ const ProviderPreApprovalSubmission = () => {
         {/* ═══════════════════════ ROW 3: DIAGNOSIS & REQUEST DETAILS ═══════════════════════ */}
         <Grid container spacing={3}>
           {/* Diagnosis Section */}
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <FormSection>
               <SectionHeader icon={DiagnosisIcon} title={LABELS.diagnosis} subtitle="رمز ووصف التشخيص الطبي" />
               <Divider sx={{ mb: 3 }} />
@@ -1155,7 +1155,7 @@ const ProviderPreApprovalSubmission = () => {
           </Grid>
 
           {/* Request Details Section */}
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <FormSection>
               <SectionHeader icon={PriorityIcon} title={LABELS.requestDetails} subtitle="أولوية الطلب والملاحظات الطبية" />
               <Divider sx={{ mb: 3 }} />

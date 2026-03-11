@@ -55,6 +55,7 @@ import employersService from 'services/api/employers.service';
 import providersService from 'services/api/providers.service';
 import providerContractsService from 'services/api/provider-contracts.service';
 import claimsService from 'services/api/claims.service';
+import claimBatchesService from 'services/api/claim-batches.service';
 import useAuth from 'hooks/useAuth';
 
 // ===========================================
@@ -107,10 +108,10 @@ const generateBatchCode = (employer, provider, month, year) => {
  */
 const ProviderBatchCard = ({ provider, selectedEmployer, onSelectBatch, filterMonth, filterYear }) => {
 
-    const batchCode = useMemo(() =>
-        generateBatchCode(selectedEmployer, provider, filterMonth, filterYear),
-        [selectedEmployer, provider, filterMonth, filterYear]
-    );
+    const batchCode = useMemo(() => {
+        if (provider.realBatch) return provider.realBatch.batchCode;
+        return generateBatchCode(selectedEmployer, provider, filterMonth, filterYear);
+    }, [selectedEmployer, provider, filterMonth, filterYear]);
 
     // Fetch actual stats using Claims Service Financial Summary endpoint
     const { data: summaryData } = useQuery({
@@ -374,6 +375,17 @@ export default function ClaimBatchManagement() {
         enabled: !!selectedEmployer && showStats
     });
 
+    // 5. Fetch actual batches for the current selection
+    const { data: realBatches } = useQuery({
+        queryKey: ['real-claim-batches', selectedEmployer?.id, filterMonth, filterYear],
+        queryFn: () => claimBatchesService.list({ 
+            employerId: selectedEmployer?.id, 
+            month: filterMonth, 
+            year: filterYear 
+        }),
+        enabled: !!selectedEmployer && !!filterMonth && !!filterYear
+    });
+
     const { user } = useAuth();
     const isProviderUser = user?.userType === 'PROVIDER_STAFF';
     const userProviderId = user?.providerId;
@@ -389,6 +401,11 @@ export default function ClaimBatchManagement() {
                 if (pId) contractByProviderId.set(pId, c.id);
             });
         }
+        // Map real batches by providerId for easy access
+        const batchByProviderId = new Map();
+        if (realBatches) {
+            realBatches.forEach(b => batchByProviderId.set(b.providerId, b));
+        }
 
         // Final enriched list
         let list = allowedProviders.map((p) => ({
@@ -396,7 +413,8 @@ export default function ClaimBatchManagement() {
             name: p.name,
             code: p.licenseNumber || p.code || p.id,
             city: p.city || 'المنطقة',
-            contractId: contractByProviderId.get(p.id) || null
+            contractId: contractByProviderId.get(p.id) || null,
+            realBatch: batchByProviderId.get(p.id) || null
         }));
 
         // ROLE ISOLATION: If provider user, filter to ONLY their provider ID

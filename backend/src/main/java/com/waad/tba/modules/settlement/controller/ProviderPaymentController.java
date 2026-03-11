@@ -105,5 +105,18 @@ public class ProviderPaymentController {
         log.info("Payment recorded in Payment Center for batch {}", batchId);
         return ResponseEntity.ok(ApiResponse.success("تم تسجيل الدفع بنجاح", payment));
     }
+    @PostMapping("/provider/{providerId}")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ACCOUNTANT')")
+    @Operation(summary = "Record installment payment to provider account")
+    public ResponseEntity<ApiResponse<ProviderPaymentDTO>> createInstallmentPayment(
+            @PathVariable("providerId") Long providerId,
+            @Valid @RequestBody CreateProviderPaymentRequest request) {
+
+        Long userId = authorizationService.getCurrentUser() != null ? authorizationService.getCurrentUser().getId() : null;
+        ProviderPaymentDTO payment = providerPaymentService.createInstallmentPayment(providerId, request, userId);
+
+        log.info("Installment payment recorded for provider {}", providerId);
+        return ResponseEntity.ok(ApiResponse.success("تم تسجيل الدفعة بنجاح", payment));
+    }
 }
 

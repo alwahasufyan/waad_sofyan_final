@@ -826,21 +826,21 @@ const ClaimViewMedicalReview = () => {
         {/* Patient Information */}
         <SectionCard title="معلومات المنتفع" icon={PersonIcon}>
           <Grid container spacing={1.5}>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <InfoRow label="الاسم الكامل" value={normalizedClaim.memberName} icon={PersonIcon} />
             </Grid>
             {hasValue(normalizedClaim.memberCivilId) && (
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <InfoRow label="الرقم المدني" value={normalizedClaim.memberCivilId} />
               </Grid>
             )}
             {hasValue(normalizedClaim.memberCardNumber) && (
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <InfoRow label="رقم البطاقة" value={normalizedClaim.memberCardNumber} />
               </Grid>
             )}
             {hasValue(normalizedClaim.memberPhone) && (
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <InfoRow label="رقم الجوال" value={normalizedClaim.memberPhone} />
               </Grid>
             )}
@@ -851,21 +851,21 @@ const ClaimViewMedicalReview = () => {
         <SectionCard title="بيانات التأمين" icon={PolicyIcon}>
           <Grid container spacing={1.5}>
             {hasValue(normalizedClaim.employerName) && (
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <InfoRow label="جهة العمل" value={normalizedClaim.employerName} icon={EmployerIcon} />
               </Grid>
             )}
             {hasValue(normalizedClaim.policyNumber) && (
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <InfoRow label="رقم البوليصة" value={normalizedClaim.policyNumber} />
               </Grid>
             )}
             {hasValue(normalizedClaim.coverageType) && (
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <InfoRow label="نوع التغطية" value={normalizedClaim.coverageType} />
               </Grid>
             )}
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <InfoRow label="تاريخ المطالبة" value={formatDate(normalizedClaim.claimDate)} />
             </Grid>
           </Grid>
@@ -1010,16 +1010,16 @@ const ClaimViewMedicalReview = () => {
         {/* Diagnosis */}
         <SectionCard title="التشخيص" icon={DiagnosisIcon}>
           <Grid container spacing={1.5}>
-            <Grid item xs={12} md={hasValue(normalizedClaim.icdCode) ? 6 : 12}>
+            <Grid size={{ xs: 12, md: hasValue(normalizedClaim.icdCode) ? 6 : 12 }}>
               <InfoRow label="التشخيص الأساسي" value={normalizedClaim.primaryDiagnosis} />
             </Grid>
             {hasValue(normalizedClaim.icdCode) && (
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <InfoRow label="ICD Code" value={normalizedClaim.icdCode} />
               </Grid>
             )}
             {normalizedClaim.secondaryDiagnosis && (
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <InfoRow label="تشخيص ثانوي" value={normalizedClaim.secondaryDiagnosis} />
               </Grid>
             )}

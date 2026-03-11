@@ -22,7 +22,7 @@ const ModernQuickActions = ({ actions = [] }) => {
   return (
     <Grid container spacing={2}>
       {actions.map((action, index) => (
-        <Grid item xs={12} sm={6} md={4} lg={3} key={index}>
+        <Grid key={index} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
           <Card
             sx={{
               height: '100%',

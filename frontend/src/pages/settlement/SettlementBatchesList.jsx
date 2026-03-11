@@ -765,7 +765,7 @@ const SettlementBatchesList = () => {
           <Collapse in={showAdvancedFilters}>
             <Grid container spacing={2} alignItems="center">
               {/* Row 1: Provider and Search - Giving Provider maximum space */}
-              <Grid item xs={12} md={8}>
+              <Grid size={{ xs: 12, md: 8 }}>
                 <Autocomplete
                   value={selectedProvider}
                   onChange={(_, newValue) => setSelectedProvider(newValue)}
@@ -795,7 +795,7 @@ const SettlementBatchesList = () => {
                 />
               </Grid>
 
-              <Grid item xs={12} md={4}>
+              <Grid size={{ xs: 12, md: 4 }}>
                 <TextField
                   fullWidth
                   label="🔍 بحث"
@@ -814,7 +814,7 @@ const SettlementBatchesList = () => {
               </Grid>
 
               {/* Row 2: Dates and Actions */}
-              <Grid item xs={12} md={3}>
+              <Grid size={{ xs: 12, md: 3 }}>
                 <TextField
                   fullWidth
                   label="📅 من تاريخ"
@@ -829,7 +829,7 @@ const SettlementBatchesList = () => {
                 />
               </Grid>
 
-              <Grid item xs={12} md={3}>
+              <Grid size={{ xs: 12, md: 3 }}>
                 <TextField
                   fullWidth
                   label="📅 إلى تاريخ"
@@ -844,7 +844,7 @@ const SettlementBatchesList = () => {
                 />
               </Grid>
 
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <Stack direction="row" spacing={1} justifyContent="flex-end">
                   <Button
                     variant="contained"

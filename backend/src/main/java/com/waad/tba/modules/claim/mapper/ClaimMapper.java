@@ -38,13 +38,14 @@ public class ClaimMapper {
     private final BenefitPolicyCoverageService benefitPolicyCoverageService;
     private final MedicalCategoryRepository medicalCategoryRepository;
     private final ProviderContractPricingItemRepository pricingItemRepository;
+    private final com.waad.tba.modules.claim.repository.ClaimBatchRepository claimBatchRepository;
 
     /**
      * Maps CreateClaimDto (from Visit) to a new Claim entity.
      * Enforces contract-first pricing and policy-first coverage.
      */
     public Claim toEntity(ClaimCreateDto dto, Visit visit, Provider provider, PreAuthorization preAuth,
-            Map<Long, MedicalService> medicalServiceMap) {
+            ClaimBatch claimBatch, Map<Long, MedicalService> medicalServiceMap) {
         Claim claim = Claim.builder()
                 .visit(visit)
                 .member(visit.getMember())
@@ -58,6 +59,7 @@ public class ClaimMapper {
                 .complaint(dto.getComplaint())
                 .reviewerComment(dto.getRejectionReason())
                 .preAuthorization(preAuth)
+                .claimBatch(claimBatch)
                 .manualCategoryEnabled(dto.getManualCategoryEnabled() != null ? dto.getManualCategoryEnabled() : false)
                 .primaryCategoryCode(dto.getPrimaryCategoryCode())
                 .isBacklog(visit.getVisitType() == com.waad.tba.modules.visit.entity.VisitType.LEGACY_BACKLOG)
@@ -216,9 +218,7 @@ public class ClaimMapper {
             }
 
             boolean isRejected = Boolean.TRUE.equals(lineDto.getRejected());
-            BigDecimal lineRefused = isRejected ? lineRequestedTotal
-                    : (lineDto.getRefusedAmount() != null ? lineDto.getRefusedAmount().max(priceExcessRefusal)
-                            : priceExcessRefusal);
+            BigDecimal lineRefused = isRejected ? lineRequestedTotal : priceExcessRefusal;
 
             ClaimLine line = ClaimLine.builder()
                     .claim(claim)
@@ -452,10 +452,8 @@ public class ClaimMapper {
             if (Boolean.TRUE.equals(lineDto.getRejected())) {
                 lineRefused = lineRequestedTotal;
             } else {
-                // Total refusal = Price Excess + (Other refusals like limits if provided)
-                lineRefused = lineDto.getRefusedAmount() != null
-                        ? lineDto.getRefusedAmount().max(priceExcessRefusal)
-                        : priceExcessRefusal;
+                // Refused = price excess only; frontend value is ignored for security
+                lineRefused = priceExcessRefusal;
 
                 // Net Available (Allowed base) = resolvedTotal - (any other refusal beyond
                 // price)
@@ -617,6 +615,8 @@ public class ClaimMapper {
                         ? medicalCategoryRepository.findByCode(claim.getPrimaryCategoryCode())
                                 .map(com.waad.tba.modules.medicaltaxonomy.entity.MedicalCategory::getName).orElse(null)
                         : null)
+                .claimBatchId(claim.getClaimBatch() != null ? claim.getClaimBatch().getId() : null)
+                .claimBatchCode(claim.getClaimBatch() != null ? claim.getClaimBatch().getBatchCode() : null)
                 .build();
 
         if (claim.getVisit() != null) {

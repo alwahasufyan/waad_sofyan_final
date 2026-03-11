@@ -353,7 +353,7 @@ const ReviewStep = ({ provider, selectedClaims, claims, description, onDescripti
 
       {/* Summary Cards */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Paper elevation={0} sx={{ p: 3, bgcolor: 'primary.lighter', borderRadius: 2, textAlign: 'center' }}>
             <LocalHospitalIcon sx={{ fontSize: 40, color: 'primary.main', mb: 1 }} />
             <Typography variant="subtitle2" color="text.secondary">
@@ -365,7 +365,7 @@ const ReviewStep = ({ provider, selectedClaims, claims, description, onDescripti
           </Paper>
         </Grid>
 
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Paper elevation={0} sx={{ p: 3, bgcolor: 'info.lighter', borderRadius: 2, textAlign: 'center' }}>
             <ReceiptIcon sx={{ fontSize: 40, color: 'info.main', mb: 1 }} />
             <Typography variant="subtitle2" color="text.secondary">
@@ -377,7 +377,7 @@ const ReviewStep = ({ provider, selectedClaims, claims, description, onDescripti
           </Paper>
         </Grid>
 
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Paper elevation={0} sx={{ p: 3, bgcolor: 'success.lighter', borderRadius: 2, textAlign: 'center' }}>
             <PaymentsIcon sx={{ fontSize: 40, color: 'success.main', mb: 1 }} />
             <Typography variant="subtitle2" color="text.secondary">

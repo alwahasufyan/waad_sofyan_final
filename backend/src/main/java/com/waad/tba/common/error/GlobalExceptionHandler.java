@@ -21,6 +21,7 @@ import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import com.waad.tba.common.exception.BusinessRuleException;
 import com.waad.tba.common.exception.ClaimStateTransitionException;
@@ -32,6 +33,7 @@ import com.waad.tba.modules.rbac.exception.EmailNotVerifiedException;
 import com.waad.tba.modules.rbac.exception.InvalidResetTokenException;
 import com.waad.tba.modules.rbac.exception.PasswordPolicyViolationException;
 
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 
 /**
@@ -199,6 +201,15 @@ public class GlobalExceptionHandler {
             code = ErrorCode.INTERNAL_ERROR;
 
         return build(HttpStatus.NOT_FOUND, code, ex.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(EntityNotFoundException.class)
+    public ResponseEntity<ApiError> handleJpaEntityNotFound(EntityNotFoundException ex, HttpServletRequest request) {
+        String trackingId = generateTrackingId();
+        log.warn("Entity not found - Path: {}, Message: {}, TrackingId: {}",
+                request.getRequestURI(), ex.getMessage(), trackingId);
+
+        return build(HttpStatus.NOT_FOUND, ErrorCode.INTERNAL_ERROR, ex.getMessage(), request, null);
     }
 
     @ExceptionHandler(IllegalStateException.class)
@@ -584,6 +595,41 @@ public class GlobalExceptionHandler {
             return handleMaxUploadSize(new MaxUploadSizeExceededException(-1L), request);
         }
         throw ex;
+    }
+
+    /**
+     * Handle MethodArgumentTypeMismatchException - returns 400 Bad Request.
+     * Triggered when a path or query parameter cannot be converted to the expected
+     * type,
+     * e.g. a non-numeric value for a Long @PathVariable.
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiError> handleMethodArgumentTypeMismatch(
+            MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
+        String trackingId = generateTrackingId();
+        String paramName = ex.getName();
+        Object value = ex.getValue();
+        Class<?> requiredType = ex.getRequiredType();
+        String typeName = requiredType != null ? requiredType.getSimpleName() : "unknown";
+
+        log.warn("Type mismatch - Path: {}, Param: '{}', Value: '{}', Expected: {}, TrackingId: {}",
+                request.getRequestURI(), paramName, value, typeName, trackingId);
+
+        String message = String.format("Invalid value '%s' for parameter '%s': expected type %s.",
+                value, paramName, typeName);
+        String messageAr = String.format("قيمة غير صالحة '%s' للمعامل '%s': النوع المطلوب %s.",
+                value, paramName, typeName);
+
+        ApiError error = ApiError.of(
+                ErrorCode.VALIDATION_ERROR,
+                message,
+                request.getRequestURI(),
+                null,
+                now(),
+                trackingId);
+        error.setMessageAr(messageAr);
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
     @ExceptionHandler(Exception.class)

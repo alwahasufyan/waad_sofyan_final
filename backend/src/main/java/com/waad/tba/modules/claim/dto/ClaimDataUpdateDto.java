@@ -29,23 +29,23 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ClaimDataUpdateDto {
-    
+
     /**
      * Doctor name - can be corrected by provider
      */
     private String doctorName;
-    
+
     /**
      * Diagnosis Code (ICD-10) - can be corrected by provider
      */
     @NotBlank(message = "Diagnosis code is required")
     private String diagnosisCode;
-    
+
     /**
      * Diagnosis Description - can be corrected by provider
      */
     private String diagnosisDescription;
-    
+
     /**
      * Link to PreAuthorization (if applicable)
      * Provider can link/unlink during DRAFT phase
@@ -54,14 +54,16 @@ public class ClaimDataUpdateDto {
 
     private String complaint;
     private String rejectionReason;
-    
+    private String primaryCategoryCode;
+    private Boolean manualCategoryEnabled;
+
     /**
      * Claim lines - can be modified in DRAFT only
      * Prices are still contract-driven and validated by backend
      */
     @Valid
     private List<ClaimLineDto> lines;
-    
+
     /**
      * Attachments - can be added/removed
      */

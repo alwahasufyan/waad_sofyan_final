@@ -439,14 +439,14 @@ const MemberChronicConditionsTab = ({ memberId, readOnly = false }) => {
                         <Collapse in={expandedRow === condition.id} timeout="auto" unmountOnExit>
                           <Box sx={{ p: 2, bgcolor: 'grey.50' }}>
                             <Grid container spacing={2}>
-                              <Grid item xs={12} md={6}>
+                              <Grid size={{ xs: 12, md: 6 }}>
                                 <Card variant="outlined">
                                   <CardContent>
                                     <Typography variant="subtitle2" color="primary" gutterBottom>
                                       معلومات التغطية
                                     </Typography>
                                     <Grid container spacing={1}>
-                                      <Grid item xs={6}>
+                                      <Grid size={6}>
                                         <Typography variant="caption" color="text.secondary">
                                           نسبة التغطية:
                                         </Typography>
@@ -454,7 +454,7 @@ const MemberChronicConditionsTab = ({ memberId, readOnly = false }) => {
                                           {condition.coveragePercentage ? `${condition.coveragePercentage}%` : 'غير محدد'}
                                         </Typography>
                                       </Grid>
-                                      <Grid item xs={6}>
+                                      <Grid size={6}>
                                         <Typography variant="caption" color="text.secondary">
                                           فترة الانتظار:
                                         </Typography>
@@ -463,7 +463,7 @@ const MemberChronicConditionsTab = ({ memberId, readOnly = false }) => {
                                         </Typography>
                                       </Grid>
                                       {condition.waitingPeriodEndDate && (
-                                        <Grid item xs={12}>
+                                        <Grid size={12}>
                                           <Typography variant="caption" color="text.secondary">
                                             تنتهي في:
                                           </Typography>
@@ -474,7 +474,7 @@ const MemberChronicConditionsTab = ({ memberId, readOnly = false }) => {
                                         </Grid>
                                       )}
                                       {condition.coverageReason && (
-                                        <Grid item xs={12}>
+                                        <Grid size={12}>
                                           <Typography variant="caption" color="text.secondary">
                                             سبب حالة التغطية:
                                           </Typography>
@@ -486,26 +486,26 @@ const MemberChronicConditionsTab = ({ memberId, readOnly = false }) => {
                                 </Card>
                               </Grid>
 
-                              <Grid item xs={12} md={6}>
+                              <Grid size={{ xs: 12, md: 6 }}>
                                 <Card variant="outlined">
                                   <CardContent>
                                     <Typography variant="subtitle2" color="primary" gutterBottom>
                                       معلومات التشخيص
                                     </Typography>
                                     <Grid container spacing={1}>
-                                      <Grid item xs={6}>
+                                      <Grid size={6}>
                                         <Typography variant="caption" color="text.secondary">
                                           الطبيب:
                                         </Typography>
                                         <Typography variant="body2">{condition.diagnosingPhysician || '-'}</Typography>
                                       </Grid>
-                                      <Grid item xs={6}>
+                                      <Grid size={6}>
                                         <Typography variant="caption" color="text.secondary">
                                           المنشأة:
                                         </Typography>
                                         <Typography variant="body2">{condition.diagnosingFacility || '-'}</Typography>
                                       </Grid>
-                                      <Grid item xs={12}>
+                                      <Grid size={12}>
                                         <Typography variant="caption" color="text.secondary">
                                           تاريخ الإفصاح:
                                         </Typography>
@@ -517,7 +517,7 @@ const MemberChronicConditionsTab = ({ memberId, readOnly = false }) => {
                               </Grid>
 
                               {(condition.currentMedications || condition.treatmentPlan) && (
-                                <Grid item xs={12}>
+                                <Grid size={12}>
                                   <Card variant="outlined">
                                     <CardContent>
                                       <Typography variant="subtitle2" color="primary" gutterBottom>
@@ -525,7 +525,7 @@ const MemberChronicConditionsTab = ({ memberId, readOnly = false }) => {
                                       </Typography>
                                       <Grid container spacing={2}>
                                         {condition.currentMedications && (
-                                          <Grid item xs={12} md={6}>
+                                          <Grid size={{ xs: 12, md: 6 }}>
                                             <Typography variant="caption" color="text.secondary">
                                               الأدوية الحالية:
                                             </Typography>
@@ -535,7 +535,7 @@ const MemberChronicConditionsTab = ({ memberId, readOnly = false }) => {
                                           </Grid>
                                         )}
                                         {condition.treatmentPlan && (
-                                          <Grid item xs={12} md={6}>
+                                          <Grid size={{ xs: 12, md: 6 }}>
                                             <Typography variant="caption" color="text.secondary">
                                               خطة العلاج:
                                             </Typography>
@@ -551,7 +551,7 @@ const MemberChronicConditionsTab = ({ memberId, readOnly = false }) => {
                               )}
 
                               {condition.notes && (
-                                <Grid item xs={12}>
+                                <Grid size={12}>
                                   <Typography variant="caption" color="text.secondary">
                                     ملاحظات:
                                   </Typography>
@@ -559,7 +559,7 @@ const MemberChronicConditionsTab = ({ memberId, readOnly = false }) => {
                                 </Grid>
                               )}
 
-                              <Grid item xs={12}>
+                              <Grid size={12}>
                                 <Divider />
                                 <Box display="flex" gap={2} mt={1}>
                                   <Typography variant="caption" color="text.secondary">
@@ -593,7 +593,7 @@ const MemberChronicConditionsTab = ({ memberId, readOnly = false }) => {
           <DialogTitle>{editingCondition ? 'تعديل المرض المزمن' : 'إضافة مرض مزمن جديد'}</DialogTitle>
           <DialogContent dividers>
             <Grid container spacing={2} sx={{ mt: 0.5 }}>
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <FormControl fullWidth required>
                   <InputLabel>نوع المرض المزمن</InputLabel>
                   <Select
@@ -612,7 +612,7 @@ const MemberChronicConditionsTab = ({ memberId, readOnly = false }) => {
               </Grid>
 
               {formData.conditionType === 'OTHER' && (
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                   <TextField
                     fullWidth
                     required
@@ -623,7 +623,7 @@ const MemberChronicConditionsTab = ({ memberId, readOnly = false }) => {
                 </Grid>
               )}
 
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <TextField
                   fullWidth
                   label="كود ICD-10"
@@ -633,7 +633,7 @@ const MemberChronicConditionsTab = ({ memberId, readOnly = false }) => {
                 />
               </Grid>
 
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <DatePicker
                   label="تاريخ التشخيص"
                   value={formData.diagnosisDate}
@@ -642,7 +642,7 @@ const MemberChronicConditionsTab = ({ memberId, readOnly = false }) => {
                 />
               </Grid>
 
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <DatePicker
                   label="تاريخ الإفصاح"
                   value={formData.disclosureDate}
@@ -651,7 +651,7 @@ const MemberChronicConditionsTab = ({ memberId, readOnly = false }) => {
                 />
               </Grid>
 
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <FormControl fullWidth>
                   <InputLabel>مستوى الشدة</InputLabel>
                   <Select
@@ -668,11 +668,11 @@ const MemberChronicConditionsTab = ({ memberId, readOnly = false }) => {
                 </FormControl>
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <Divider sx={{ my: 1 }}>معلومات التغطية</Divider>
               </Grid>
 
-              <Grid item xs={12} md={4}>
+              <Grid size={{ xs: 12, md: 4 }}>
                 <FormControl fullWidth>
                   <InputLabel>حالة التغطية</InputLabel>
                   <Select
@@ -689,7 +689,7 @@ const MemberChronicConditionsTab = ({ memberId, readOnly = false }) => {
                 </FormControl>
               </Grid>
 
-              <Grid item xs={12} md={4}>
+              <Grid size={{ xs: 12, md: 4 }}>
                 <TextField
                   fullWidth
                   type="number"
@@ -700,7 +700,7 @@ const MemberChronicConditionsTab = ({ memberId, readOnly = false }) => {
                 />
               </Grid>
 
-              <Grid item xs={12} md={4}>
+              <Grid size={{ xs: 12, md: 4 }}>
                 <TextField
                   fullWidth
                   type="number"
@@ -711,7 +711,7 @@ const MemberChronicConditionsTab = ({ memberId, readOnly = false }) => {
                 />
               </Grid>
 
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <TextField
                   fullWidth
                   type="number"
@@ -722,7 +722,7 @@ const MemberChronicConditionsTab = ({ memberId, readOnly = false }) => {
                 />
               </Grid>
 
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <TextField
                   fullWidth
                   label="سبب حالة التغطية"
@@ -732,11 +732,11 @@ const MemberChronicConditionsTab = ({ memberId, readOnly = false }) => {
                 />
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <Divider sx={{ my: 1 }}>معلومات التشخيص</Divider>
               </Grid>
 
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <TextField
                   fullWidth
                   label="الطبيب المشخص"
@@ -745,7 +745,7 @@ const MemberChronicConditionsTab = ({ memberId, readOnly = false }) => {
                 />
               </Grid>
 
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <TextField
                   fullWidth
                   label="منشأة التشخيص"
@@ -754,7 +754,7 @@ const MemberChronicConditionsTab = ({ memberId, readOnly = false }) => {
                 />
               </Grid>
 
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <TextField
                   fullWidth
                   multiline
@@ -765,7 +765,7 @@ const MemberChronicConditionsTab = ({ memberId, readOnly = false }) => {
                 />
               </Grid>
 
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <TextField
                   fullWidth
                   multiline
@@ -776,7 +776,7 @@ const MemberChronicConditionsTab = ({ memberId, readOnly = false }) => {
                 />
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <TextField
                   fullWidth
                   multiline
@@ -824,7 +824,7 @@ const MemberChronicConditionsTab = ({ memberId, readOnly = false }) => {
           <DialogTitle>تحديث حالة التغطية</DialogTitle>
           <DialogContent>
             <Grid container spacing={2} sx={{ mt: 0.5 }}>
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <FormControl fullWidth>
                   <InputLabel>حالة التغطية الجديدة</InputLabel>
                   <Select
@@ -840,7 +840,7 @@ const MemberChronicConditionsTab = ({ memberId, readOnly = false }) => {
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <TextField
                   fullWidth
                   multiline

@@ -146,14 +146,14 @@ const VisitCreate = () => {
         <form onSubmit={handleSubmit}>
           <Grid container spacing={3}>
             {/* Section: Basic Info */}
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Typography variant="h5" gutterBottom>
                 معلومات الزيارة الأساسية
               </Typography>
             </Grid>
 
             {/* Member - Required */}
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <FormControl fullWidth required error={!!errors.memberId}>
                 <InputLabel>المؤمَّن عليه *</InputLabel>
                 <Select value={form.memberId} onChange={handleChange('memberId')} label="المؤمَّن عليه *" disabled={membersLoading}>
@@ -173,7 +173,7 @@ const VisitCreate = () => {
             </Grid>
 
             {/* Visit Date - Required */}
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 required
@@ -188,7 +188,7 @@ const VisitCreate = () => {
             </Grid>
 
             {/* Doctor Name - Required */}
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 required
@@ -202,7 +202,7 @@ const VisitCreate = () => {
             </Grid>
 
             {/* Specialty - Optional */}
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 label="التخصص"
@@ -213,7 +213,7 @@ const VisitCreate = () => {
             </Grid>
 
             {/* Provider - Optional */}
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <FormControl fullWidth>
                 <InputLabel>مقدم الخدمة</InputLabel>
                 <Select value={form.providerId} onChange={handleChange('providerId')} label="مقدم الخدمة" disabled={providersLoading}>
@@ -228,7 +228,7 @@ const VisitCreate = () => {
             </Grid>
 
             {/* Visit Type - Optional with default */}
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <FormControl fullWidth>
                 <InputLabel>نوع الزيارة</InputLabel>
                 <Select value={form.visitType} onChange={handleChange('visitType')} label="نوع الزيارة">
@@ -242,14 +242,14 @@ const VisitCreate = () => {
             </Grid>
 
             {/* Section: Medical Info */}
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Typography variant="h5" gutterBottom sx={{ mt: 2 }}>
                 المعلومات الطبية
               </Typography>
             </Grid>
 
             {/* Diagnosis - Optional */}
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 multiline
@@ -262,7 +262,7 @@ const VisitCreate = () => {
             </Grid>
 
             {/* Treatment - Optional */}
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 multiline
@@ -275,7 +275,7 @@ const VisitCreate = () => {
             </Grid>
 
             {/* Total Amount - Optional */}
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 type="number"
@@ -290,7 +290,7 @@ const VisitCreate = () => {
             </Grid>
 
             {/* Notes - Optional */}
-            <Grid item xs={12}>
+            <Grid size={12}>
               <TextField
                 fullWidth
                 multiline
@@ -303,7 +303,7 @@ const VisitCreate = () => {
             </Grid>
 
             {/* Actions */}
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ mt: 2 }}>
                 <Button variant="outlined" startIcon={<CancelIcon />} onClick={handleCancel} disabled={loading}>
                   إلغاء

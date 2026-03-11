@@ -94,7 +94,6 @@ public class MedicalServicesMappingService {
                 .status(MedicalServiceStatus.ACTIVE)
                 .active(true)
                 .isMaster(true)
-                .requiresPA(false)
                 .build();
         service = medicalServiceRepo.save(service);
         log.info("CREATE_SERVICE: code={} by user={}", service.getCode(), actor.getId());

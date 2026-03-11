@@ -100,7 +100,7 @@ const VisitView = () => {
         <MainCard>
           <Grid container spacing={3}>
             {[1, 2, 3, 4].map((i) => (
-              <Grid item xs={12} md={6} key={i}>
+              <Grid key={i} size={{ xs: 12, md: 6 }}>
                 <Skeleton variant="rectangular" height={120} />
               </Grid>
             ))}
@@ -207,7 +207,7 @@ const VisitView = () => {
 
       <Grid container spacing={3}>
         {/* Visit Information */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <MainCard
             title={
               <Stack direction="row" spacing={1} alignItems="center">
@@ -228,7 +228,7 @@ const VisitView = () => {
         </Grid>
 
         {/* Member Information */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <MainCard
             title={
               <Stack direction="row" spacing={1} alignItems="center">
@@ -245,7 +245,7 @@ const VisitView = () => {
         </Grid>
 
         {/* Provider Information */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <MainCard
             title={
               <Stack direction="row" spacing={1} alignItems="center">
@@ -274,7 +274,7 @@ const VisitView = () => {
         </Grid>
 
         {/* Services */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <MainCard
             title={
               <Stack direction="row" spacing={1} alignItems="center">
@@ -332,7 +332,7 @@ const VisitView = () => {
         </Grid>
 
         {/* Notes & Diagnosis */}
-        <Grid item xs={12}>
+        <Grid size={12}>
           <MainCard
             title={
               <Stack direction="row" spacing={1} alignItems="center">
@@ -343,7 +343,7 @@ const VisitView = () => {
             contentSX={{ pt: 2 }}
           >
             <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <InfoRow
                   label="الملاحظات"
                   icon={NotesIcon}
@@ -358,7 +358,7 @@ const VisitView = () => {
                   }
                 />
               </Grid>
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <InfoRow
                   label="التشخيص"
                   value={
@@ -377,7 +377,7 @@ const VisitView = () => {
         </Grid>
 
         {/* Status */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <MainCard
             title={
               <Stack direction="row" spacing={1} alignItems="center">
@@ -407,7 +407,7 @@ const VisitView = () => {
         </Grid>
 
         {/* System Metadata */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <MainCard
             title={
               <Stack direction="row" spacing={1} alignItems="center">
