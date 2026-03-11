@@ -137,6 +137,7 @@ const GenericDataTable = ({
   stickyHeader = true,
   minHeight = 400,
   maxHeight = 'calc(100vh - 300px)',
+  disableInternalScroll = false,
   compact = false,
   tableSize = 'medium',
   onRowClick,
@@ -259,7 +260,9 @@ const GenericDataTable = ({
                   px: compact ? 1 : 2,
                   minWidth: header.column.columnDef.minWidth || 100,
                   width: header.column.columnDef.width,
-                  maxWidth: header.column.columnDef.maxWidth
+                  maxWidth: header.column.columnDef.maxWidth,
+                  whiteSpace: 'normal',
+                  overflowWrap: 'anywhere'
                 }}
               >
                 {header.isPlaceholder ? null : (
@@ -351,7 +354,12 @@ const GenericDataTable = ({
               <TableCell
                 key={cell.id}
                 align={cell.column.columnDef.align || 'right'}
-                sx={{ py: compact ? 1.3 : 1.2, px: compact ? 1 : 2 }}
+                sx={{
+                  py: compact ? 1.3 : 1.2,
+                  px: compact ? 1 : 2,
+                  whiteSpace: 'normal',
+                  overflowWrap: 'anywhere'
+                }}
               >
                 {flexRender(cell.column.columnDef.cell, cell.getContext())}
               </TableCell>
@@ -395,9 +403,10 @@ const GenericDataTable = ({
       <TableContainer
         component={Paper}
         sx={{
-          minHeight,
-          maxHeight,
-          overflow: 'auto',
+          minHeight: disableInternalScroll ? 'auto' : minHeight,
+          maxHeight: disableInternalScroll ? 'none' : maxHeight,
+          overflowX: 'hidden',
+          overflowY: disableInternalScroll ? 'visible' : 'auto',
           '&::-webkit-scrollbar': {
             width: 8,
             height: 8
@@ -408,7 +417,11 @@ const GenericDataTable = ({
           }
         }}
       >
-        <Table stickyHeader={stickyHeader} size={compact ? 'small' : tableSize}>
+        <Table
+          stickyHeader={disableInternalScroll ? false : stickyHeader}
+          size={compact ? 'small' : tableSize}
+          sx={{ tableLayout: 'fixed', width: '100%' }}
+        >
           {renderTableHeader()}
           {renderTableBody()}
         </Table>
@@ -481,6 +494,7 @@ GenericDataTable.propTypes = {
   stickyHeader: PropTypes.bool,
   minHeight: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
   maxHeight: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+  disableInternalScroll: PropTypes.bool,
   onRowClick: PropTypes.func,
   emptyMessage: PropTypes.string,
   rowsPerPageOptions: PropTypes.arrayOf(PropTypes.number)

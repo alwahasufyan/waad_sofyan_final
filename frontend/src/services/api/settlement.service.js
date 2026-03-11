@@ -36,9 +36,14 @@ export const providerAccountsService = {
    * Get all provider accounts with outstanding balance
    * @returns {Promise<Array>} List of provider accounts
    */
-  getAll: async () => {
+  getAll: async (params = {}) => {
     try {
-      const response = await axiosClient.get(PROVIDER_ACCOUNTS_URL);
+      const queryParams = new URLSearchParams();
+      if (params.status) queryParams.append('status', params.status);
+      if (params.hasBalance !== undefined) queryParams.append('hasBalance', String(!!params.hasBalance));
+
+      const url = queryParams.toString() ? `${PROVIDER_ACCOUNTS_URL}?${queryParams.toString()}` : PROVIDER_ACCOUNTS_URL;
+      const response = await axiosClient.get(url);
       return unwrap(response);
     } catch (error) {
       throw handleSettlementErrors(error);

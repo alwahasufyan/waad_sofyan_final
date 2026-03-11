@@ -145,15 +145,18 @@ export const exportAccountsListToExcel = async ({ accounts = [] }) => {
     { header: 'الرصيد الحالي', key: 'runningBalance', width: 18 },
     { header: 'إجمالي المعتمد', key: 'totalApproved', width: 18 },
     { header: 'إجمالي المدفوع', key: 'totalPaid', width: 18 },
-    { header: 'عدد الحركات', key: 'transactionCount', width: 14 }
+    { header: 'فجوة السداد', key: 'gapAmount', width: 16 },
+    { header: 'نسبة السداد %', key: 'coveragePercent', width: 14 },
+    { header: 'آخر حركة', key: 'lastActivityAt', width: 16 },
+    { header: 'مطالبات معلقة', key: 'pendingClaimsCount', width: 14 }
   ];
 
-  worksheet.mergeCells('A1:F1');
+  worksheet.mergeCells('A1:I1');
   worksheet.getCell('A1').value = 'الدفعات المالية لمقدمي الخدمة';
   worksheet.getCell('A1').font = { bold: true, size: 14 };
   worksheet.getCell('A1').alignment = { horizontal: 'center', vertical: 'middle' };
 
-  worksheet.mergeCells('A2:F2');
+  worksheet.mergeCells('A2:I2');
   worksheet.getCell('A2').value = `تاريخ التصدير: ${new Date().toLocaleString('ar-LY')}`;
   worksheet.getCell('A2').font = { size: 10, color: { argb: 'FF666666' } };
   worksheet.getCell('A2').alignment = { horizontal: 'center', vertical: 'middle' };
@@ -179,7 +182,12 @@ export const exportAccountsListToExcel = async ({ accounts = [] }) => {
       runningBalance: Number(acc.runningBalance) || 0,
       totalApproved: Number(acc.totalApproved) || 0,
       totalPaid: Number(acc.totalPaid) || 0,
-      transactionCount: acc.transactionCount || 0
+      gapAmount: Number(acc.gapAmount) || Math.max((Number(acc.totalApproved) || 0) - (Number(acc.totalPaid) || 0), 0),
+      coveragePercent:
+        Number(acc.coveragePercent) ||
+        ((Number(acc.totalApproved) || 0) > 0 ? ((Number(acc.totalPaid) || 0) / (Number(acc.totalApproved) || 0)) * 100 : 0),
+      lastActivityAt: acc.lastActivityAt || acc.updatedAt || acc.createdAt || '-',
+      pendingClaimsCount: acc.pendingClaimsCount ?? acc.transactionCount ?? 0
     });
 
     row.eachCell((cell, colNumber) => {
@@ -189,9 +197,12 @@ export const exportAccountsListToExcel = async ({ accounts = [] }) => {
         bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
         right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
       };
-      if (colNumber >= 3 && colNumber <= 5) {
+      if (colNumber >= 3 && colNumber <= 6) {
         cell.numFmt = '#,##0.00';
         cell.alignment = { horizontal: 'right', vertical: 'middle' };
+      } else if (colNumber === 7) {
+        cell.numFmt = '0.0';
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
       } else {
         cell.alignment = { horizontal: 'center', vertical: 'middle' };
       }
