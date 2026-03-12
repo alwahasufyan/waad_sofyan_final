@@ -35,6 +35,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Member Search", description = "Unified member search API - supports Card/Name/Barcode")
+@PreAuthorize("isAuthenticated()")
 public class UnifiedSearchController {
 
     private final UnifiedSearchService unifiedSearchService;

@@ -34,6 +34,7 @@ import java.util.Optional;
 @RequestMapping("/api/v1/benefit-policies/{policyId}")
 @RequiredArgsConstructor
 @Tag(name = "Benefit Policy Rules", description = "Manage coverage rules within benefit policies")
+@PreAuthorize("isAuthenticated()")
 public class BenefitPolicyRuleController {
 
     private final BenefitPolicyRuleService ruleService;

@@ -62,6 +62,9 @@ export default defineConfig(({ mode }) => {
     optimizeDeps: {
       include: ['@mui/material/Tooltip', 'react', 'react-dom', 'react-router-dom']
     },
+    esbuild: {
+      drop: mode === 'production' ? ['console', 'debugger'] : []
+    },
     build: {
       chunkSizeWarningLimit: 1000, // Raise warning limit to 1000kb
       rollupOptions: {

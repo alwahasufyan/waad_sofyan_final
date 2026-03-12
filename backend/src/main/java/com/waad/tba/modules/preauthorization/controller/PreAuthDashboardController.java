@@ -18,6 +18,7 @@ import java.util.List;
 @RequestMapping("/api/v1/pre-authorizations/dashboard")
 @RequiredArgsConstructor
 @Slf4j
+@PreAuthorize("isAuthenticated()")
 public class PreAuthDashboardController {
 
     private final PreAuthDashboardService dashboardService;

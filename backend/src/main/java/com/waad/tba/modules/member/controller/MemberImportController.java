@@ -46,6 +46,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequestMapping("/api/v1/members/legacy-import")
 @RequiredArgsConstructor
 @Tag(name = "Member Import (Legacy)", description = "Bulk member import from Excel - DEPRECATED, use /api/members/import instead")
+@PreAuthorize("isAuthenticated()")
 public class MemberImportController {
 
     private final MemberExcelImportService importService;

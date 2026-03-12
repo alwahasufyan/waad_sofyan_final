@@ -21,6 +21,7 @@ import java.io.IOException;
 @RequestMapping("/api/v1/providers/import")
 @RequiredArgsConstructor
 @Tag(name = "Provider Excel Import", description = "System-generated Excel template download and import")
+@PreAuthorize("isAuthenticated()")
 public class ProviderExcelTemplateController {
     
     private final ProviderExcelTemplateService templateService;

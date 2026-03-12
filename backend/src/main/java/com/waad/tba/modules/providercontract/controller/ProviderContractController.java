@@ -55,6 +55,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequestMapping("/api/v1/provider-contracts")
 @RequiredArgsConstructor
 @Tag(name = "Provider Contracts", description = "Provider contract management API")
+@PreAuthorize("isAuthenticated()")
 public class ProviderContractController {
 
     private final ProviderContractService contractService;

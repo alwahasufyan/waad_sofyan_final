@@ -34,6 +34,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/visits")
 @RequiredArgsConstructor
+@PreAuthorize("isAuthenticated()")
 public class VisitAttachmentController {
     
     private final VisitAttachmentService attachmentService;

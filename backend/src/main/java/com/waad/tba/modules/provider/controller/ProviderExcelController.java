@@ -20,6 +20,7 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/api/v1/providers")
 @RequiredArgsConstructor
 @Tag(name = "Providers - Excel Import", description = "Import healthcare providers from Excel files")
+@PreAuthorize("isAuthenticated()")
 public class ProviderExcelController {
 
     private final ProviderExcelService excelService;

@@ -24,6 +24,7 @@ import java.util.List;
 @RequestMapping("/api/v1/claim-batches")
 @RequiredArgsConstructor
 @Slf4j
+@PreAuthorize("isAuthenticated()")
 public class ClaimBatchController {
 
     private final ClaimBatchService claimBatchService;

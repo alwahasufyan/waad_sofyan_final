@@ -37,6 +37,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "System", description = "System-level configuration and context APIs")
+@PreAuthorize("isAuthenticated()")
 public class SystemController {
 
     private final EmployerService employerService;

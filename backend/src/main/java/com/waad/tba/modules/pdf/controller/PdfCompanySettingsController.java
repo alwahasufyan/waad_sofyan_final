@@ -27,6 +27,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/pdf/settings")
 @RequiredArgsConstructor
+@PreAuthorize("isAuthenticated()")
 public class PdfCompanySettingsController {
     
     private final PdfCompanySettingsService service;

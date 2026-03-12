@@ -31,6 +31,7 @@ import java.time.LocalDate;
 @RequestMapping("/api/v1/provider/documents")
 @RequiredArgsConstructor
 @Slf4j
+@PreAuthorize("isAuthenticated()")
 public class ProviderDocumentController {
 
     private final ProviderDocumentService documentService;

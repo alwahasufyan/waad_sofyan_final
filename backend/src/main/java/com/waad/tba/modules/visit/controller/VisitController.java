@@ -24,6 +24,7 @@ import java.util.List;
 @RequestMapping("/api/v1/visits")
 @RequiredArgsConstructor
 @Tag(name = "Visits", description = "APIs for managing visit records")
+@PreAuthorize("isAuthenticated()")
 public class VisitController {
 
         private final VisitService service;

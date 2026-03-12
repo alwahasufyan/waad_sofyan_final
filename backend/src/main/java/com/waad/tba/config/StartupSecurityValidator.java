@@ -160,9 +160,9 @@ public class StartupSecurityValidator implements EnvironmentPostProcessor {
             System.err.println("   Or disable email: export EMAIL_ENABLED=false");
             System.err.println();
 
-            log.error("❌ [SECURITY] Security configuration validation failed, but continuing startup (defaults may be applied later)");
-            // throw new IllegalStateException(
-            //        "Security configuration validation failed: " + String.join("; ", errors));
+            log.error("❌ [SECURITY] Security configuration validation failed!");
+            throw new IllegalStateException(
+                    "Security configuration validation failed: " + String.join("; ", errors));
         }
 
         log.info("🔐 [SECURITY] All security configurations validated successfully!");

@@ -29,7 +29,8 @@ import org.springframework.web.multipart.MultipartFile;
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/files")
-@RequiredArgsConstructor@SuppressWarnings("null")public class FileController {
+@RequiredArgsConstructor@SuppressWarnings("null")@PreAuthorize("isAuthenticated()")
+public class FileController {
     
     private final FileStorageService fileStorageService;
     

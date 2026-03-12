@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/v1/providers")
 @RequiredArgsConstructor
+@PreAuthorize("isAuthenticated()")
 public class ProviderController {
 
     private final ProviderService providerService;

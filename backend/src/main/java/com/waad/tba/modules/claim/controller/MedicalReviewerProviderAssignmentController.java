@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/admin/medical-reviewers")
+@PreAuthorize("isAuthenticated()")
 public class MedicalReviewerProviderAssignmentController {
 
     private final MedicalReviewerProviderAssignmentService assignmentService;

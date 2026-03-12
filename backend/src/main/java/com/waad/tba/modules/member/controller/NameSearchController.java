@@ -26,6 +26,7 @@ import java.util.List;
 @RequestMapping("/api/v1/members")
 @RequiredArgsConstructor
 @Tag(name = "Name Search", description = "Fuzzy name search and autocomplete endpoints")
+@PreAuthorize("isAuthenticated()")
 public class NameSearchController {
 
     private final NameSearchService nameSearchService;

@@ -46,6 +46,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequestMapping("/api/v1/reports")
 @RequiredArgsConstructor
 @Tag(name = "Reports", description = "Financial Reports - Adjudication & Settlement")
+@PreAuthorize("isAuthenticated()")
 public class ReportsController {
     
     private final AdjudicationReportService adjudicationReportService;

@@ -42,6 +42,7 @@ import java.util.List;
 @RequestMapping("/api/v1/medical-categories")
 @RequiredArgsConstructor
 @Tag(name = "Medical Category", description = "Medical category reference data management")
+@PreAuthorize("isAuthenticated()")
 public class MedicalCategoryController {
 
     private final MedicalCategoryService categoryService;

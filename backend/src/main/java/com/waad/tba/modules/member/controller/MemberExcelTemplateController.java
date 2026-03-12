@@ -50,6 +50,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequestMapping("/api/v1/unified-members/import")
 @RequiredArgsConstructor
 @Tag(name = "Member Excel Import", description = "System-generated Excel template download and import")
+@PreAuthorize("isAuthenticated()")
 public class MemberExcelTemplateController {
     
     private final MemberExcelTemplateService templateService;

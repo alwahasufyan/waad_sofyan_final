@@ -52,6 +52,7 @@ import java.util.List;
 @RequestMapping("/api/v1/eligibility")
 @RequiredArgsConstructor
 @Tag(name = "Eligibility", description = "Eligibility Engine API - Member eligibility verification")
+@PreAuthorize("isAuthenticated()")
 public class EligibilityController {
 
         private final EligibilityEngineService eligibilityService;

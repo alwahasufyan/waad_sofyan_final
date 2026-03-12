@@ -60,6 +60,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequestMapping("/api/v1/provider-accounts")
 @RequiredArgsConstructor
 @Tag(name = "Settlement - Provider Accounts (v1)", description = "APIs for viewing provider financial accounts - Version 1")
+@PreAuthorize("isAuthenticated()")
 public class ProviderAccountController {
 
     private final ProviderAccountService providerAccountService;

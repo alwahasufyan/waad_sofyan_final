@@ -44,6 +44,7 @@ import java.io.IOException;
 @RequiredArgsConstructor
 @Tag(name = "Price List Excel Import", description = "System-generated Excel template download and import for contract pricing")
 @SecurityRequirement(name = "bearer-jwt")
+@PreAuthorize("isAuthenticated()")
 public class ProviderContractPricingExcelController {
 
     private final PriceListExcelTemplateService templateService;

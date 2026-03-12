@@ -32,6 +32,7 @@ import java.util.*;
 @RequiredArgsConstructor
 @Deprecated(since = "2026-01", forRemoval = false)
 @SuppressWarnings("dep-ann")
+@PreAuthorize("isAuthenticated()")
 public class PdfReportController {
     
     private final PdfTemplateService templateService;

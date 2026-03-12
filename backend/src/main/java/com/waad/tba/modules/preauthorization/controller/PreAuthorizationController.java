@@ -45,6 +45,7 @@ import java.util.Set;
 @RequestMapping("/api/v1/pre-authorizations")
 @RequiredArgsConstructor
 @Slf4j
+@PreAuthorize("isAuthenticated()")
 public class PreAuthorizationController {
 
     private final PreAuthorizationService preAuthorizationService;

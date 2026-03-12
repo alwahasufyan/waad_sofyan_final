@@ -29,6 +29,7 @@ import java.io.IOException;
 @RequestMapping("/api/v1/medical-categories/import")
 @RequiredArgsConstructor
 @Tag(name = "Medical Categories Excel Import", description = "System-generated Excel template download and import")
+@PreAuthorize("isAuthenticated()")
 public class MedicalCategoryExcelController {
 
     private final MedicalCategoryExcelTemplateService templateService;

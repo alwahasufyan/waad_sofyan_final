@@ -110,6 +110,7 @@ import java.util.Map;
         "Supports: Principal creation with inline Dependents, Dependent management, " +
         "Family eligibility checks via Barcode, CASCADE deletion, and unified CRUD operations.")
 @SuppressWarnings("deprecation")
+@PreAuthorize("isAuthenticated()")
 public class UnifiedMemberController {
 
     private final UnifiedMemberService unifiedMemberService;

@@ -32,6 +32,7 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/api/v1/employers")
 @RequiredArgsConstructor
+@PreAuthorize("isAuthenticated()")
 public class EmployerController {
 
     private final EmployerService service;

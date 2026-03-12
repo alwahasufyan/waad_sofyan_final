@@ -67,6 +67,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequestMapping("/api/v1/provider")
 @RequiredArgsConstructor
 @Tag(name = "Provider Portal", description = "Healthcare provider interface for eligibility checks and service verification")
+@PreAuthorize("isAuthenticated()")
 public class ProviderPortalController {
     
     private final ProviderPortalService providerPortalService;

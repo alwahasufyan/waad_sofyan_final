@@ -41,6 +41,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/v1/members")
 @RequiredArgsConstructor
 @Tag(name = "Eligibility Check", description = "Unified eligibility verification endpoints")
+@PreAuthorize("isAuthenticated()")
 public class UnifiedEligibilityController {
 
     private final UnifiedEligibilityService eligibilityService;

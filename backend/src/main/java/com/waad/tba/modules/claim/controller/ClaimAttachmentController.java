@@ -35,6 +35,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/claims")
 @RequiredArgsConstructor
+@PreAuthorize("isAuthenticated()")
 public class ClaimAttachmentController {
     
     private final ClaimAttachmentService attachmentService;

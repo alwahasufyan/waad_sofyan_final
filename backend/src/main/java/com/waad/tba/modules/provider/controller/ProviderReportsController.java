@@ -50,6 +50,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequestMapping("/api/v1/provider/reports")
 @RequiredArgsConstructor
 @Tag(name = "Provider Reports", description = "Provider Portal Reports — Claims, Pre-Auth, Visits")
+@PreAuthorize("isAuthenticated()")
 public class ProviderReportsController {
 
     /** Maximum records returned per export — prevents OOM on large datasets */

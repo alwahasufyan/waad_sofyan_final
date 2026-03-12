@@ -42,6 +42,7 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/v1/dashboard")
 @RequiredArgsConstructor
 @Tag(name = "Dashboard", description = "APIs for dashboard statistics and charts")
+@PreAuthorize("isAuthenticated()")
 public class DashboardController {
 
     private final DashboardService service;

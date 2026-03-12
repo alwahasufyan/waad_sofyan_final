@@ -68,6 +68,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequestMapping("/api/v1/benefit-policies")
 @RequiredArgsConstructor
 @Tag(name = "Benefit Policy", description = "Manage medical benefit policies")
+@PreAuthorize("isAuthenticated()")
 public class BenefitPolicyController {
 
     /** Allowlist of valid sort field names to prevent entity field enumeration. */
