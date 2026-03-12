@@ -108,15 +108,10 @@ const BenefitPolicyEdit = Loadable(lazy(() => import('pages/benefit-policies/Ben
 
 // ==============================|| LAZY LOADING - MEDICAL CATALOG ||============================== //
 
-const MedicalCatalogPage = Loadable(lazy(() => import('pages/medical/MedicalCatalogPage')));
 const MedicalCategoriesPage = Loadable(lazy(() => import('pages/medical-categories')));
 const MedicalCategoryCreate = Loadable(lazy(() => import('pages/medical-categories/MedicalCategoryCreate')));
 const MedicalCategoryEdit = Loadable(lazy(() => import('pages/medical-categories/MedicalCategoryEdit')));
 const MedicalCategoryView = Loadable(lazy(() => import('pages/medical-categories/MedicalCategoryView')));
-const MedicalServicesPage = Loadable(lazy(() => import('pages/medical-services')));
-const MedicalServiceCreate = Loadable(lazy(() => import('pages/medical-services/MedicalServiceCreate')));
-const MedicalServiceEdit = Loadable(lazy(() => import('pages/medical-services/MedicalServiceEdit')));
-const MedicalServiceView = Loadable(lazy(() => import('pages/medical-services/MedicalServiceView')));
 
 // ==============================|| LAZY LOADING - DOCUMENTS ||============================== //
 
@@ -125,22 +120,6 @@ const DocumentsLibrary = Loadable(lazy(() => import('pages/documents/DocumentsLi
 // ==============================|| LAZY LOADING - UNDER DEVELOPMENT ||============================== //
 
 const UnderDevelopment = Loadable(lazy(() => import('pages/under-development')));
-
-// ==============================|| LAZY LOADING - MEDICAL SPECIALTIES ||============================== //
-
-const MedicalSpecialtiesPage = Loadable(lazy(() => import('pages/medical-specialties')));
-
-// ==============================|| LAZY LOADING - MEDICAL CATALOG HIERARCHY ||============================== //
-
-const CatalogHierarchyPage = Loadable(lazy(() => import('pages/medical-catalog')));
-
-// ==============================|| LAZY LOADING - PROVIDER MAPPING CENTER ||============================== //
-
-const ProviderMappingCenter = Loadable(lazy(() => import('pages/medical/ProviderMappingCenter')));
-
-// ==============================|| LAZY LOADING - MEDICAL SERVICES MAPPING ||============================== //
-
-const MedicalServicesMappingPage = Loadable(lazy(() => import('pages/medical/MedicalServicesPage')));
 
 // Companies — single TPA mode: redirect to company settings
 // No multi-company management needed (single TPA context)
@@ -151,9 +130,6 @@ const AdminUsersList = Loadable(lazy(() => import('pages/rbac/users')));
 const AdminUserDetails = Loadable(lazy(() => import('pages/rbac/users/UserDetails')));
 const AdminUserCreate = Loadable(lazy(() => import('pages/rbac/users/UserCreate')));
 const AdminUserEdit = Loadable(lazy(() => import('pages/rbac/users/UserEdit')));
-const AdminMedicalReviewersList = Loadable(lazy(() => import('pages/admin/medical-reviewers')));
-const AdminMedicalReviewerProviders = Loadable(lazy(() => import('pages/admin/medical-reviewers/ReviewerProviderAssignments')));
-
 // ==============================|| LAZY LOADING - SETTINGS ||============================== //
 
 const Settings = Loadable(lazy(() => import('pages/settings')));
@@ -164,10 +140,6 @@ const SystemSettingsPage = Loadable(lazy(() => import('pages/settings/SystemSett
 
 const ProfileOverview = Loadable(lazy(() => import('pages/profile/ProfileOverview')));
 const AccountSettings = Loadable(lazy(() => import('pages/profile/AccountSettings')));
-
-// ==============================|| LAZY LOADING - AUDIT ||============================== //
-
-const AuditLog = Loadable(lazy(() => import('pages/audit')));
 
 // ==============================|| LAZY LOADING - REPORTS ||============================== //
 
@@ -602,18 +574,6 @@ const MainRoutes = {
     },
 
     // NOTE: Benefit Packages main routes are defined below (line ~674)
-    // This section intentionally left empty to avoid duplicate route
-
-    // Unified Medical Catalog
-    {
-      path: 'medical-catalog',
-      element: (
-        <PermissionGuard isRouteGuard>
-          <MedicalCatalogPage />
-        </PermissionGuard>
-      )
-    },
-
     // Medical Categories (for category creation/maintenance workflows)
     {
       path: 'medical-categories',
@@ -652,86 +612,6 @@ const MainRoutes = {
           )
         }
       ]
-    },
-
-    // Medical Services (legacy routes kept for compatibility)
-    {
-      path: 'medical-services',
-      element: <TableRefreshLayout />,
-      children: [
-        {
-          path: '',
-          element: (
-            <PermissionGuard isRouteGuard>
-              <MedicalServicesPage />
-            </PermissionGuard>
-          )
-        },
-        {
-          path: 'add',
-          element: (
-            <PermissionGuard isRouteGuard>
-              <MedicalServiceCreate />
-            </PermissionGuard>
-          )
-        },
-        {
-          path: 'edit/:id',
-          element: (
-            <PermissionGuard isRouteGuard>
-              <MedicalServiceEdit />
-            </PermissionGuard>
-          )
-        },
-        {
-          path: ':id',
-          element: (
-            <PermissionGuard isRouteGuard>
-              <MedicalServiceView />
-            </PermissionGuard>
-          )
-        }
-      ]
-    },
-
-    // Provider Mapping Center
-    {
-      path: 'medical/provider-mapping',
-      element: (
-        <PermissionGuard isRouteGuard>
-          <ProviderMappingCenter />
-        </PermissionGuard>
-      )
-    },
-
-    // Medical Services Mapping
-    {
-      path: 'medical/services-mapping',
-      element: (
-        <PermissionGuard isRouteGuard>
-          <MedicalServicesMappingPage />
-        </PermissionGuard>
-      )
-    },
-
-    // Medical Specialties Management
-    {
-      path: 'medical-specialties',
-      element: (
-        <PermissionGuard isRouteGuard>
-          <MedicalSpecialtiesPage />
-        </PermissionGuard>
-      )
-    },
-
-    // Medical Catalog Hierarchy (Category → Specialty → Service tree)
-    {
-      path: 'medical-catalog-hierarchy',
-      element: (
-        <PermissionGuard isRouteGuard>
-          <CatalogHierarchyPage />
-        </PermissionGuard>
-      )
     },
 
     // Benefit Packages Module - Wrapped with TableRefreshLayout
@@ -963,22 +843,6 @@ const MainRoutes = {
             }
           ]
         },
-        {
-          path: 'medical-reviewers',
-          element: (
-            <PermissionGuard isRouteGuard>
-              <AdminMedicalReviewersList />
-            </PermissionGuard>
-          )
-        },
-        {
-          path: 'medical-reviewers/:reviewerId/providers',
-          element: (
-            <PermissionGuard isRouteGuard>
-              <AdminMedicalReviewerProviders />
-            </PermissionGuard>
-          )
-        }
       ]
     },
 
@@ -1069,18 +933,6 @@ const MainRoutes = {
           )
         }
       ]
-    },
-
-    // Audit Log
-    {
-      path: 'audit',
-      element: (
-        <PermissionGuard isRouteGuard>
-          <TableRefreshProvider>
-            <AuditLog />
-          </TableRefreshProvider>
-        </PermissionGuard>
-      )
     },
 
     // Under Development Placeholder

@@ -7,7 +7,6 @@ import {
   ReceiptLong as ReceiptLongIcon,
   Description as DescriptionIcon,
   PeopleAlt as PeopleAltIcon,
-  MedicalServices as MedicalServicesIcon,
   Category as CategoryIcon,
   Assignment as AssignmentIcon,
   Settings as SettingsIcon,
@@ -17,17 +16,14 @@ import {
   Policy as PolicyIcon,
   Handshake as HandshakeIcon,
   Security as SecurityIcon,
-  Timeline as TimelineIcon,
   HowToReg as HowToRegIcon,
   FormatListBulleted as FormatListBulletedIcon,
   Folder as FolderIcon,
   VerifiedUser as VerifiedUserIcon,
-  AssignmentInd as AssignmentIndIcon,
   History as HistoryIcon,
   PriceCheck as PriceCheckIcon,
   BarChart as BarChartIcon,
   ErrorOutline as ErrorOutlineIcon,
-  AccountTree as AccountTreeIcon,
   AccountBalanceWallet as AccountBalanceWalletIcon
 } from '@mui/icons-material';
 
@@ -611,14 +607,14 @@ const menuItem = [
         }
       },
       {
-        id: 'medical-reviewers-assignment',
-        title: 'تعيينات المراجعين الطبيين',
-        titleEn: 'Medical Reviewer Assignments',
+        id: 'medical-categories',
+        title: 'إدارة التصنيفات',
+        titleEn: 'Manage Categories',
         type: 'item',
-        url: '/admin/medical-reviewers',
-        icon: AssignmentIndIcon,
-        resource: 'reviewers',
-        action: 'manage',
+        url: '/medical-categories',
+        icon: CategoryIcon,
+        resource: 'medical_catalog',
+        action: 'view',
         chip: {
           label: '✅',
           color: 'success',
@@ -626,102 +622,19 @@ const menuItem = [
         }
       },
       {
-        id: 'audit',
-        title: 'سجل التدقيق',
-        titleEn: 'Audit Log',
+        id: 'system-configuration',
+        title: 'تكوين النظام والمؤسسة',
+        titleEn: 'System & Organization Configuration',
         type: 'item',
-        url: '/audit',
-        icon: TimelineIcon,
-        resource: 'audit_logs',
+        url: '/settings/system',
+        icon: SettingsIcon,
+        resource: 'system_settings',
         action: 'view',
         chip: {
           label: '✅',
           color: 'success',
-          size: 'small',
-          variant: 'outlined'
+          size: 'small'
         }
-      },
-      {
-        id: 'medical-taxonomy',
-        title: 'التصنيف الطبي',
-        titleEn: 'Medical Taxonomy',
-        type: 'collapse',
-        icon: MedicalServicesIcon,
-        resource: 'medical_catalog',
-        action: 'view',
-        children: [
-          {
-            id: 'medical-catalog',
-            title: 'الكتالوج الطبي الموحد',
-            titleEn: 'Medical Catalog',
-            type: 'item',
-            url: '/medical-catalog',
-            icon: MedicalServicesIcon,
-            resource: 'medical_catalog',
-            action: 'view',
-            chip: {
-              label: '✅',
-              color: 'success',
-              size: 'small'
-            }
-          },
-          {
-            id: 'medical-categories',
-            title: 'إدارة التصنيفات',
-            titleEn: 'Manage Categories',
-            type: 'item',
-            url: '/medical-categories',
-            icon: CategoryIcon,
-            resource: 'medical_catalog',
-            action: 'view'
-          },
-          {
-            id: 'provider-mapping-center',
-            title: 'مركز تعيين خدمات المزودين',
-            titleEn: 'Provider Mapping Center',
-            type: 'item',
-            url: '/medical/provider-mapping',
-            icon: AccountTreeIcon,
-            resource: 'medical_catalog',
-            action: 'view'
-          },
-        ]
-      },
-      {
-        id: 'settings',
-        title: 'إعدادات عامة',
-        titleEn: 'General Settings',
-        type: 'collapse',
-        icon: SettingsIcon,
-        resource: 'system_settings',
-        action: 'view',
-        children: [
-          {
-            id: 'system-configuration',
-            title: 'تكوين النظام والمؤسسة',
-            titleEn: 'System & Organization Configuration',
-            type: 'item',
-            url: '/settings/system',
-            icon: SettingsIcon,
-            resource: 'system_settings',
-            action: 'view',
-            chip: {
-              label: '✅',
-              color: 'success',
-              size: 'small'
-            }
-          },
-          {
-            id: 'medical-services-mapping',
-            title: 'الخدمات الطبية',
-            titleEn: 'Medical Services',
-            type: 'item',
-            url: '/medical/services-mapping',
-            icon: AssignmentIcon,
-            resource: 'medical_catalog',
-            action: 'view'
-          }
-        ]
       }
     ]
   }
