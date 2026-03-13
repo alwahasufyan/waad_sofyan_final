@@ -89,6 +89,7 @@ export default function ClaimBatchDetail() {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
     const [printClaims, setPrintClaims] = useState([]);
+    const [selectedClaimIds, setSelectedClaimIds] = useState([]);
     const [suspendDialogOpen, setSuspendDialogOpen] = useState(false);
     const [suspendComment, setSuspendComment] = useState('');
     const [suspendingClaimId, setSuspendingClaimId] = useState(null);
@@ -594,6 +595,23 @@ export default function ClaimBatchDetail() {
                         <Button
                             variant="outlined"
                             color="info"
+                            startIcon={<ViewIcon />}
+                            onClick={() => {
+                                if (selectedClaimIds.length === 0) {
+                                    enqueueSnackbar('الرجاء تحديد مطالبة واحدة على الأقل للمعاينة', { variant: 'warning' });
+                                    return;
+                                }
+                                navigate(`/claims/statement-preview?ids=${selectedClaimIds.join(',')}`);
+                            }}
+                            sx={{ borderRadius: 1.5, height: 40 }}
+                            // disabled={selectedClaimIds.length === 0}
+                        >
+                            معاينة
+                        </Button>
+
+                        <Button
+                            variant="outlined"
+                            color="info"
                             startIcon={<PrintIcon />}
                             onClick={handlePrint}
                             sx={{ borderRadius: 1.5, height: 40 }}
@@ -753,6 +771,10 @@ export default function ClaimBatchDetail() {
                         enableFiltering={false}
                         enableSorting={true}
                         enablePagination={true}
+                        enableRowSelection={true}
+                        onRowSelectionChange={(selectedRows) => {
+                            setSelectedClaimIds(selectedRows.map(row => row.id));
+                        }}
                         compact={true}
                         tableSize="small"
                         stickyHeader={false}

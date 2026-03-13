@@ -20,6 +20,9 @@ public class UserServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private com.waad.tba.modules.rbac.mapper.UserMapper userMapper;
+
     @InjectMocks
     private UserService userService;
 
@@ -38,8 +41,9 @@ public class UserServiceTest {
     @Test
     void testFindUserById_Success() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+        when(userMapper.toResponseDto(testUser)).thenReturn(com.waad.tba.modules.rbac.dto.UserResponseDto.builder().username("testuser").build());
 
-        User result = userService.getUserById(1L);
+        var result = userService.findById(1L);
 
         assertNotNull(result);
         assertEquals("testuser", result.getUsername());
@@ -50,10 +54,8 @@ public class UserServiceTest {
     void testFindUserById_NotFound() {
         when(userRepository.findById(2L)).thenReturn(Optional.empty());
 
-        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
-            userService.getUserById(2L);
+        assertThrows(com.waad.tba.common.exception.ResourceNotFoundException.class, () -> {
+            userService.findById(2L);
         });
-
-        assertTrue(exception.getMessage().contains("User not found"));
     }
 }

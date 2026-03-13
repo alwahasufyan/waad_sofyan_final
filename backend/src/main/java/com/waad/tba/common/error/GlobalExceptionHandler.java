@@ -7,6 +7,7 @@ import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.data.mapping.PropertyReferenceException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -57,7 +58,8 @@ public class GlobalExceptionHandler {
     }
 
     private String generateTrackingId() {
-        return UUID.randomUUID().toString();
+        String traceId = MDC.get("traceId");
+        return traceId != null ? traceId : UUID.randomUUID().toString();
     }
 
     private ResponseEntity<ApiError> build(@NonNull HttpStatus status, ErrorCode code, String message,

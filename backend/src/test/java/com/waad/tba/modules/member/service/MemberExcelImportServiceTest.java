@@ -67,16 +67,22 @@ class MemberExcelImportServiceTest {
 
     @BeforeEach
     void setUp() {
+        MemberImportParser parser = new MemberImportParser();
+        MemberImportMapper mapper = new MemberImportMapper(parser);
+        MemberImportRowProcessor rowProcessor = new MemberImportRowProcessor(
+                parser, employerRepository, benefitPolicyRepository, barcodeGeneratorService);
+
         service = new MemberExcelImportService(
                 memberRepository,
-                attributeRepository,
                 importLogRepository,
                 importErrorRepository,
                 employerRepository,
                 benefitPolicyRepository,
                 authorizationService,
                 new ObjectMapper(),
-                barcodeGeneratorService);
+                parser,
+                mapper,
+                rowProcessor);
 
         employer = Employer.builder().id(10L).code("EMP1").name("Employer One").active(true).build();
 

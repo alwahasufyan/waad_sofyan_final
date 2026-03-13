@@ -52,7 +52,7 @@ public class ClaimAuditService {
      * @param actor The user who made the change
      * @param comment Optional comment explaining the change
      */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional(propagation = Propagation.REQUIRED)
     public void recordStatusChange(Claim claim, ClaimStatus previousStatus, User actor, String comment) {
         ClaimAuditLog auditLog = ClaimAuditLog.builder()
             .claimId(claim.getId())
@@ -120,7 +120,7 @@ public class ClaimAuditService {
      * @param actor The reviewer who approved
      * @param comment Approval comment
      */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional(propagation = Propagation.REQUIRED)
     public void recordApproval(Claim claim, ClaimStatus previousStatus, 
                                java.math.BigDecimal previousApproved, User actor, String comment) {
         ClaimAuditLog auditLog = ClaimAuditLog.approval(
@@ -148,7 +148,7 @@ public class ClaimAuditService {
      * @param actor The reviewer who rejected
      * @param reason Rejection reason (required)
      */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional(propagation = Propagation.REQUIRED)
     public void recordRejection(Claim claim, ClaimStatus previousStatus, User actor, String reason) {
         ClaimAuditLog auditLog = ClaimAuditLog.rejection(
             claim.getId(),
@@ -171,7 +171,7 @@ public class ClaimAuditService {
      * @param claim The settled claim
      * @param actor The user who processed settlement
      */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional(propagation = Propagation.REQUIRED)
     public void recordSettlement(Claim claim, User actor) {
         ClaimAuditLog auditLog = ClaimAuditLog.settlement(
             claim.getId(),
@@ -196,7 +196,7 @@ public class ClaimAuditService {
      * @param comment Description of the change
      * @param beforeClaim Claim state before (for snapshot)
      */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional(propagation = Propagation.REQUIRED)
     public void recordChange(Claim claim, ChangeType changeType, User actor, 
                             String comment, Claim beforeClaim) {
         ClaimAuditLog auditLog = ClaimAuditLog.builder()

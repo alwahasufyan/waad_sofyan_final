@@ -188,6 +188,7 @@ public class ClaimStateMachine {
                 default -> Set.of();
             };
             case APPROVED -> switch (to) {
+                case SETTLED -> Set.of(ROLE_ACCOUNTANT);
                 case BATCHED -> Set.of(ROLE_ACCOUNTANT);
                 case NEEDS_CORRECTION -> Set.of(ROLE_REVIEWER, ROLE_ACCOUNTANT); // Reviewer suspends
                 default -> Set.of();

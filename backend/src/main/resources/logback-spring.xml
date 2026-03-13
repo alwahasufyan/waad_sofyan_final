@@ -4,8 +4,8 @@
     <!-- PROPERTIES & VARIABLES                        -->
     <!-- ============================================= -->
     <property name="LOG_DIR" value="logs"/>
-    <property name="LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"/>
-    <property name="CONSOLE_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} %highlight(%-5level) [%thread] %cyan(%logger{36}) - %msg%n"/>
+    <property name="LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%X{traceId}] [%X{username}] [%thread] %-5level %logger{36} - %msg%n"/>
+    <property name="CONSOLE_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} %highlight(%-5level) [%X{traceId}] [%X{username}] [%thread] %cyan(%logger{36}) - %msg%n"/>
 
     <!-- ============================================= -->
     <!-- CONSOLE APPENDER (Colored for Development)    -->

@@ -43,6 +43,7 @@ import org.springframework.beans.factory.annotation.Value;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
+    private final LogMdcFilter logMdcFilter;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final SessionAuthenticationFilter sessionAuthenticationFilter; // Phase B: Session support
     private final UserDetailsService userDetailsService;
@@ -100,6 +101,7 @@ public class SecurityConfig {
                                 "/swagger-ui.html",
                                 "/swagger-resources/**",
                                 "/webjars/**",
+                                "/actuator/**",
                                 "/error")
                         .permitAll()
                         // All other endpoints require authentication
@@ -125,6 +127,7 @@ public class SecurityConfig {
                 // 3. UsernamePasswordAuthenticationFilter handles form-based login (not used in
                 // our API)
                 .addFilterBefore(sessionAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(logMdcFilter, SessionAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
 
                 // Return 401 (not 403) for unauthenticated requests

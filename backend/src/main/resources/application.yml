@@ -7,6 +7,12 @@ spring:
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
     password: ${DB_PASSWORD:12345}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 50
+      minimum-idle: 10
+      idle-timeout: 300000
+      connection-timeout: 30000
+      max-lifetime: 1200000
 
   servlet:
     multipart:
@@ -51,6 +57,8 @@ spring:
           lock:
             timeout: 30000
 
+
+
   data:
     web:
       pageable:
@@ -69,6 +77,13 @@ spring:
     baseline-version: 0
 
 server:
+  tomcat:
+    threads:
+      max: 400
+      min-spare: 20
+    connection-timeout: 20000
+    max-connections: 10000
+    accept-count: 200
   error:
     include-message: always
     include-stacktrace: never
@@ -136,6 +151,21 @@ waad:
       - image/jpg
       - application/dicom
       - application/x-dicom
+
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: when_authorized
+    prometheus:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
 
 logging:
   level:

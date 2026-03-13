@@ -148,7 +148,7 @@ public enum ClaimStatus {
             case UNDER_REVIEW -> Set.of(APPROVAL_IN_PROGRESS, REJECTED, NEEDS_CORRECTION);
             case NEEDS_CORRECTION -> Set.of(APPROVED); // Corrected → back to APPROVED
             case APPROVAL_IN_PROGRESS -> Set.of(APPROVED, REJECTED, UNDER_REVIEW); // Async result + Recovery
-            case APPROVED -> Set.of(BATCHED, NEEDS_CORRECTION); // Finance handoff or reviewer suspension
+            case APPROVED -> Set.of(SETTLED, BATCHED, NEEDS_CORRECTION); // Directly settlable or via Batch
             case BATCHED -> Set.of(SETTLED, APPROVED); // Settle from batch, or unbatch back to APPROVED
             case REJECTED, SETTLED -> Collections.emptySet(); // Terminal
         };

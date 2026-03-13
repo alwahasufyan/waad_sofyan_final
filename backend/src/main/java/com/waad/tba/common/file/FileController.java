@@ -199,9 +199,9 @@ public class FileController {
      * @param expiryMinutes URL validity duration (default: 60 minutes)
      * @return Presigned URL
      */
-    @GetMapping("/{folder}/{filename}/url")
+    @GetMapping(value = "/{folder}/{filename}/url", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<String> getPresignedUrl(
+    public ResponseEntity<java.util.Map<String, String>> getPresignedUrl(
             @PathVariable("folder") String folder,
             @PathVariable("filename") String filename,
             @RequestParam(value = "expiryMinutes", defaultValue = "60") int expiryMinutes) {
@@ -213,13 +213,11 @@ public class FileController {
         
         try {
             String url = fileStorageService.getPresignedUrl(fileKey, expiryMinutes);
-            return ResponseEntity.ok()
-                    .contentType(MediaType.TEXT_PLAIN) // Fix potential XSS by specifying text/plain
-                    .body(url);
+            return ResponseEntity.ok(java.util.Map.of("url", url));
             
         } catch (FileStorageException e) {
             log.error("URL generation failed: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(java.util.Map.of("error", e.getMessage()));
         }
     }
     
