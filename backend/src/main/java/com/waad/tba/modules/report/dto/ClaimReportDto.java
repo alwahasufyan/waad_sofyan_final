@@ -28,4 +28,14 @@ public class ClaimReportDto {
     private BigDecimal grandTotalNet;
     private BigDecimal grandTotalRejected;
     private BigDecimal grandTotalPatientShare; // New field for Summary Page
+
+    // Configuration from Settings
+    private String reportTitle;
+    private String primaryColor;
+    private String introText;
+    private String footerNote;
+    private String sigRightTop;
+    private String sigRightBottom;
+    private String sigLeftTop;
+    private String sigLeftBottom;
 }

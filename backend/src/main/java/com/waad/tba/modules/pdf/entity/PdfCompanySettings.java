@@ -87,6 +87,32 @@ public class PdfCompanySettings {
     @Column(name = "margin_right")
     private Integer marginRight;
     
+    // ========== Claim Report Configuration ==========
+    
+    @Column(name = "claim_report_title")
+    private String claimReportTitle;
+    
+    @Column(name = "claim_report_primary_color", length = 7)
+    private String claimReportPrimaryColor;
+    
+    @Column(name = "claim_report_intro", columnDefinition = "TEXT")
+    private String claimReportIntro;
+    
+    @Column(name = "claim_report_footer_note", columnDefinition = "TEXT")
+    private String claimReportFooterNote;
+    
+    @Column(name = "claim_report_sig_right_top")
+    private String claimReportSigRightTop;
+    
+    @Column(name = "claim_report_sig_right_bottom")
+    private String claimReportSigRightBottom;
+    
+    @Column(name = "claim_report_sig_left_top")
+    private String claimReportSigLeftTop;
+    
+    @Column(name = "claim_report_sig_left_bottom")
+    private String claimReportSigLeftBottom;
+
     // ========== Metadata ==========
     
     @Column(name = "is_active")

@@ -39,10 +39,15 @@ public class ReportDataService {
 
         String batchCode = "N/A";
         String providerName = "N/A";
-        if (!claims.isEmpty()) {
-            Claim first = claims.get(0);
-            batchCode = first.getClaimBatch() != null ? first.getClaimBatch().getBatchCode() : "N/A";
-            providerName = first.getProviderName() != null ? first.getProviderName() : "N/A";
+        
+        // Find first valid provider name and batch code from all claims
+        for (Claim c : claims) {
+            if (providerName.equals("N/A") && c.getProviderName() != null) {
+                providerName = c.getProviderName();
+            }
+            if (batchCode.equals("N/A") && c.getClaimBatch() != null) {
+                batchCode = c.getClaimBatch().getBatchCode();
+            }
         }
 
         DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
@@ -50,8 +55,9 @@ public class ReportDataService {
         for (Claim claim : claims) {
             String patientName = claim.getMember() != null ? claim.getMember().getFullName() : "غير معروف";
             String insuranceNumber = claim.getMember() != null && claim.getMember().getPolicyNumber() != null ? claim.getMember().getPolicyNumber() : "غير معروف";
+            String patientRef = claim.getMember() != null ? claim.getMember().getCardNumber() : "غير معروف";
             
-            String originNumber = claim.getClaimBatch() != null ? claim.getClaimBatch().getBatchCode() : claim.getId().toString();
+            String currentBatchCode = claim.getClaimBatch() != null ? claim.getClaimBatch().getBatchCode() : "N/A";
             String diagnosis = claim.getDiagnosisDescription() != null ? claim.getDiagnosisDescription() : claim.getDiagnosisCode();
             
             List<ClaimStatementItemDto> items = new ArrayList<>();
@@ -68,7 +74,6 @@ public class ReportDataService {
                     rejected = gross;
                 }
                 
-                // Net at line level is just for display, the real financial net is at claim level
                 BigDecimal lineNet = gross.subtract(rejected);
                 if (lineNet.compareTo(BigDecimal.ZERO) < 0) lineNet = BigDecimal.ZERO;
 
@@ -79,18 +84,21 @@ public class ReportDataService {
                         .netAmount(lineNet)
                         .rejectedAmount(rejected)
                         .rejectionReason(line.getRejectionReason())
+                        .rejectionReasonArabic(line.getRejectionReason()) 
                         .build());
                         
                 subTotalGross = subTotalGross.add(gross);
                 subTotalRejected = subTotalRejected.add(rejected);
             }
             
-            BigDecimal subTotalNet = claim.getNetPayableAmount(); // This is correctly (Gross - Rejected - PatientShare)
+            BigDecimal subTotalNet = claim.getNetPayableAmount(); 
             
             groupedClaims.add(ClaimStatementReportDto.builder()
                     .patientName(patientName)
                     .insuranceNumber(insuranceNumber)
-                    .originNumber("CLM-" + originNumber)
+                    .patientRef(patientRef)
+                    .batchCode(currentBatchCode)
+                    .claimId(claim.getId())
                     .diagnosis(diagnosis)
                     .currentContract(claim.getProviderName())
                     .items(items)
@@ -105,9 +113,15 @@ public class ReportDataService {
             grandTotalPatientShare = grandTotalPatientShare.add(subTotalPatientShare);
         }
 
-        String logoBase64 = "";
-        if (settings.getLogoData() != null && settings.getLogoData().length > 0) {
-            logoBase64 = "data:image/png;base64," + Base64.getEncoder().encodeToString(settings.getLogoData());
+        String logoBase64 = settings.getLogoBase64DataUrl();
+        if (logoBase64 == null) logoBase64 = "";
+
+        // Default Intro Text with batch replacement if necessary
+        String intro = settings.getClaimReportIntro();
+        if (intro == null || intro.isEmpty()) {
+            intro = "نحيطكم علماً بأننا قد انتهينا من مراجعة المطالبات المالية المقدمة من طرفكم والمشار إليها في الدفعة رقم (" + batchCode + ")، وقد تمت المراجعة الفنية والمالية وفق المعايير المعتمدة، وكانت النتائج كالتالي:";
+        } else if (intro.contains("{batchCode}")) {
+            intro = intro.replace("{batchCode}", batchCode);
         }
 
         return ClaimReportDto.builder()
@@ -122,6 +136,15 @@ public class ReportDataService {
                 .grandTotalNet(grandTotalNet)
                 .grandTotalRejected(grandTotalRejected)
                 .grandTotalPatientShare(grandTotalPatientShare)
+                // New specialized settings
+                .reportTitle(settings.getClaimReportTitle() != null ? settings.getClaimReportTitle() : "نظام وعد الطبي")
+                .primaryColor(settings.getClaimReportPrimaryColor() != null ? settings.getClaimReportPrimaryColor() : "#005f6b")
+                .introText(intro)
+                .footerNote(settings.getClaimReportFooterNote() != null ? settings.getClaimReportFooterNote() : "يرجى التكرم بمراجعة التفاصيل والملاحظات المرفقة، وفي حال وجود أي اعتراض يرجى مراسلتنا في غضون أسبوعين من تاريخه.")
+                .sigRightTop(settings.getClaimReportSigRightTop() != null ? settings.getClaimReportSigRightTop() : "والسلام عليكم")
+                .sigRightBottom(settings.getClaimReportSigRightBottom() != null ? settings.getClaimReportSigRightBottom() : "قسم المراجعة والتدقيق")
+                .sigLeftTop(settings.getClaimReportSigLeftTop() != null ? settings.getClaimReportSigLeftTop() : "")
+                .sigLeftBottom(settings.getClaimReportSigLeftBottom() != null ? settings.getClaimReportSigLeftBottom() : "إدارة الحسابات")
                 .build();
     }
 }

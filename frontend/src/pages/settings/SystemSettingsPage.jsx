@@ -23,6 +23,7 @@ import { alpha, useTheme } from '@mui/material/styles';
 import {
   Business as BusinessIcon,
   CloudUpload as CloudUploadIcon,
+  Description as ReportIcon,
   LocalHospital as ProviderPortalIcon,
   Lock as SecurityIcon,
   Preview as PreviewIcon,
@@ -38,6 +39,7 @@ import waadLogoFallback from 'assets/images/waad-logo.png';
 import featureFlagsService from 'services/api/featureFlags.service';
 import systemSettingsService from 'services/api/systemSettings.service';
 import { companyService } from 'services/api/company.service';
+import reportSettingsService from 'services/api/reports-settings.service';
 import useSystemConfig from 'hooks/useSystemConfig';
 import useConfig from 'hooks/useConfig';
 
@@ -142,10 +144,11 @@ const SystemSettingsPage = () => {
       setIsLoading(true);
       setError(null);
 
-      const [settings, flags, companyResponse] = await Promise.all([
+      const [settings, flags, companyResponse, reportSettingsResponse] = await Promise.all([
         systemSettingsService.getAll(),
         featureFlagsService.getAllFlags(),
-        companyService.getSystemCompany()
+        companyService.getSystemCompany(),
+        reportSettingsService.getActiveSettings()
       ]);
 
       const normalized = settings || [];
@@ -177,7 +180,17 @@ const SystemSettingsPage = () => {
         beneficiaryNumberDigits: toInt(byKey.get(KEYS.beneficiaryNumberDigits), 8),
         eligibilityStrictMode: toBool(byKey.get(KEYS.eligibilityStrictMode), true),
         waitingPeriodDaysDefault: toInt(byKey.get(KEYS.waitingPeriodDaysDefault), 0),
-        eligibilityGracePeriodDays: toInt(byKey.get(KEYS.eligibilityGracePeriodDays), 0)
+        eligibilityGracePeriodDays: toInt(byKey.get(KEYS.eligibilityGracePeriodDays), 0),
+        // Report Settings Fields
+        pdfSettingsId: reportSettingsResponse?.id,
+        claimReportTitle: reportSettingsResponse?.claimReportTitle || 'نظام وعد الطبي',
+        claimReportPrimaryColor: reportSettingsResponse?.claimReportPrimaryColor || '#005f6b',
+        claimReportIntro: reportSettingsResponse?.claimReportIntro || '',
+        claimReportFooterNote: reportSettingsResponse?.claimReportFooterNote || '',
+        claimReportSigRightTop: reportSettingsResponse?.claimReportSigRightTop || '',
+        claimReportSigRightBottom: reportSettingsResponse?.claimReportSigRightBottom || '',
+        claimReportSigLeftTop: reportSettingsResponse?.claimReportSigLeftTop || '',
+        claimReportSigLeftBottom: reportSettingsResponse?.claimReportSigLeftBottom || ''
       });
 
       const portalFlag = (flags || []).find((f) => f.flagKey === PROVIDER_PORTAL_FLAG_KEY);
@@ -233,7 +246,18 @@ const SystemSettingsPage = () => {
         saveSettingIfExists(KEYS.beneficiaryNumberDigits, formData.beneficiaryNumberDigits),
         saveSettingIfExists(KEYS.eligibilityStrictMode, formData.eligibilityStrictMode),
         saveSettingIfExists(KEYS.waitingPeriodDaysDefault, formData.waitingPeriodDaysDefault),
-        saveSettingIfExists(KEYS.eligibilityGracePeriodDays, formData.eligibilityGracePeriodDays)
+        saveSettingIfExists(KEYS.eligibilityGracePeriodDays, formData.eligibilityGracePeriodDays),
+        // Save Report Settings
+        reportSettingsService.updateSettings(formData.pdfSettingsId, {
+          claimReportTitle: formData.claimReportTitle,
+          claimReportPrimaryColor: formData.claimReportPrimaryColor,
+          claimReportIntro: formData.claimReportIntro,
+          claimReportFooterNote: formData.claimReportFooterNote,
+          claimReportSigRightTop: formData.claimReportSigRightTop,
+          claimReportSigRightBottom: formData.claimReportSigRightBottom,
+          claimReportSigLeftTop: formData.claimReportSigLeftTop,
+          claimReportSigLeftBottom: formData.claimReportSigLeftBottom
+        })
       ]);
 
       if (formData.fontFamily) setField('fontFamily', formData.fontFamily);
@@ -345,6 +369,7 @@ const SystemSettingsPage = () => {
           <Tab icon={<BusinessIcon sx={{ fontSize: '1.2rem' }} />} iconPosition="start" label="معلومات المؤسسة" />
           <Tab icon={<SecurityIcon sx={{ fontSize: '1.2rem' }} />} iconPosition="start" label="قواعد الاستحقاق" />
           <Tab icon={<SpeedIcon sx={{ fontSize: '1.2rem' }} />} iconPosition="start" label="المحرك التشغيلي" />
+          <Tab icon={<ReportIcon sx={{ fontSize: '1.2rem' }} />} iconPosition="start" label="إعدادات التقارير" />
           <Tab icon={<ProviderPortalIcon sx={{ fontSize: '1.2rem' }} />} iconPosition="start" label="بوابة مقدم الخدمة" />
         </Tabs>
 
@@ -565,6 +590,70 @@ const SystemSettingsPage = () => {
           </TabPanel>
 
           <TabPanel value={tabValue} index={3}>
+            <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+              <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
+                <Grid container spacing={2}>
+                  <Grid size={{ xs: 12, md: 8 }}>
+                    <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
+                      <FieldGroup title="تخصيص تقرير المطالبات" icon={ReportIcon}>
+                        <Grid container spacing={2}>
+                          <Grid size={{ xs: 12, sm: 8 }}>
+                            <TextField fullWidth size="small" label="عنوان التقرير" value={formData.claimReportTitle} onChange={updateField('claimReportTitle')} />
+                          </Grid>
+                          <Grid size={{ xs: 12, sm: 4 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <TextField fullWidth size="small" label="اللون الرئيسي" value={formData.claimReportPrimaryColor} onChange={updateField('claimReportPrimaryColor')} />
+                              <Box sx={{ width: 36, height: 36, bgcolor: formData.claimReportPrimaryColor, border: '1px solid #ddd', borderRadius: 1, flexShrink: 0 }} />
+                            </Box>
+                          </Grid>
+                          <Grid size={12}>
+                            <TextField fullWidth size="small" multiline rows={3} label="نص المقدمة (استخدم {batchCode} لرقم الدفعة)" value={formData.claimReportIntro} onChange={updateField('claimReportIntro')} />
+                          </Grid>
+                          <Grid size={12}>
+                            <TextField fullWidth size="small" multiline rows={2} label="ملاحظة التذييل" value={formData.claimReportFooterNote} onChange={updateField('claimReportFooterNote')} />
+                          </Grid>
+                          <Grid size={{ xs: 12, sm: 6 }}>
+                            <Paper variant="outlined" sx={{ p: 1.5, bgcolor: alpha(theme.palette.primary.main, 0.02) }}>
+                              <Typography variant="caption" fontWeight={700} sx={{ mb: 1, display: 'block' }}>التوقيع الأيمن</Typography>
+                              <Stack spacing={1}>
+                                <TextField fullWidth size="small" label="السطر العلوي" value={formData.claimReportSigRightTop} onChange={updateField('claimReportSigRightTop')} />
+                                <TextField fullWidth size="small" label="السطر السفلي" value={formData.claimReportSigRightBottom} onChange={updateField('claimReportSigRightBottom')} />
+                              </Stack>
+                            </Paper>
+                          </Grid>
+                          <Grid size={{ xs: 12, sm: 6 }}>
+                            <Paper variant="outlined" sx={{ p: 1.5, bgcolor: alpha(theme.palette.primary.main, 0.02) }}>
+                              <Typography variant="caption" fontWeight={700} sx={{ mb: 1, display: 'block' }}>التوقيع الأيسر</Typography>
+                              <Stack spacing={1}>
+                                <TextField fullWidth size="small" label="السطر العلوي" value={formData.claimReportSigLeftTop} onChange={updateField('claimReportSigLeftTop')} />
+                                <TextField fullWidth size="small" label="السطر السفلي" value={formData.claimReportSigLeftBottom} onChange={updateField('claimReportSigLeftBottom')} />
+                              </Stack>
+                            </Paper>
+                          </Grid>
+                        </Grid>
+                      </FieldGroup>
+                    </Paper>
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 4 }}>
+                     <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, bgcolor: alpha(theme.palette.info.main, 0.05), height: '100%' }}>
+                        <Typography variant="subtitle2" fontWeight={700} gutterBottom>تلميحات التقرير</Typography>
+                        <Typography variant="body2" sx={{ mb: 1 }}>• يمكنك استخدام الرمز <b>{'{batchCode}'}</b> في حقل المقدمة ليتم استبداله برقم الدفعة الحقيقي.</Typography>
+                        <Typography variant="body2" sx={{ mb: 1 }}>• اللون الرئيسي يتحكم في لون العناوين والخطوط الفاصلة وصافي القيمة.</Typography>
+                        <Typography variant="body2">• التوقيعات تظهر في الصفحة الأولى من التقرير.</Typography>
+                     </Paper>
+                  </Grid>
+                </Grid>
+              </Box>
+              <Divider sx={{ mt: 'auto' }} />
+              <Box sx={{ p: 1.5, display: 'flex', justifyContent: 'flex-end', bgcolor: 'background.paper' }}>
+                <Button variant="contained" size="small" startIcon={isSaving ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />} disabled={isSaving} onClick={handleSaveAll}>
+                  {isSaving ? 'جاري الحفظ...' : 'حفظ الإعدادات'}
+                </Button>
+              </Box>
+            </Box>
+          </TabPanel>
+
+          <TabPanel value={tabValue} index={4}>
             <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
               <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
                 <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, maxWidth: 760 }}>

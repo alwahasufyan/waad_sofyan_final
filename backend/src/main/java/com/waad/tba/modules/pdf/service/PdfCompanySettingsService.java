@@ -7,6 +7,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.jdbc.core.JdbcTemplate;
+import jakarta.annotation.PostConstruct;
 
 import java.io.IOException;
 import java.util.List;
@@ -24,6 +26,38 @@ import java.util.List;
 public class PdfCompanySettingsService {
     
     private final PdfCompanySettingsRepository repository;
+    private final JdbcTemplate jdbcTemplate;
+    
+    /**
+     * AUTO-REPAIR: Ensure missing columns exist in the database.
+     * This runs on startup to prevent 'column does not exist' errors even if 
+     * migrations were skipped or had checksum issues on Windows.
+     */
+    @PostConstruct
+    public void ensureSchemaIntegrity() {
+        log.info("[PdfSettingsService] Verifying schema integrity for pdf_company_settings...");
+        try {
+            String[] columns = {
+                "claim_report_title", "claim_report_primary_color", "claim_report_intro",
+                "claim_report_footer_note", "claim_report_sig_right_top", "claim_report_sig_right_bottom",
+                "claim_report_sig_left_top", "claim_report_sig_left_bottom"
+            };
+            
+            for (String col : columns) {
+                String type = "VARCHAR(255)";
+                if (col.contains("_intro") || col.contains("_note")) {
+                    type = "TEXT";
+                } else if (col.contains("_color")) {
+                    type = "VARCHAR(7)";
+                }
+                
+                jdbcTemplate.execute("ALTER TABLE pdf_company_settings ADD COLUMN IF NOT EXISTS " + col + " " + type);
+            }
+            log.info("[PdfSettingsService] Schema integrity check completed successfully.");
+        } catch (Exception e) {
+            log.error("[PdfSettingsService] Failed to repair schema: {}", e.getMessage());
+        }
+    }
     
     private static final List<String> ALLOWED_IMAGE_TYPES = List.of(
         "image/png", "image/jpeg", "image/jpg", "image/svg+xml"
@@ -122,6 +156,32 @@ public class PdfCompanySettingsService {
         }
         if (updates.getMarginRight() != null) {
             existing.setMarginRight(updates.getMarginRight());
+        }
+
+        // Claim Report specialized fields
+        if (updates.getClaimReportTitle() != null) {
+            existing.setClaimReportTitle(updates.getClaimReportTitle());
+        }
+        if (updates.getClaimReportPrimaryColor() != null) {
+            existing.setClaimReportPrimaryColor(updates.getClaimReportPrimaryColor());
+        }
+        if (updates.getClaimReportIntro() != null) {
+            existing.setClaimReportIntro(updates.getClaimReportIntro());
+        }
+        if (updates.getClaimReportFooterNote() != null) {
+            existing.setClaimReportFooterNote(updates.getClaimReportFooterNote());
+        }
+        if (updates.getClaimReportSigRightTop() != null) {
+            existing.setClaimReportSigRightTop(updates.getClaimReportSigRightTop());
+        }
+        if (updates.getClaimReportSigRightBottom() != null) {
+            existing.setClaimReportSigRightBottom(updates.getClaimReportSigRightBottom());
+        }
+        if (updates.getClaimReportSigLeftTop() != null) {
+            existing.setClaimReportSigLeftTop(updates.getClaimReportSigLeftTop());
+        }
+        if (updates.getClaimReportSigLeftBottom() != null) {
+            existing.setClaimReportSigLeftBottom(updates.getClaimReportSigLeftBottom());
         }
         
         existing.setUpdatedBy(username);
@@ -222,6 +282,14 @@ public class PdfCompanySettingsService {
             .marginLeft(20)
             .marginRight(20)
             .isActive(true)
+            .claimReportTitle("نظام وعد الطبي")
+            .claimReportPrimaryColor("#005f6b")
+            .claimReportIntro("نحيطكم علماً بأننا قد انتهينا من مراجعة المطالبات المالية المقدمة من طرفكم والمشار إليها في الدفعة رقم ({batchCode})، وقد تمت المراجعة الفنية والمالية وفق المعايير المعتمدة، وكانت النتائج كالتالي:")
+            .claimReportFooterNote("يرجى التكرم بمراجعة التفاصيل والملاحظات المرفقة، وفي حال وجود أي اعتراض يرجى مراسلتنا في غضون أسبوعين من تاريخه.")
+            .claimReportSigRightTop("والسلام عليكم")
+            .claimReportSigRightBottom("قسم المراجعة والتدقيق")
+            .claimReportSigLeftTop("")
+            .claimReportSigLeftBottom("إدارة الحسابات")
             .build();
     }
 }

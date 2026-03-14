@@ -11,14 +11,20 @@ import {
   Divider, 
   CircularProgress,
   ButtonGroup,
-  Slider
+  Slider,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText
 } from '@mui/material';
 import {
   Print as PrintIcon,
   Download as DownloadIcon,
   ArrowBack as ArrowBackIcon,
   ZoomIn as ZoomInIcon,
-  ZoomOut as ZoomOutIcon
+  ZoomOut as ZoomOutIcon,
+  PictureAsPdf as PictureAsPdfIcon,
+  Layers as LayersIcon
 } from '@mui/icons-material';
 import { useSnackbar } from 'notistack';
 
@@ -36,9 +42,12 @@ const ClaimStatementPreview = () => {
   
   const [loading, setLoading] = useState(true);
   const [zoom, setZoom] = useState(100);
+  const [exportAnchor, setExportAnchor] = useState(null);
+  const [exporting, setExporting] = useState(false);
 
   const previewUrl = `/api/reports/claims/html?claimIds=${claimIds}`;
   const pdfUrl = `/api/reports/claims/pdf?claimIds=${claimIds}`;
+  const jasperPdfUrl = `/api/reports/claims/jasper?claimIds=${claimIds}`;
 
   useEffect(() => {
     if (!claimIds) {
@@ -57,6 +66,27 @@ const ClaimStatementPreview = () => {
     // Open PDF URL
     window.open(pdfUrl, '_blank');
   };
+
+  const handleDownloadJasper = () => {
+    try {
+      setExporting(true);
+      // استخدم فتح في تبويب جديد لتجنب مشاكل الكاش/الهيدر
+      const url = jasperPdfUrl.startsWith('http')
+        ? jasperPdfUrl
+        : `${window.location.origin}${jasperPdfUrl}`;
+      window.open(url, '_blank', 'noopener,noreferrer');
+      enqueueSnackbar('جارٍ توليد تقرير Jasper في تبويب جديد', { variant: 'info' });
+    } catch (err) {
+      console.error(err);
+      enqueueSnackbar('تعذر فتح تقرير Jasper', { variant: 'error' });
+    } finally {
+      setExporting(false);
+      setExportAnchor(null);
+    }
+  };
+
+  const handleOpenExportMenu = (e) => setExportAnchor(e.currentTarget);
+  const handleCloseExportMenu = () => setExportAnchor(null);
 
   const iframeStyle = {
     width: '100%',
@@ -99,11 +129,27 @@ const ClaimStatementPreview = () => {
               variant="contained"
               color="primary"
               startIcon={<DownloadIcon />}
-              onClick={handleDownload}
-              disabled={loading}
+              onClick={handleOpenExportMenu}
+              disabled={loading || exporting}
             >
-              تصدير PDF (Export PDF)
+              تصدير التقرير
             </Button>
+            <Menu
+              anchorEl={exportAnchor}
+              open={Boolean(exportAnchor)}
+              onClose={handleCloseExportMenu}
+              anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+              transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+            >
+              <MenuItem onClick={() => { handleCloseExportMenu(); handleDownload(); }}>
+                <ListItemIcon><PictureAsPdfIcon fontSize="small" /></ListItemIcon>
+                <ListItemText primary="PDF (HTML) - النمط الحالي" secondary="مناسب للعرض السريع" />
+              </MenuItem>
+              <MenuItem onClick={handleDownloadJasper} disabled={exporting}>
+                <ListItemIcon><LayersIcon fontSize="small" /></ListItemIcon>
+                <ListItemText primary="PDF (Jasper) - مطابق الورقي" secondary="يشمل الخطاب وصفحة الجدول" />
+              </MenuItem>
+            </Menu>
           </Stack>
         }
       />
@@ -138,36 +184,61 @@ const ClaimStatementPreview = () => {
 
           <Box sx={{ 
             position: 'relative', 
-            bgcolor: '#e0e0e0', 
-            p: 2, 
+            bgcolor: '#ebeef2', 
+            p: { xs: 1, md: 4 }, 
             borderRadius: 1, 
             minHeight: '800px',
-            overflow: 'hidden'
+            display: 'flex',
+            justifyContent: 'center',
+            overflow: 'auto',
+            border: '1px solid #d1d9e0'
           }}>
             {loading && (
-              <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 10 }}>
-                <Stack alignItems="center" spacing={2}>
-                  <CircularProgress />
-                  <Typography>جاري إعداد التقرير...</Typography>
-                </Stack>
+              <Box sx={{ 
+                position: 'absolute', 
+                top: 200, 
+                left: '50%', 
+                transform: 'translateX(-50%)', 
+                zIndex: 10,
+                textAlign: 'center'
+              }}>
+                <CircularProgress size={50} thickness={4} />
+                <Typography sx={{ mt: 2, fontWeight: 'bold' }}>جاري إعداد التقرير وتجهيز المعاينة...</Typography>
               </Box>
             )}
             
             {claimIds && (
               <Box sx={{ 
-                height: `${(100 / (zoom / 100))}0px`, 
-                width: `${100 / (zoom / 100)}%`,
-                transform: `scale(${zoom / 100})`,
-                transformOrigin: 'top center',
-                transition: 'transform 0.2s',
+                width: '100%',
+                display: 'flex',
+                justifyContent: 'center',
+                // This wrapper handles the internal scaling of the iframe
               }}>
-                <iframe
-                  title="Claim Statement Preview"
-                  ref={iframeRef}
-                  src={previewUrl}
-                  style={{ width: '100%', height: '100%', border: '1px solid #ccc', backgroundColor: 'white', borderRadius: '4px' }}
-                  onLoad={() => setLoading(false)}
-                />
+                <Box sx={{
+                  width: '210mm', // Fixed A4 width
+                  height: '297mm', // Approximate A4 height for single page preview
+                  minHeight: '1200px',
+                  bgcolor: 'white',
+                  boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
+                  transform: `scale(${zoom / 100})`,
+                  transformOrigin: 'top center',
+                  transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  overflow: 'hidden',
+                  borderRadius: '4px'
+                }}>
+                  <iframe
+                    title="Claim Statement Preview"
+                    ref={iframeRef}
+                    src={previewUrl}
+                    style={{ 
+                      width: '100%', 
+                      height: '100%', 
+                      border: 'none',
+                      backgroundColor: 'white' 
+                    }}
+                    onLoad={() => setLoading(false)}
+                  />
+                </Box>
               </Box>
             )}
           </Box>

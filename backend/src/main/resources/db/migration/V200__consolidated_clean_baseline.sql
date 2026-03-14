@@ -374,6 +374,17 @@ CREATE TABLE IF NOT EXISTS pdf_company_settings (
     margin_bottom INTEGER,
     margin_left INTEGER,
     margin_right INTEGER,
+    
+    -- Claim Report Customization (Added in V210)
+    claim_report_title VARCHAR(255),
+    claim_report_primary_color VARCHAR(7),
+    claim_report_intro TEXT,
+    claim_report_footer_note TEXT,
+    claim_report_sig_right_top VARCHAR(255),
+    claim_report_sig_right_bottom VARCHAR(255),
+    claim_report_sig_left_top VARCHAR(255),
+    claim_report_sig_left_bottom VARCHAR(255),
+    
     is_active BOOLEAN,
     created_at TIMESTAMP,
     updated_at TIMESTAMP,
