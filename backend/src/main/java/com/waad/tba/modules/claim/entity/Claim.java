@@ -232,6 +232,13 @@ public class Claim {
     // ========== Provider Account Settlement (Phase: Settlement Refactor)
     // ==========
 
+    /**
+     * المبلغ المدفوع فعلياً لمقدم الخدمة عند التسوية (paid_amount).
+     * يُسجَّل لحظة إتمام التسوية، ويُستخدم في التقارير المالية.
+     */
+    @Column(name = "paid_amount", precision = 15, scale = 2)
+    private BigDecimal paidAmount;
+
     // ========== SLA Tracking Fields (Phase 1: SLA Implementation) ==========
 
     /**

@@ -382,6 +382,87 @@ public class ProviderAccountService {
         }
 
         // ═══════════════════════════════════════════════════════════════════════════
+        // CLAIM REVERSAL - DEBIT OPERATION
+        // ═══════════════════════════════════════════════════════════════════════════
+
+        /**
+         * Debit the provider account when an approved claim is reversed to REJECTED.
+         * Looks up the original CREDIT transaction for this claim and debits the same
+         * amount.
+         *
+         * @param claimId The claim that was reversed
+         * @param userId  User performing the action
+         * @return The created debit transaction, or null if no prior credit existed
+         */
+        @Transactional
+        public AccountTransaction debitOnClaimReversal(Long claimId, Long userId) {
+                // Find the original CREDIT transaction for this claim
+                AccountTransaction creditTx = transactionRepository
+                                .findByReferenceTypeAndReferenceId(ReferenceType.CLAIM_APPROVAL, claimId)
+                                .orElse(null);
+
+                if (creditTx == null) {
+                        log.warn("⚠️ No credit transaction found for claim {} — skipping reversal debit", claimId);
+                        return null;
+                }
+
+                BigDecimal amount = creditTx.getAmount();
+
+                Long providerId = claimRepository.findById(claimId)
+                                .map(c -> c.getProviderId())
+                                .orElse(null);
+
+                if (providerId == null) {
+                        log.warn("⚠️ Provider not found for claim {} — skipping reversal debit", claimId);
+                        return null;
+                }
+
+                AccountTransaction tx = debitOnInstallmentPayment(providerId, amount,
+                                "عكس قيد موافقة مطالبة مرفوضة #" + claimId, userId);
+
+                log.info("REVERSAL DEBIT: claim={}, provider={}, amount={}", claimId, providerId, amount);
+                return tx;
+        }
+
+        /**
+         * Debit the provider account when a claim is individually settled (paid
+         * directly).
+         * Mirrors the original credit amount recorded at approval time.
+         *
+         * @param claimId The settled claim ID
+         * @param userId  User performing the action
+         * @return The created debit transaction, or null if no prior credit existed
+         */
+        @Transactional
+        public AccountTransaction debitOnClaimSettlement(Long claimId, Long userId) {
+                AccountTransaction creditTx = transactionRepository
+                                .findByReferenceTypeAndReferenceId(ReferenceType.CLAIM_APPROVAL, claimId)
+                                .orElse(null);
+
+                if (creditTx == null) {
+                        log.warn("⚠️ No credit transaction found for claim {} — skipping settlement debit", claimId);
+                        return null;
+                }
+
+                BigDecimal amount = creditTx.getAmount();
+
+                Long providerId = claimRepository.findById(claimId)
+                                .map(c -> c.getProviderId())
+                                .orElse(null);
+
+                if (providerId == null) {
+                        log.warn("⚠️ Provider not found for claim {} — skipping settlement debit", claimId);
+                        return null;
+                }
+
+                AccountTransaction tx = debitOnInstallmentPayment(providerId, amount,
+                                "تسوية مطالبة #" + claimId, userId);
+
+                log.info("SETTLEMENT DEBIT: claim={}, provider={}, amount={}", claimId, providerId, amount);
+                return tx;
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════════
         // ACCOUNT SUMMARY & REPORTING
         // ═══════════════════════════════════════════════════════════════════════════
 

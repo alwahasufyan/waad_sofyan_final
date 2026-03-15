@@ -13,6 +13,7 @@ import com.waad.tba.modules.member.entity.Member;
 import com.waad.tba.modules.member.repository.MemberRepository;
 import com.waad.tba.modules.rbac.entity.User;
 import com.waad.tba.modules.settlement.event.ClaimApprovedEvent;
+import com.waad.tba.modules.settlement.service.ProviderAccountService;
 import com.waad.tba.security.AuthorizationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -55,6 +56,7 @@ public class ClaimReviewService {
     private final BusinessDaysCalculatorService businessDaysCalculator;
     private final ClaimAuditService claimAuditService;
     private final ApplicationEventPublisher eventPublisher;
+    private final ProviderAccountService providerAccountService;
 
     /**
      * Generic review action (Phase 0).
@@ -203,11 +205,14 @@ public class ClaimReviewService {
             CostCalculationService.CostBreakdown breakdown = atomicFinancialService
                     .calculateCostsWithAtomicDeductible(claim);
 
-            BigDecimal requestedAmount = claim.getRequestedAmount() != null ? claim.getRequestedAmount() : BigDecimal.ZERO;
+            BigDecimal requestedAmount = claim.getRequestedAmount() != null ? claim.getRequestedAmount()
+                    : BigDecimal.ZERO;
             BigDecimal refusedAmount = claim.getRefusedAmount() != null ? claim.getRefusedAmount() : BigDecimal.ZERO;
             BigDecimal netAcceptedAmount = requestedAmount.subtract(refusedAmount).max(BigDecimal.ZERO);
 
-            BigDecimal systemPatientCoPay = breakdown.patientResponsibility() != null ? breakdown.patientResponsibility() : BigDecimal.ZERO;
+            BigDecimal systemPatientCoPay = breakdown.patientResponsibility() != null
+                    ? breakdown.patientResponsibility()
+                    : BigDecimal.ZERO;
             if (systemPatientCoPay.compareTo(netAcceptedAmount) > 0) {
                 systemPatientCoPay = netAcceptedAmount;
             }
@@ -225,7 +230,7 @@ public class ClaimReviewService {
 
             BigDecimal patientCoPay = netAcceptedAmount.subtract(approvedAmount);
             BigDecimal netProviderAmount = approvedAmount;
-            
+
             if (patientCoPay.add(netProviderAmount).compareTo(netAcceptedAmount) != 0) {
                 netProviderAmount = netAcceptedAmount.subtract(patientCoPay).max(BigDecimal.ZERO);
                 approvedAmount = netProviderAmount;
@@ -235,19 +240,21 @@ public class ClaimReviewService {
             LocalDate serviceDate = claim.getServiceDate() != null ? claim.getServiceDate() : LocalDate.now();
 
             if (member.getBenefitPolicy() != null) {
-                benefitPolicyCoverageService.validateAmountLimits(member, member.getBenefitPolicy(), approvedAmount, serviceDate);
+                benefitPolicyCoverageService.validateAmountLimits(member, member.getBenefitPolicy(), approvedAmount,
+                        serviceDate);
             }
 
             claim.setApprovedAmount(approvedAmount);
             claim.setPatientCoPay(patientCoPay);
             claim.setNetProviderAmount(netProviderAmount);
-            
+
             BigDecimal effectiveCoPayPercent = netAcceptedAmount.compareTo(BigDecimal.ZERO) > 0
                     ? patientCoPay.multiply(new BigDecimal("100")).divide(netAcceptedAmount, 2, RoundingMode.HALF_UP)
                     : BigDecimal.ZERO;
             claim.setCoPayPercent(effectiveCoPayPercent);
-            
-            BigDecimal rawDeductible = breakdown.deductibleApplied() != null ? breakdown.deductibleApplied() : BigDecimal.ZERO;
+
+            BigDecimal rawDeductible = breakdown.deductibleApplied() != null ? breakdown.deductibleApplied()
+                    : BigDecimal.ZERO;
             claim.setDeductibleApplied(rawDeductible.min(patientCoPay));
             claim.setDifferenceAmount(claim.getRequestedAmount().subtract(netProviderAmount));
 
@@ -270,10 +277,12 @@ public class ClaimReviewService {
             Claim savedClaim = claimRepository.save(claim);
 
             if (savedClaim.getProviderId() != null) {
-                eventPublisher.publishEvent(new ClaimApprovedEvent(this, savedClaim.getId(), savedClaim.getProviderId(), currentUser != null ? currentUser.getId() : null));
+                eventPublisher.publishEvent(new ClaimApprovedEvent(this, savedClaim.getId(), savedClaim.getProviderId(),
+                        currentUser != null ? currentUser.getId() : null));
             }
 
-            claimAuditService.recordApproval(savedClaim, ClaimStatus.APPROVAL_IN_PROGRESS, null, currentUser, dto.getNotes());
+            claimAuditService.recordApproval(savedClaim, ClaimStatus.APPROVAL_IN_PROGRESS, null, currentUser,
+                    dto.getNotes());
             log.info("✅ [SPLIT-PHASE] Phase 2 complete: Claim {} approved successfully", id);
 
         } catch (Exception e) {
@@ -291,7 +300,8 @@ public class ClaimReviewService {
                 failedClaim.setUpdatedBy("system-async");
                 claimRepository.save(failedClaim);
             }
-        } catch (Exception ignore) {}
+        } catch (Exception ignore) {
+        }
     }
 
     /**
@@ -359,15 +369,23 @@ public class ClaimReviewService {
             throw new BusinessRuleException("رقم مرجع الدفع مطلوب");
         }
 
-        BigDecimal netProviderAmount = claim.getNetProviderAmount() != null ? claim.getNetProviderAmount() : claim.getApprovedAmount();
+        BigDecimal netProviderAmount = claim.getNetProviderAmount() != null ? claim.getNetProviderAmount()
+                : claim.getApprovedAmount();
         if (dto.getSettlementAmount() != null) {
-            if (dto.getSettlementAmount().compareTo(BigDecimal.ZERO) <= 0) throw new BusinessRuleException("مبلغ التسوية يجب أن يكون أكبر من صفر");
-            if (dto.getSettlementAmount().compareTo(netProviderAmount) > 0) throw new BusinessRuleException("مبلغ التسوية يتجاوز المبلغ المستحق للمقدم");
+            if (dto.getSettlementAmount().compareTo(BigDecimal.ZERO) <= 0)
+                throw new BusinessRuleException("مبلغ التسوية يجب أن يكون أكبر من صفر");
+            if (dto.getSettlementAmount().compareTo(netProviderAmount) > 0)
+                throw new BusinessRuleException("مبلغ التسوية يتجاوز المبلغ المستحق للمقدم");
         }
 
         claim.setPaymentReference(dto.getPaymentReference());
         claim.setSettledAt(LocalDateTime.now());
-        if (dto.getNotes() != null) claim.setSettlementNotes(dto.getNotes());
+        if (dto.getNotes() != null)
+            claim.setSettlementNotes(dto.getNotes());
+
+        // M4: Record the amount actually paid for audit/reporting purposes
+        BigDecimal settledAmount = dto.getSettlementAmount() != null ? dto.getSettlementAmount() : netProviderAmount;
+        claim.setPaidAmount(settledAmount);
 
         claimStateMachine.transition(claim, ClaimStatus.SETTLED, currentUser);
 
@@ -376,6 +394,15 @@ public class ClaimReviewService {
         }
 
         Claim savedClaim = claimRepository.save(claim);
+
+        // M4: Debit provider account to reflect payment
+        Long userId = currentUser != null ? currentUser.getId() : null;
+        try {
+            providerAccountService.debitOnClaimSettlement(savedClaim.getId(), userId);
+        } catch (Exception e) {
+            log.warn("⚠️ Failed to debit provider account for settled claim {}: {}", id, e.getMessage());
+        }
+
         claimAuditService.recordSettlement(savedClaim, currentUser);
         return claimMapper.toViewDto(savedClaim);
     }
@@ -388,17 +415,21 @@ public class ClaimReviewService {
         Sort.Direction direction = "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
         Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
         List<ClaimStatus> pendingStatuses = List.of(ClaimStatus.SUBMITTED, ClaimStatus.UNDER_REVIEW);
-        
+
         User currentUser = authorizationService.getCurrentUser();
         Page<Claim> claims;
 
         if (reviewerIsolationService.isSubjectToIsolation(currentUser)) {
-            if (providerId == null) throw new BusinessRuleException("providerId is required");
+            if (providerId == null)
+                throw new BusinessRuleException("providerId is required");
             reviewerIsolationService.validateReviewerAccess(currentUser, providerId);
             claims = claimRepository.findByStatusInAndReviewerProviders(List.of(providerId), pendingStatuses, pageable);
         } else {
-            if (providerId != null) claims = claimRepository.findByStatusInAndReviewerProviders(List.of(providerId), pendingStatuses, pageable);
-            else claims = claimRepository.findByStatusIn(pendingStatuses, pageable);
+            if (providerId != null)
+                claims = claimRepository.findByStatusInAndReviewerProviders(List.of(providerId), pendingStatuses,
+                        pageable);
+            else
+                claims = claimRepository.findByStatusIn(pendingStatuses, pageable);
         }
 
         return claims.map(claimMapper::toViewDto);
@@ -416,7 +447,8 @@ public class ClaimReviewService {
         Page<Claim> claims;
 
         if (reviewerIsolationService.isSubjectToIsolation(currentUser)) {
-            if (providerId == null) throw new BusinessRuleException("providerId is required");
+            if (providerId == null)
+                throw new BusinessRuleException("providerId is required");
             reviewerIsolationService.validateReviewerAccess(currentUser, providerId);
             claims = claimRepository.findByStatusInAndReviewerProviders(
                     List.of(providerId), List.of(ClaimStatus.APPROVED), pageable);
@@ -433,7 +465,8 @@ public class ClaimReviewService {
     }
 
     private User resolveWorkflowUser(User currentUser) {
-        if (currentUser != null) return currentUser;
+        if (currentUser != null)
+            return currentUser;
         return User.builder().username("system-async").userType("ACCOUNTANT").build();
     }
 }

@@ -55,6 +55,7 @@ import com.waad.tba.modules.visit.entity.Visit;
 import com.waad.tba.modules.visit.repository.VisitRepository;
 import com.waad.tba.modules.rbac.entity.User;
 import com.waad.tba.modules.settlement.event.ClaimApprovedEvent;
+import com.waad.tba.modules.settlement.event.ClaimReversalEvent;
 import com.waad.tba.security.AuthorizationService;
 import com.waad.tba.security.ProviderContextGuard;
 
@@ -569,6 +570,7 @@ public class ClaimService {
 
         // Allow status update when re-editing a REJECTED claim (admin corrects and
         // re-approves)
+        ClaimStatus prevStatus = claim.getStatus();
         if (dto.getStatus() != null && claim.getStatus() == ClaimStatus.REJECTED) {
             ClaimStatus newStatus = dto.getStatus();
             if (newStatus == ClaimStatus.APPROVED) {
@@ -604,6 +606,17 @@ public class ClaimService {
         // Save and return
         Claim updatedClaim = claimRepository.save(claim);
         log.info("✅ Claim DATA updated: id={}", id);
+
+        // M1: Fire ClaimApprovedEvent when admin re-approves a REJECTED claim
+        // so the provider account gets credited (bypasses the normal approval async
+        // flow)
+        if (prevStatus == ClaimStatus.REJECTED && updatedClaim.getStatus() == ClaimStatus.APPROVED
+                && updatedClaim.getProviderId() != null) {
+            eventPublisher.publishEvent(new ClaimApprovedEvent(
+                    this, updatedClaim.getId(), updatedClaim.getProviderId(),
+                    currentUser != null ? currentUser.getId() : null));
+            log.info("📤 ClaimApprovedEvent published for REJECTED→APPROVED claim {}", updatedClaim.getId());
+        }
 
         // Audit trail
         claimAuditService.recordStatusChange(claim, claim.getStatus(), currentUser, "Data updated");
@@ -733,6 +746,13 @@ public class ClaimService {
             claimAuditService.recordApproval(updatedClaim, previousStatus, null, currentUser, comment);
         } else if (targetStatus == ClaimStatus.REJECTED) {
             claimAuditService.recordRejection(updatedClaim, previousStatus, currentUser, comment);
+            // C1: If claim was previously APPROVED, publish reversal event to debit balance
+            if (previousStatus == ClaimStatus.APPROVED && updatedClaim.getProviderId() != null) {
+                eventPublisher.publishEvent(new ClaimReversalEvent(
+                        this, updatedClaim.getId(), updatedClaim.getProviderId(),
+                        currentUser != null ? currentUser.getId() : null));
+                log.info("📤 ClaimReversalEvent published for APPROVED→REJECTED claim {}", updatedClaim.getId());
+            }
         } else if (targetStatus == ClaimStatus.SETTLED) {
             claimAuditService.recordSettlement(updatedClaim, currentUser);
         } else {

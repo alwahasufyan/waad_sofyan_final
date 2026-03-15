@@ -7,7 +7,6 @@ import com.waad.tba.modules.settlement.entity.ProviderAccount;
 import com.waad.tba.modules.settlement.repository.AccountTransactionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -21,10 +20,10 @@ import java.util.List;
  * Account Transaction Service
  * 
  * ╔═══════════════════════════════════════════════════════════════════════════════╗
- * ║                   ACCOUNT TRANSACTION SERVICE                                 ║
+ * ║ ACCOUNT TRANSACTION SERVICE ║
  * ║───────────────────────────────────────────────────────────────────────────────║
- * ║ IMMUTABLE AUDIT TRAIL - Transactions are NEVER modified or deleted.           ║
- * ║ This service only CREATES transactions and READS them.                        ║
+ * ║ IMMUTABLE AUDIT TRAIL - Transactions are NEVER modified or deleted. ║
+ * ║ This service only CREATES transactions and READS them. ║
  * ╚═══════════════════════════════════════════════════════════════════════════════╝
  * 
  * IMPORTANT: This service is called INTERNALLY by ProviderAccountService.
@@ -43,49 +42,43 @@ public class AccountTransactionService {
 
     /**
      * Create a CREDIT transaction when a claim is approved.
+     * NOTE: Double-credit prevention is enforced in ProviderAccountService via
+     * a second existsForReference check under DB lock (TOCTOU-safe).
      */
-    @Transactional
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     public AccountTransaction createClaimApprovedCredit(
             ProviderAccount account,
             Long claimId,
             BigDecimal amount,
             BigDecimal balanceBefore,
             Long userId) {
-        
+
         // Validate: no duplicate transaction for same claim
         if (transactionRepository.existsByReferenceTypeAndReferenceId(ReferenceType.CLAIM_APPROVAL, claimId)) {
             throw new IllegalStateException(
-                "Transaction already exists for claim " + claimId + ". Cannot credit twice.");
+                    "Transaction already exists for claim " + claimId + ". Cannot credit twice.");
         }
-        
+
         AccountTransaction transaction = AccountTransaction.createClaimApprovedCredit(
                 account.getId(),
                 claimId,
                 amount,
                 balanceBefore,
-                userId
-        );
-        
-        try {
-            transaction = transactionRepository.save(transaction);
-        } catch (DataIntegrityViolationException e) {
-            // Race condition: another thread already created this transaction
-            log.warn("Duplicate credit transaction detected for claim {} — returning existing", claimId);
-            return transactionRepository.findByReferenceTypeAndReferenceId(ReferenceType.CLAIM_APPROVAL, claimId)
-                    .orElseThrow(() -> new IllegalStateException(
-                            "Duplicate credit conflict but no existing transaction found for claim " + claimId));
-        }
-        
+                userId);
+
+        transaction = transactionRepository.save(transaction);
+
         log.info("CREDIT transaction created: account={}, claim={}, amount={}, balanceAfter={}",
                 account.getId(), claimId, amount, transaction.getBalanceAfter());
-        
+
         return transaction;
     }
 
     /**
      * Create a DEBIT transaction when a batch is paid.
+     * NOTE: Double-debit prevention is enforced via the existsForReference check.
      */
-    @Transactional
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     public AccountTransaction createBatchPaidDebit(
             ProviderAccount account,
             Long batchId,
@@ -93,35 +86,26 @@ public class AccountTransactionService {
             BigDecimal amount,
             BigDecimal balanceBefore,
             Long userId) {
-        
+
         // Validate: no duplicate transaction for same batch
         if (transactionRepository.existsByReferenceTypeAndReferenceId(ReferenceType.SETTLEMENT_PAYMENT, batchId)) {
             throw new IllegalStateException(
-                "Transaction already exists for batch " + batchId + ". Cannot debit twice.");
+                    "Transaction already exists for batch " + batchId + ". Cannot debit twice.");
         }
-        
+
         AccountTransaction transaction = AccountTransaction.createBatchPaidDebit(
                 account.getId(),
                 batchId,
                 batchNumber,
                 amount,
                 balanceBefore,
-                userId
-        );
+                userId);
 
-        try {
-            transaction = transactionRepository.save(transaction);
-        } catch (DataIntegrityViolationException e) {
-            // Race condition: another thread already created this transaction
-            log.warn("Duplicate debit transaction detected for batch {} — returning existing", batchId);
-            return transactionRepository.findByReferenceTypeAndReferenceId(ReferenceType.SETTLEMENT_PAYMENT, batchId)
-                    .orElseThrow(() -> new IllegalStateException(
-                            "Duplicate debit conflict but no existing transaction found for batch " + batchId));
-        }
-        
+        transaction = transactionRepository.save(transaction);
+
         log.info("DEBIT transaction created: account={}, batch={}, amount={}, balanceAfter={}",
                 account.getId(), batchId, amount, transaction.getBalanceAfter());
-        
+
         return transaction;
     }
 
@@ -136,25 +120,24 @@ public class AccountTransactionService {
             BigDecimal balanceBefore,
             String reason,
             Long userId) {
-        
+
         if (reason == null || reason.trim().isEmpty()) {
             throw new IllegalArgumentException("Adjustment transactions require a reason");
         }
-        
+
         AccountTransaction transaction = AccountTransaction.createAdjustment(
                 account.getId(),
                 amount,
                 isCredit,
                 balanceBefore,
                 reason,
-                userId
-        );
-        
+                userId);
+
         transaction = transactionRepository.save(transaction);
-        
+
         log.warn("ADJUSTMENT transaction created: account={}, type={}, amount={}, reason={}",
                 account.getId(), isCredit ? "CREDIT" : "DEBIT", amount, reason);
-        
+
         return transaction;
     }
 
@@ -174,8 +157,8 @@ public class AccountTransactionService {
 
     @Transactional(readOnly = true)
     public List<AccountTransaction> getTransactionsInDateRange(
-            Long providerAccountId, 
-            LocalDateTime startDate, 
+            Long providerAccountId,
+            LocalDateTime startDate,
             LocalDateTime endDate) {
         return transactionRepository.findByAccountAndDateRange(providerAccountId, startDate, endDate);
     }
