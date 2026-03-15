@@ -214,11 +214,13 @@ public class BenefitPolicyCoverageService {
     }
 
     /**
-     * Check if a specific service is covered under the member's policy with an optional category override.
+     * Check if a specific service is covered under the member's policy with an
+     * optional category override.
      * 
      * @param member             The member
      * @param serviceId          The medical service ID
-     * @param categoryOverrideId Optional: Category ID to use instead of service's default
+     * @param categoryOverrideId Optional: Category ID to use instead of service's
+     *                           default
      * @return Coverage info, or empty if not covered
      */
     public Optional<CoverageInfo> getCoverageForService(Member member, Long serviceId, Long categoryOverrideId) {
@@ -234,7 +236,7 @@ public class BenefitPolicyCoverageService {
 
         // Use override if provided, otherwise resolve from service
         Long categoryId = (categoryOverrideId != null) ? categoryOverrideId : resolveCategoryIdForCoverage(service);
-        
+
         // Resolve parent category for hierarchical rule lookup
         Long parentCategoryId = null;
         if (categoryId != null) {
@@ -247,7 +249,7 @@ public class BenefitPolicyCoverageService {
                 policy.getId(), serviceId, categoryId, null, parentCategoryId);
 
         if (ruleOpt.isEmpty()) {
-            log.debug("⚠️ No specific rule found for service {} in policy {}. Falling back to default: {}%", 
+            log.debug("⚠️ No specific rule found for service {} in policy {}. Falling back to default: {}%",
                     serviceId, policy.getName(), policy.getDefaultCoveragePercent());
 
             return Optional.of(CoverageInfo.builder()
@@ -741,9 +743,19 @@ public class BenefitPolicyCoverageService {
 
     /**
      * Get remaining coverage for a member (for UI display).
+     * Uses member's direct benefit policy only. For employer-fallback scenarios,
+     * use getRemainingCoverage(BenefitPolicy, Long, LocalDate) instead.
      */
     public BigDecimal getRemainingCoverage(Member member, LocalDate asOfDate) {
         BenefitPolicy policy = member.getBenefitPolicy();
+        return getRemainingCoverage(policy, member.getId(), asOfDate);
+    }
+
+    /**
+     * Get remaining coverage given an already-resolved policy (supports
+     * employer-level fallback).
+     */
+    public BigDecimal getRemainingCoverage(BenefitPolicy policy, Long memberId, LocalDate asOfDate) {
         if (policy == null) {
             return null;
         }
@@ -753,7 +765,7 @@ public class BenefitPolicyCoverageService {
             return null; // Unlimited or not configured
         }
 
-        BigDecimal used = calculateUsedAmountForYear(member.getId(), asOfDate.getYear());
+        BigDecimal used = calculateUsedAmountForYear(memberId, asOfDate.getYear());
         return annualLimit.subtract(used).max(BigDecimal.ZERO);
     }
 
@@ -825,18 +837,19 @@ public class BenefitPolicyCoverageService {
      * @param policyId   The benefit policy ID
      * @param serviceId  The medical service ID
      * @param categoryId The medical category ID (from service)
-     * Priority: SERVICE_RULE > CATEGORY_RULE > POLICY_DEFAULT
+     *                   Priority: SERVICE_RULE > CATEGORY_RULE > POLICY_DEFAULT
      */
     public ResolvedCoverage resolveCoverage(
-            Long policyId, 
-            Long serviceId, 
-            Long serviceCategoryId, 
-            Long overrideCategoryId, 
-            Long memberId, 
+            Long policyId,
+            Long serviceId,
+            Long serviceCategoryId,
+            Long overrideCategoryId,
+            Long memberId,
             LocalDate serviceDate,
             Long claimIdToExclude) {
-            
-        log.debug("🔍 Resolving coverage: policyId={}, serviceId={}, serviceCat={}, overrideCat={}, memberId={}, date={}",
+
+        log.debug(
+                "🔍 Resolving coverage: policyId={}, serviceId={}, serviceCat={}, overrideCat={}, memberId={}, date={}",
                 policyId, serviceId, serviceCategoryId, overrideCategoryId, memberId, serviceDate);
 
         // Resolve parent category for hierarchical rule lookup
@@ -861,18 +874,21 @@ public class BenefitPolicyCoverageService {
 
         if (ruleOpt.isPresent()) {
             BenefitPolicyRule rule = ruleOpt.get();
-            log.debug("✅ Found matching rule: ruleId={}, level={}", rule.getId(), rule.isServiceRule() ? "SERVICE" : "CATEGORY");
-            
+            log.debug("✅ Found matching rule: ruleId={}, level={}", rule.getId(),
+                    rule.isServiceRule() ? "SERVICE" : "CATEGORY");
+
             // Determine the category ID that actually matched (for usage tracking)
-            Long matchingCategoryId = rule.getMedicalCategory() != null ? rule.getMedicalCategory().getId() : serviceCategoryId;
-            
-            ResolvedCoverage res = ResolvedCoverage.fromRule(rule, 
-                rule.isServiceRule() ? CoverageSource.SERVICE_RULE : CoverageSource.CATEGORY_RULE, 
-                matchingCategoryId);
-                
+            Long matchingCategoryId = rule.getMedicalCategory() != null ? rule.getMedicalCategory().getId()
+                    : serviceCategoryId;
+
+            ResolvedCoverage res = ResolvedCoverage.fromRule(rule,
+                    rule.isServiceRule() ? CoverageSource.SERVICE_RULE : CoverageSource.CATEGORY_RULE,
+                    matchingCategoryId);
+
             // Add consumption data if member and date provided
             if (memberId != null && serviceDate != null && rule.getAmountLimit() != null) {
-                res.setUsedAmount(calculateCategoryUsedAmount(memberId, matchingCategoryId, serviceDate, claimIdToExclude));
+                res.setUsedAmount(
+                        calculateCategoryUsedAmount(memberId, matchingCategoryId, serviceDate, claimIdToExclude));
                 res.setRemainingAmount(rule.getAmountLimit().subtract(res.getUsedAmount()).max(BigDecimal.ZERO));
             }
             return res;
@@ -917,7 +933,8 @@ public class BenefitPolicyCoverageService {
             return DEFAULT_REQUIRES_PA;
         }
 
-        ResolvedCoverage coverage = resolveCoverage(policy.getId(), serviceId, resolveCategoryIdForCoverage(service), null, member.getId(), LocalDate.now(), null);
+        ResolvedCoverage coverage = resolveCoverage(policy.getId(), serviceId, resolveCategoryIdForCoverage(service),
+                null, member.getId(), LocalDate.now(), null);
         if (coverage == null) {
             return DEFAULT_REQUIRES_PA;
         }
@@ -940,7 +957,8 @@ public class BenefitPolicyCoverageService {
             return 0;
         }
 
-        ResolvedCoverage coverage = resolveCoverage(policy.getId(), serviceId, resolveCategoryIdForCoverage(service), null, member.getId(), LocalDate.now(), null);
+        ResolvedCoverage coverage = resolveCoverage(policy.getId(), serviceId, resolveCategoryIdForCoverage(service),
+                null, member.getId(), LocalDate.now(), null);
         if (coverage == null || !coverage.isCovered()) {
             return 0;
         }
@@ -1049,7 +1067,7 @@ public class BenefitPolicyCoverageService {
         private int coveragePercent;
         private BigDecimal amountLimit;
         private Long matchingCategoryId; // Category that matched the rule
-        private BigDecimal usedAmount; 
+        private BigDecimal usedAmount;
         private BigDecimal remainingAmount;
         private Integer timesLimit;
         private boolean requiresPreApproval;
@@ -1057,7 +1075,8 @@ public class BenefitPolicyCoverageService {
         private Long ruleId;
         private CoverageSource source;
 
-        public static ResolvedCoverage fromRule(BenefitPolicyRule rule, CoverageSource source, Long matchingCategoryId) {
+        public static ResolvedCoverage fromRule(BenefitPolicyRule rule, CoverageSource source,
+                Long matchingCategoryId) {
             return ResolvedCoverage.builder()
                     .covered(true)
                     .coveragePercent(rule.getEffectiveCoveragePercent())
@@ -1137,20 +1156,24 @@ public class BenefitPolicyCoverageService {
     }
 
     /**
-     * Calculate used amount for a specific category in the benefit year of the service date.
+     * Calculate used amount for a specific category in the benefit year of the
+     * service date.
      */
-    private BigDecimal calculateCategoryUsedAmount(Long memberId, Long categoryId, LocalDate serviceDate, Long claimIdToExclude) {
-        if (categoryId == null) return BigDecimal.ZERO;
-        
+    private BigDecimal calculateCategoryUsedAmount(Long memberId, Long categoryId, LocalDate serviceDate,
+            Long claimIdToExclude) {
+        if (categoryId == null)
+            return BigDecimal.ZERO;
+
         int year = serviceDate.getYear();
         LocalDate yearStart = LocalDate.of(year, 1, 1);
         LocalDate yearEnd = LocalDate.of(year, 12, 31);
-        
+
         List<Long> allCategoryIds = new ArrayList<>();
         allCategoryIds.add(categoryId);
         collectAllChildCategoryIds(categoryId, allCategoryIds);
-        
-        return claimRepository.sumApprovedAmountsByMemberAndCategoriesAndYear(memberId, allCategoryIds, yearStart, yearEnd, claimIdToExclude);
+
+        return claimRepository.sumApprovedAmountsByMemberAndCategoriesAndYear(memberId, allCategoryIds, yearStart,
+                yearEnd, claimIdToExclude);
     }
 
     private void collectAllChildCategoryIds(Long parentId, List<Long> result) {

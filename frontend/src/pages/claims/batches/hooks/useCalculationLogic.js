@@ -92,12 +92,27 @@ export function useCalculationLogic({ applyBenefits, policyInfo }) {
             byCompany = parseFloat(Math.max(0, approvedTotalForCoverage - byEmployee).toFixed(2));
         }
 
+        // تعيين سبب الرفض تلقائياً بناءً على نوع المرفوض
+        const AUTO_PRICE_REASON = 'تجاوز السعر المتفق عليه';
+        const AUTO_LIMIT_REASON = 'المستفيد استهلك رصيده';
+        const isAutoReason = (r) => r === AUTO_PRICE_REASON || r === AUTO_LIMIT_REASON;
+
+        let autoRejectionReason = line.rejectionReason || '';
+        if (priceRefused > 0 && (!autoRejectionReason || isAutoReason(autoRejectionReason))) {
+            autoRejectionReason = AUTO_PRICE_REASON;
+        } else if (priceRefused === 0 && usageExceeded && (!autoRejectionReason || isAutoReason(autoRejectionReason))) {
+            autoRejectionReason = AUTO_LIMIT_REASON;
+        } else if (priceRefused === 0 && !usageExceeded && isAutoReason(autoRejectionReason)) {
+            autoRejectionReason = '';
+        }
+
         return {
             ...line,
             total,
             byCompany,
             byEmployee,
             refusedAmount: parseFloat((priceRefused + limitRefused).toFixed(2)),
+            rejectionReason: autoRejectionReason,
             usageExceeded: usageExceeded || (usage && usage.exceeded),
             usageExhausted: limitRefused >= effectiveTotal && effectiveTotal > 0,
             usageDetails: usage ? {

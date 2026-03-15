@@ -149,8 +149,8 @@ export const ClaimLineRow = ({
                             );
                         }
                         const tooltipTitle = line.rejected
-                            ? 'الخدمة مرفوضة بالكامل'
-                            : `تجاوز سعر العقد (${line.contractPrice > 0 ? line.contractPrice : '—'})`;
+                            ? (line.rejectionReason || 'الخدمة مرفوضة بالكامل')
+                            : (line.rejectionReason || `تجاوز سعر العقد (${line.contractPrice > 0 ? line.contractPrice : '—'})`);
                         return (
                             <Tooltip title={tooltipTitle} arrow>
                                 <Typography variant="body2" sx={{ fontSize: '0.85rem', fontWeight: 700, color: 'error.main' }}>

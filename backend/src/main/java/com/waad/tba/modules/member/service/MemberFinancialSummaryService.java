@@ -124,7 +124,10 @@ public class MemberFinancialSummaryService {
         BigDecimal utilizationPercent = BigDecimal.ZERO;
 
         if (policy != null) {
-            remainingCoverage = coverageService.getRemainingCoverage(member, LocalDate.now());
+            // Use policy-aware overload to support employer-level policy fallback
+            // (member.getBenefitPolicy() may be null when policy is inherited from
+            // employer)
+            remainingCoverage = coverageService.getRemainingCoverage(policy, member.getId(), LocalDate.now());
             builder.remainingCoverage(remainingCoverage);
 
             // Calculate utilization %
