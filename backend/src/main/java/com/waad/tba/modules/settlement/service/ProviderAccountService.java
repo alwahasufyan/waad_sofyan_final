@@ -427,36 +427,74 @@ public class ProviderAccountService {
         /**
          * Debit the provider account when a claim is individually settled (paid
          * directly).
-         * Mirrors the original credit amount recorded at approval time.
+         * Uses claim.paidAmount (set by settleClaim) as the authoritative amount.
+         * Falls back to the original CREDIT transaction amount if paidAmount is null.
+         * Idempotent: no-op if the claim was already debited (prevents double-debit
+         * in case batch payment later tries to process the same claim).
          *
          * @param claimId The settled claim ID
          * @param userId  User performing the action
-         * @return The created debit transaction, or null if no prior credit existed
+         * @return The created debit transaction, or null if no prior credit / already
+         *         settled
          */
         @Transactional
         public AccountTransaction debitOnClaimSettlement(Long claimId, Long userId) {
-                AccountTransaction creditTx = transactionRepository
-                                .findByReferenceTypeAndReferenceId(ReferenceType.CLAIM_APPROVAL, claimId)
-                                .orElse(null);
-
-                if (creditTx == null) {
-                        log.warn("⚠️ No credit transaction found for claim {} — skipping settlement debit", claimId);
+                // Idempotency guard: if we already recorded a CLAIM_SETTLEMENT tx, skip.
+                if (transactionService.existsForReference(ReferenceType.CLAIM_SETTLEMENT, claimId)) {
+                        log.warn("⚠️ CLAIM_SETTLEMENT debit already exists for claim {} — skipping duplicate", claimId);
                         return null;
                 }
 
-                BigDecimal amount = creditTx.getAmount();
+                Claim claim = claimRepository.findById(claimId).orElse(null);
+                if (claim == null) {
+                        log.warn("⚠️ Claim {} not found — skipping settlement debit", claimId);
+                        return null;
+                }
 
-                Long providerId = claimRepository.findById(claimId)
-                                .map(c -> c.getProviderId())
-                                .orElse(null);
-
+                Long providerId = claim.getProviderId();
                 if (providerId == null) {
                         log.warn("⚠️ Provider not found for claim {} — skipping settlement debit", claimId);
                         return null;
                 }
 
-                AccountTransaction tx = debitOnInstallmentPayment(providerId, amount,
-                                "تسوية مطالبة #" + claimId, userId);
+                // Use the recorded paidAmount if available (exact amount given to provider),
+                // otherwise fall back to the original CREDIT amount
+                BigDecimal amount = claim.getPaidAmount();
+                if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+                        AccountTransaction creditTx = transactionRepository
+                                        .findByReferenceTypeAndReferenceId(ReferenceType.CLAIM_APPROVAL, claimId)
+                                        .orElse(null);
+                        if (creditTx == null) {
+                                log.warn("⚠️ No credit transaction found for claim {} — skipping settlement debit",
+                                                claimId);
+                                return null;
+                        }
+                        amount = creditTx.getAmount();
+                }
+
+                ProviderAccount account = accountRepository.findByProviderIdForUpdate(providerId)
+                                .orElseThrow(() -> new EntityNotFoundException(
+                                                "Provider account not found for provider: " + providerId));
+
+                if (!account.isActive()) {
+                        throw new IllegalStateException(
+                                        "Cannot debit inactive account for provider " + providerId);
+                }
+
+                BigDecimal balance = account.getRunningBalance() != null ? account.getRunningBalance()
+                                : BigDecimal.ZERO;
+                if (balance.compareTo(amount) < 0) {
+                        throw new IllegalStateException(
+                                        "Insufficient balance for claim settlement. Provider: " + providerId
+                                                        + ", Balance: " + balance + ", Requested: " + amount);
+                }
+
+                BigDecimal balanceBefore = balance;
+                account.debit(amount);
+                accountRepository.save(account);
+
+                AccountTransaction tx = transactionService.createClaimSettlementDebit(
+                                account, claimId, amount, balanceBefore, userId);
 
                 log.info("SETTLEMENT DEBIT: claim={}, provider={}, amount={}", claimId, providerId, amount);
                 return tx;

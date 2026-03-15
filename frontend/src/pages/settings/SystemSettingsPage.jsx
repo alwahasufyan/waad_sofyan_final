@@ -54,6 +54,7 @@ const KEYS = {
   fontSizeBase: 'FONT_SIZE_BASE',
   claimSlaDays: 'CLAIM_SLA_DAYS',
   preApprovalSlaDays: 'PRE_APPROVAL_SLA_DAYS',
+  claimBackdatedMonths: 'CLAIM_BACKDATED_MONTHS',
   beneficiaryNumberFormat: 'BENEFICIARY_NUMBER_FORMAT',
   beneficiaryNumberPrefix: 'BENEFICIARY_NUMBER_PREFIX',
   beneficiaryNumberDigits: 'BENEFICIARY_NUMBER_DIGITS',
@@ -141,6 +142,7 @@ const SystemSettingsPage = () => {
     fontSizeBase: 14,
     claimSlaDays: 10,
     preApprovalSlaDays: 3,
+    claimBackdatedMonths: 3,
     beneficiaryNumberFormat: '[PRO]-[COMP]-[YEAR]-[EMP_NO][REL_SUFFIX]',
     beneficiaryNumberPrefix: 'TD',
     beneficiaryNumberDigits: 8,
@@ -218,6 +220,7 @@ const SystemSettingsPage = () => {
         fontSizeBase: toInt(byKey.get(KEYS.fontSizeBase), 14),
         claimSlaDays: toInt(byKey.get(KEYS.claimSlaDays), 10),
         preApprovalSlaDays: toInt(byKey.get(KEYS.preApprovalSlaDays), 3),
+        claimBackdatedMonths: toInt(byKey.get(KEYS.claimBackdatedMonths), 3),
         beneficiaryNumberFormat: byKey.get(KEYS.beneficiaryNumberFormat) || '[PRO]-[COMP]-[YEAR]-[EMP_NO][REL_SUFFIX]',
         beneficiaryNumberPrefix: byKey.get(KEYS.beneficiaryNumberPrefix) || 'TD',
         beneficiaryNumberDigits: toInt(byKey.get(KEYS.beneficiaryNumberDigits), 8),
@@ -289,6 +292,7 @@ const SystemSettingsPage = () => {
         saveSettingIfExists(KEYS.fontSizeBase, dataToSave.fontSizeBase),
         saveSettingIfExists(KEYS.claimSlaDays, dataToSave.claimSlaDays),
         saveSettingIfExists(KEYS.preApprovalSlaDays, dataToSave.preApprovalSlaDays),
+        saveSettingIfExists(KEYS.claimBackdatedMonths, dataToSave.claimBackdatedMonths),
         saveSettingIfExists(KEYS.beneficiaryNumberFormat, dataToSave.beneficiaryNumberFormat),
         saveSettingIfExists(KEYS.beneficiaryNumberPrefix, dataToSave.beneficiaryNumberPrefix),
         saveSettingIfExists(KEYS.beneficiaryNumberDigits, dataToSave.beneficiaryNumberDigits),
@@ -718,6 +722,18 @@ const SystemSettingsPage = () => {
                           </Grid>
                           <Grid size={{ xs: 12, sm: 6 }}>
                             <TextField fullWidth size="small" type="number" label="SLA الموافقات (يوم)" value={formData.preApprovalSlaDays} onChange={(e) => setFormData((p) => ({ ...p, preApprovalSlaDays: Number(e.target.value) }))} />
+                          </Grid>
+                          <Grid size={{ xs: 12, sm: 6 }}>
+                            <TextField
+                              fullWidth
+                              size="small"
+                              type="number"
+                              label="السماح بمطالبات قديمة (أشهر)"
+                              helperText="0 = الشهر الحالي فقط، الحد الأقصى 24 شهراً"
+                              inputProps={{ min: 0, max: 24 }}
+                              value={formData.claimBackdatedMonths}
+                              onChange={(e) => setFormData((p) => ({ ...p, claimBackdatedMonths: Number(e.target.value) }))}
+                            />
                           </Grid>
                           <Grid size={{ xs: 12, sm: 8 }}>
                             <TextField fullWidth size="small" label="تنسيق رقم المستفيد" value={formData.beneficiaryNumberFormat} onChange={updateField('beneficiaryNumberFormat')} />

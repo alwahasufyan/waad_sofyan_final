@@ -42,10 +42,12 @@ public class AccountTransactionService {
 
     /**
      * Create a CREDIT transaction when a claim is approved.
-     * NOTE: Double-credit prevention is enforced in ProviderAccountService via
-     * a second existsForReference check under DB lock (TOCTOU-safe).
+     * NOTE: Must run in the SAME transaction as the balance update (in
+     * ProviderAccountService)
+     * to preserve atomicity — if saving the record fails, the balance update rolls
+     * back too.
      */
-    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
+    @Transactional
     public AccountTransaction createClaimApprovedCredit(
             ProviderAccount account,
             Long claimId,
@@ -76,9 +78,10 @@ public class AccountTransactionService {
 
     /**
      * Create a DEBIT transaction when a batch is paid.
-     * NOTE: Double-debit prevention is enforced via the existsForReference check.
+     * NOTE: Must run in the SAME transaction as the balance update to preserve
+     * atomicity.
      */
-    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
+    @Transactional
     public AccountTransaction createBatchPaidDebit(
             ProviderAccount account,
             Long batchId,
@@ -105,6 +108,39 @@ public class AccountTransactionService {
 
         log.info("DEBIT transaction created: account={}, batch={}, amount={}, balanceAfter={}",
                 account.getId(), batchId, amount, transaction.getBalanceAfter());
+
+        return transaction;
+    }
+
+    /**
+     * Create a DEBIT transaction when a claim is individually settled (not via
+     * batch).
+     * Idempotent: throws if a CLAIM_SETTLEMENT tx already exists for this claim.
+     */
+    @Transactional
+    public AccountTransaction createClaimSettlementDebit(
+            ProviderAccount account,
+            Long claimId,
+            BigDecimal amount,
+            BigDecimal balanceBefore,
+            Long userId) {
+
+        if (transactionRepository.existsByReferenceTypeAndReferenceId(ReferenceType.CLAIM_SETTLEMENT, claimId)) {
+            throw new IllegalStateException(
+                    "Transaction already exists for settlement of claim " + claimId + ". Cannot debit twice.");
+        }
+
+        AccountTransaction transaction = AccountTransaction.createClaimSettlementDebit(
+                account.getId(),
+                claimId,
+                amount,
+                balanceBefore,
+                userId);
+
+        transaction = transactionRepository.save(transaction);
+
+        log.info("CLAIM SETTLEMENT DEBIT transaction created: account={}, claim={}, amount={}, balanceAfter={}",
+                account.getId(), claimId, amount, transaction.getBalanceAfter());
 
         return transaction;
     }

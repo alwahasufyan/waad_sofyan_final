@@ -574,17 +574,18 @@ public class ClaimService {
         if (dto.getStatus() != null && claim.getStatus() == ClaimStatus.REJECTED) {
             ClaimStatus newStatus = dto.getStatus();
             if (newStatus == ClaimStatus.APPROVED) {
-                // Clearing reviewer comment not required; keep it for audit trail
-                claim.setStatus(newStatus);
                 // Reset financial fields set to 0 during REJECTED so calculateFields()
                 // re-derives them
                 claim.setApprovedAmount(null);
                 claim.setPatientCoPay(null);
                 claim.setNetProviderAmount(null);
-                log.info("↩️ REJECTED claim {} re-opened to APPROVED by admin", id);
+                // Use StateMachine for proper transition validation and audit
+                claimStateMachine.transition(claim, newStatus, currentUser);
+                log.info("↩️ REJECTED claim {} re-opened to APPROVED by admin via StateMachine", id);
             } else if (newStatus == ClaimStatus.REJECTED) {
-                // Stays REJECTED — reviewer comment already set from dto.getRejectionReason()
-                claim.setStatus(newStatus);
+                // Stays REJECTED — StateMachine allows REJECTED→REJECTED (self-transition for
+                // comment update)
+                claimStateMachine.transition(claim, newStatus, currentUser);
             }
         }
 

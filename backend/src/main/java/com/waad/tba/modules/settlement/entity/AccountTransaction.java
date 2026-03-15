@@ -11,16 +11,16 @@ import java.time.LocalDateTime;
  * Account Transaction Entity
  * 
  * ╔═══════════════════════════════════════════════════════════════════════════════╗
- * ║                       ACCOUNT TRANSACTION                                     ║
+ * ║ ACCOUNT TRANSACTION ║
  * ║───────────────────────────────────────────────────────────────────────────────║
- * ║ IMMUTABLE audit trail for all financial movements on provider accounts.       ║
- * ║                                                                               ║
- * ║ Transaction Types:                                                            ║
- * ║   CREDIT: Increases balance (claim approved)                                  ║
- * ║   DEBIT:  Decreases balance (batch paid)                                      ║
- * ║                                                                               ║
- * ║ IMPORTANT: This entity is IMMUTABLE.                                          ║
- * ║ No UPDATE or DELETE allowed (enforced by database trigger).                   ║
+ * ║ IMMUTABLE audit trail for all financial movements on provider accounts. ║
+ * ║ ║
+ * ║ Transaction Types: ║
+ * ║ CREDIT: Increases balance (claim approved) ║
+ * ║ DEBIT: Decreases balance (batch paid) ║
+ * ║ ║
+ * ║ IMPORTANT: This entity is IMMUTABLE. ║
+ * ║ No UPDATE or DELETE allowed (enforced by database trigger). ║
  * ╚═══════════════════════════════════════════════════════════════════════════════╝
  */
 @Entity
@@ -44,7 +44,7 @@ public class AccountTransaction {
     /**
      * Transaction type
      * CREDIT: Increases balance (e.g., claim approved)
-     * DEBIT:  Decreases balance (e.g., batch paid)
+     * DEBIT: Decreases balance (e.g., batch paid)
      */
     @Enumerated(EnumType.STRING)
     @Column(name = "transaction_type", nullable = false, length = 20)
@@ -128,9 +128,9 @@ public class AccountTransaction {
             BigDecimal amount,
             BigDecimal balanceBefore,
             Long userId) {
-        
+
         BigDecimal balanceAfter = balanceBefore.add(amount);
-        
+
         return AccountTransaction.builder()
                 .providerAccountId(accountId)
                 .transactionType(TransactionType.CREDIT)
@@ -154,9 +154,9 @@ public class AccountTransaction {
             BigDecimal amount,
             BigDecimal balanceBefore,
             Long userId) {
-        
+
         BigDecimal balanceAfter = balanceBefore.subtract(amount);
-        
+
         return AccountTransaction.builder()
                 .providerAccountId(accountId)
                 .transactionType(TransactionType.DEBIT)
@@ -171,6 +171,33 @@ public class AccountTransaction {
     }
 
     /**
+     * Create a DEBIT transaction when a claim is individually settled (not via
+     * batch).
+     * Has a dedicated ReferenceType so idempotency can be checked.
+     */
+    public static AccountTransaction createClaimSettlementDebit(
+            Long accountId,
+            Long claimId,
+            BigDecimal amount,
+            BigDecimal balanceBefore,
+            Long userId) {
+
+        BigDecimal balanceAfter = balanceBefore.subtract(amount);
+
+        return AccountTransaction.builder()
+                .providerAccountId(accountId)
+                .transactionType(TransactionType.DEBIT)
+                .amount(amount)
+                .balanceBefore(balanceBefore)
+                .balanceAfter(balanceAfter)
+                .referenceType(ReferenceType.CLAIM_SETTLEMENT)
+                .referenceId(claimId)
+                .description(String.format("تسوية مطالبة فردية رقم %d - خصم %s", claimId, amount))
+                .createdBy(userId)
+                .build();
+    }
+
+    /**
      * Create an ADJUSTMENT transaction (manual correction)
      */
     public static AccountTransaction createAdjustment(
@@ -180,11 +207,11 @@ public class AccountTransaction {
             BigDecimal balanceBefore,
             String reason,
             Long userId) {
-        
-        BigDecimal balanceAfter = isCredit 
-                ? balanceBefore.add(amount) 
+
+        BigDecimal balanceAfter = isCredit
+                ? balanceBefore.add(amount)
                 : balanceBefore.subtract(amount);
-        
+
         return AccountTransaction.builder()
                 .providerAccountId(accountId)
                 .transactionType(isCredit ? TransactionType.CREDIT : TransactionType.DEBIT)
@@ -209,11 +236,11 @@ public class AccountTransaction {
             BigDecimal balanceBefore,
             String reason,
             Long userId) {
-        
-        BigDecimal balanceAfter = isCredit 
-                ? balanceBefore.add(amount) 
+
+        BigDecimal balanceAfter = isCredit
+                ? balanceBefore.add(amount)
                 : balanceBefore.subtract(amount);
-        
+
         return AccountTransaction.builder()
                 .providerAccountId(accountId)
                 .transactionType(isCredit ? TransactionType.CREDIT : TransactionType.DEBIT)
@@ -234,7 +261,7 @@ public class AccountTransaction {
     public enum TransactionType {
         /** Credit - increases account balance */
         CREDIT("إضافة"),
-        
+
         /** Debit - decreases account balance */
         DEBIT("خصم");
 
@@ -256,10 +283,13 @@ public class AccountTransaction {
     public enum ReferenceType {
         /** Claim approved - CREDIT transaction */
         CLAIM_APPROVAL("اعتماد مطالبة"),
-        
+
         /** Settlement batch paid - DEBIT transaction */
         SETTLEMENT_PAYMENT("دفع دفعة تسوية"),
-        
+
+        /** Individual claim settlement (direct pay, not via batch) */
+        CLAIM_SETTLEMENT("تسوية مطالبة فردية"),
+
         /** Manual adjustment */
         ADJUSTMENT("تسوية يدوية");
 

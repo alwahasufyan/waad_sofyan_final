@@ -36,6 +36,9 @@ public class SystemSettingsService {
     public static final String PRE_APPROVAL_SLA_DAYS_KEY = "PRE_APPROVAL_SLA_DAYS";
     public static final int DEFAULT_PRE_APPROVAL_SLA_DAYS = 3;
 
+    public static final String CLAIM_BACKDATED_MONTHS_KEY = "CLAIM_BACKDATED_MONTHS";
+    public static final int DEFAULT_CLAIM_BACKDATED_MONTHS = 3;
+
     // ── UI / Appearance ────────────────────────────────────────────────────────
     public static final String LOGO_URL_KEY = "LOGO_URL";
     public static final String FONT_FAMILY_KEY = "FONT_FAMILY";
@@ -101,6 +104,24 @@ public class SystemSettingsService {
 
             settingRepository.save(preApprovalSlaSetting);
             log.info("✅ Created default setting: {} = {}", PRE_APPROVAL_SLA_DAYS_KEY, DEFAULT_PRE_APPROVAL_SLA_DAYS);
+        }
+
+        // CLAIM_BACKDATED_MONTHS: max months in the past allowed for backdated
+        // claims/batches
+        if (settingRepository.findBySettingKey(CLAIM_BACKDATED_MONTHS_KEY).isEmpty()) {
+            settingRepository.save(SystemSetting.builder()
+                    .settingKey(CLAIM_BACKDATED_MONTHS_KEY)
+                    .settingValue(String.valueOf(DEFAULT_CLAIM_BACKDATED_MONTHS))
+                    .valueType(SystemSetting.SettingValueType.INTEGER)
+                    .description(
+                            "أقصى عدد أشهر سابقة يُسمح فيها بإدخال مطالبات قديمة انطلاقاً من الشهر الحالي. (0 = الشهر الحالي فقط)")
+                    .category("CLAIMS")
+                    .isEditable(true)
+                    .defaultValue(String.valueOf(DEFAULT_CLAIM_BACKDATED_MONTHS))
+                    .validationRules("min:0,max:24")
+                    .active(true)
+                    .build());
+            log.info("✅ Created default setting: {} = {}", CLAIM_BACKDATED_MONTHS_KEY, DEFAULT_CLAIM_BACKDATED_MONTHS);
         }
 
         // Auth: Password reset method (default TOKEN for better security)
@@ -217,6 +238,14 @@ public class SystemSettingsService {
      */
     public int getPreApprovalSlaDays() {
         return getSettingAsInt(PRE_APPROVAL_SLA_DAYS_KEY, DEFAULT_PRE_APPROVAL_SLA_DAYS);
+    }
+
+    /**
+     * Get the max number of past months allowed for backdated claim batches.
+     * 0 = current month only, 3 = up to 3 months in the past (default).
+     */
+    public int getClaimBackdatedMonths() {
+        return getSettingAsInt(CLAIM_BACKDATED_MONTHS_KEY, DEFAULT_CLAIM_BACKDATED_MONTHS);
     }
 
     /**
