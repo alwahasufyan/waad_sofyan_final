@@ -518,7 +518,8 @@ public class ClaimService {
         // PART 2 — CLAIM SAFETY: Protect Claim Modification After Submission
         if (claim.getStatus() != ClaimStatus.DRAFT &&
                 claim.getStatus() != ClaimStatus.APPROVED &&
-                claim.getStatus() != ClaimStatus.NEEDS_CORRECTION) {
+                claim.getStatus() != ClaimStatus.NEEDS_CORRECTION &&
+                claim.getStatus() != ClaimStatus.REJECTED) {
             throw new IllegalStateException(
                     "Claim cannot be modified in current status: " + claim.getStatus());
         }
@@ -531,7 +532,7 @@ public class ClaimService {
         // SECURITY: Verify claim is in editable status
         if (!claim.getStatus().allowsEdit()) {
             throw new BusinessRuleException(
-                    String.format("Cannot edit claim in %s status. Only DRAFT and NEEDS_CORRECTION allow edits.",
+                    String.format("Cannot edit claim in %s status.",
                             claim.getStatus()));
         }
 
@@ -564,6 +565,25 @@ public class ClaimService {
         }
         if (dto.getManualCategoryEnabled() != null) {
             claim.setManualCategoryEnabled(dto.getManualCategoryEnabled());
+        }
+
+        // Allow status update when re-editing a REJECTED claim (admin corrects and
+        // re-approves)
+        if (dto.getStatus() != null && claim.getStatus() == ClaimStatus.REJECTED) {
+            ClaimStatus newStatus = dto.getStatus();
+            if (newStatus == ClaimStatus.APPROVED) {
+                // Clearing reviewer comment not required; keep it for audit trail
+                claim.setStatus(newStatus);
+                // Reset financial fields set to 0 during REJECTED so calculateFields()
+                // re-derives them
+                claim.setApprovedAmount(null);
+                claim.setPatientCoPay(null);
+                claim.setNetProviderAmount(null);
+                log.info("↩️ REJECTED claim {} re-opened to APPROVED by admin", id);
+            } else if (newStatus == ClaimStatus.REJECTED) {
+                // Stays REJECTED — reviewer comment already set from dto.getRejectionReason()
+                claim.setStatus(newStatus);
+            }
         }
 
         // DRAFT line edits (services/categories/quantities) with backend contract

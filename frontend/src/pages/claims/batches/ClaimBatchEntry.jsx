@@ -598,6 +598,13 @@ export default function ClaimBatchEntry() {
 
             const effectivelyRejected = isClaimRejected || anyLineRejected || anyRefusedAmount;
 
+            // إذا لم يدخل المستخدم سبب رفض صريح، نستخدم أول سبب تلقائي موجود في البنود
+            let effectiveRejectionReason = rejectionInput || null;
+            if (effectivelyRejected && !effectiveRejectionReason) {
+                const autoReason = activeLines.find(l => l.rejectionReason)?.rejectionReason;
+                effectiveRejectionReason = autoReason || 'مبالغ مرفوضة بسبب تجاوز السعر أو السقف المتفق عليه';
+            }
+
             const claimData = {
                 memberId: member.id,
                 providerId: parseInt(providerId),
@@ -607,7 +614,7 @@ export default function ClaimBatchEntry() {
                 complaint,
                 notes,
                 status: effectivelyRejected ? 'REJECTED' : 'APPROVED',
-                rejectionReason: effectivelyRejected ? (rejectionInput || null) : null,
+                rejectionReason: effectivelyRejected ? effectiveRejectionReason : null,
                 preAuthorizationId: preAuthId ? parseInt(preAuthId) : null,
                 manualCategoryEnabled,
                 // Always send context category so backend can set appliedCategoryId on unmapped services

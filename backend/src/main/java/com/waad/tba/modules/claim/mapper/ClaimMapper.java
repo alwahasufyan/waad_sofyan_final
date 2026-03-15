@@ -192,14 +192,37 @@ public class ClaimMapper {
             Integer coveragePercentSnapshot = lineDto.getCoveragePercent();
             boolean requiresPA = lineDto.getRequiresPA() != null ? lineDto.getRequiresPA() : false;
 
+            // For unmapped services (medicalService=null), infer the category from the
+            // pricing
+            // item's medical_category_id (e.g. SUB-VISION). This ensures subcategory rules
+            // (amount/times limits) are matched instead of falling back to POLICY_DEFAULT.
+            Long pricingItemCategoryId = null;
+            if (medicalService == null && resolvedPricingItemId != null) {
+                pricingItemCategoryId = pricingItemRepository.findById(resolvedPricingItemId)
+                        .map(item -> item.getMedicalCategory() != null ? item.getMedicalCategory().getId() : null)
+                        .orElse(null);
+                if (pricingItemCategoryId != null) {
+                    log.info("📂 [MAPPER] Inferred category from pricingItem {}: catId={}",
+                            resolvedPricingItemId, pricingItemCategoryId);
+                }
+            }
+
+            // Resolve the best category for coverage lookup:
+            // 1. Manual override (manualCategoryEnabled=true)
+            // 2. Linked MedicalService's category
+            // 3. PricingItem's category (for unmapped but categorised items)
+            // 4. DTO's appliedCategoryId (from previous save)
+            Long serviceCatIdForCoverage = medicalService != null
+                    ? medicalService.getCategoryId()
+                    : (pricingItemCategoryId != null ? pricingItemCategoryId : lineDto.getAppliedCategoryId());
+
             // Resolve coverage (support unmapped services via category rules)
-            Long targetCategoryId = (categoryOverrideId != null) ? categoryOverrideId
-                    : (medicalService != null ? medicalService.getCategoryId() : lineDto.getAppliedCategoryId());
+            Long targetCategoryId = (categoryOverrideId != null) ? categoryOverrideId : serviceCatIdForCoverage;
 
             var coverageResult = benefitPolicyCoverageService.resolveCoverage(
                     resolvePolicy(claim.getMember()) != null ? resolvePolicy(claim.getMember()).getId() : null,
                     medicalService != null ? medicalService.getId() : null,
-                    medicalService != null ? medicalService.getCategoryId() : lineDto.getAppliedCategoryId(),
+                    serviceCatIdForCoverage,
                     categoryOverrideId,
                     claim.getMember().getId(),
                     claim.getServiceDate(),
@@ -224,7 +247,9 @@ public class ClaimMapper {
             // primaryCategoryCode so that usage queries can always find these lines.
             Long rawCategoryId = (medicalService != null)
                     ? medicalService.getCategoryId()
-                    : (lineDto.getAppliedCategoryId() != null ? lineDto.getAppliedCategoryId() : contextCategoryId);
+                    : (pricingItemCategoryId != null ? pricingItemCategoryId
+                            : (lineDto.getAppliedCategoryId() != null ? lineDto.getAppliedCategoryId()
+                                    : contextCategoryId));
 
             Long appliedCategoryId = (coverageResult != null && coverageResult.getMatchingCategoryId() != null)
                     ? coverageResult.getMatchingCategoryId()
@@ -454,14 +479,32 @@ public class ClaimMapper {
             Integer coveragePercentSnapshot = lineDto.getCoveragePercent();
             boolean requiresPA = lineDto.getRequiresPA() != null ? lineDto.getRequiresPA() : false;
 
+            // For unmapped services (medicalService=null), infer the category from the
+            // pricing
+            // item's medical_category_id. This ensures subcategory rules are matched
+            // correctly.
+            Long pricingItemCategoryId = null;
+            if (medicalService == null && resolvedPricingItemId != null) {
+                pricingItemCategoryId = pricingItemRepository.findById(resolvedPricingItemId)
+                        .map(item -> item.getMedicalCategory() != null ? item.getMedicalCategory().getId() : null)
+                        .orElse(null);
+                if (pricingItemCategoryId != null) {
+                    log.info("📂 [REPLACE_MAPPER] Inferred category from pricingItem {}: catId={}",
+                            resolvedPricingItemId, pricingItemCategoryId);
+                }
+            }
+
+            Long serviceCatIdForCoverage = medicalService != null
+                    ? medicalService.getCategoryId()
+                    : (pricingItemCategoryId != null ? pricingItemCategoryId : lineDto.getAppliedCategoryId());
+
             // Resolve coverage (support unmapped services via category rules)
-            Long targetCategoryId = (categoryOverrideId != null) ? categoryOverrideId
-                    : (medicalService != null ? medicalService.getCategoryId() : lineDto.getAppliedCategoryId());
+            Long targetCategoryId = (categoryOverrideId != null) ? categoryOverrideId : serviceCatIdForCoverage;
 
             var coverageResult = benefitPolicyCoverageService.resolveCoverage(
                     resolvePolicy(claim.getMember()) != null ? resolvePolicy(claim.getMember()).getId() : null,
                     medicalService != null ? medicalService.getId() : null,
-                    medicalService != null ? medicalService.getCategoryId() : lineDto.getAppliedCategoryId(),
+                    serviceCatIdForCoverage,
                     categoryOverrideId,
                     claim.getMember().getId(),
                     claim.getServiceDate(),
@@ -476,7 +519,9 @@ public class ClaimMapper {
             // Same fallback chain as the create mapper.
             Long rawCategoryId = (medicalService != null)
                     ? medicalService.getCategoryId()
-                    : (lineDto.getAppliedCategoryId() != null ? lineDto.getAppliedCategoryId() : contextCategoryId);
+                    : (pricingItemCategoryId != null ? pricingItemCategoryId
+                            : (lineDto.getAppliedCategoryId() != null ? lineDto.getAppliedCategoryId()
+                                    : contextCategoryId));
 
             Long appliedCategoryId = (categoryOverrideId != null) ? categoryOverrideId : rawCategoryId;
 

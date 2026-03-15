@@ -41,6 +41,9 @@ public class UpdateClaimDataRequest {
     private String complaint;
     private String rejectionReason;
 
+    /** Re-open a REJECTED claim: send 'APPROVED' or 'REJECTED' */
+    private String status;
+
     private Long preAuthorizationId;
 
     /**

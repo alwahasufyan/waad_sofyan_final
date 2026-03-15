@@ -131,10 +131,10 @@ public enum ClaimStatus {
 
     /**
      * Check if this status allows editing claim details.
-     * Allowed: DRAFT, NEEDS_CORRECTION, and APPROVED (for manual entry model).
+     * Allowed: DRAFT, NEEDS_CORRECTION, APPROVED, and REJECTED (re-edit by admin).
      */
     public boolean allowsEdit() {
-        return this == DRAFT || this == APPROVED || this == NEEDS_CORRECTION;
+        return this == DRAFT || this == APPROVED || this == NEEDS_CORRECTION || this == REJECTED;
     }
 
     /**
@@ -150,7 +150,8 @@ public enum ClaimStatus {
             case APPROVAL_IN_PROGRESS -> Set.of(APPROVED, REJECTED, UNDER_REVIEW); // Async result + Recovery
             case APPROVED -> Set.of(SETTLED, BATCHED, NEEDS_CORRECTION); // Directly settlable or via Batch
             case BATCHED -> Set.of(SETTLED, APPROVED); // Settle from batch, or unbatch back to APPROVED
-            case REJECTED, SETTLED -> Collections.emptySet(); // Terminal
+            case REJECTED -> Set.of(APPROVED, REJECTED); // Re-editable by admin
+            case SETTLED -> Collections.emptySet(); // Terminal
         };
     }
 

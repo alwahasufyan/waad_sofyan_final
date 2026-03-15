@@ -1,5 +1,6 @@
 package com.waad.tba.modules.claim.dto;
 
+import com.waad.tba.modules.claim.entity.ClaimStatus;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
@@ -56,6 +57,11 @@ public class ClaimDataUpdateDto {
     private String rejectionReason;
     private String primaryCategoryCode;
     private Boolean manualCategoryEnabled;
+
+    /**
+     * New status — only honoured when current status is REJECTED (re-edit path).
+     */
+    private ClaimStatus status;
 
     /**
      * Claim lines - can be modified in DRAFT only

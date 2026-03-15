@@ -111,6 +111,10 @@ public class ClaimApiMapper {
                                 .primaryCategoryCode(request.getPrimaryCategoryCode())
                                 .manualCategoryEnabled(request.getManualCategoryEnabled())
                                 .preAuthorizationId(request.getPreAuthorizationId())
+                                .status(request.getStatus() != null
+                                                ? com.waad.tba.modules.claim.entity.ClaimStatus
+                                                                .valueOf(request.getStatus())
+                                                : null)
                                 .lines(request.getLines() != null ? request.getLines().stream()
                                                 .map(line -> ClaimLineDto.builder()
                                                                 .medicalServiceId(line.getMedicalServiceId())

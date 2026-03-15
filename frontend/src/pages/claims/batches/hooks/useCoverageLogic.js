@@ -39,7 +39,11 @@ export function useCoverageLogic({
             return { coveragePercent: fallbackPercent, requiresPreApproval: false, notCovered: false };
 
         try {
-            if (categoryCodeOverride) {
+            // Use the service's own specific subcategory (e.g. SUB-VISION) for coverage lookup.
+            // Only fall back to the claim's primary classification (e.g. CAT-OUTPAT) when the
+            // service has no intrinsic category — this ensures subcategory rules (amount/times
+            // limits) are matched correctly instead of the broader bucket rule.
+            if (!categoryId && categoryCodeOverride) {
                 const cat = rootCategories?.find(c => c.code === categoryCodeOverride);
                 if (cat) categoryId = cat.id;
             }
