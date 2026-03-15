@@ -351,9 +351,18 @@
         font-weight: bold;
         border-top: 2px solid #aaa;
       }
-      .svc-tbl tr.subtotal-row td.sub-gross   { background-color: #1976d2; color: #fff; }
-      .svc-tbl tr.subtotal-row td.sub-net     { background-color: #00897b; color: #fff; }
-      .svc-tbl tr.subtotal-row td.sub-rejected { background-color: #e53935; color: #fff; }
+      .svc-tbl tr.subtotal-row td.sub-gross {
+        background-color: #1976d2;
+        color: #fff;
+      }
+      .svc-tbl tr.subtotal-row td.sub-net {
+        background-color: #00897b;
+        color: #fff;
+      }
+      .svc-tbl tr.subtotal-row td.sub-rejected {
+        background-color: #e53935;
+        color: #fff;
+      }
 
       .num {
         font-family: "Courier New", Courier, monospace;
@@ -365,8 +374,15 @@
       .col-grn {
         color: var(--primary, #005f6b);
       }
-      .subtotal-row .num { font-family: "Courier New", Courier, monospace; font-weight: bold; }
-      .sub-gross .num, .sub-net .num, .sub-rejected .num { color: #fff; }
+      .subtotal-row .num {
+        font-family: "Courier New", Courier, monospace;
+        font-weight: bold;
+      }
+      .sub-gross .num,
+      .sub-net .num,
+      .sub-rejected .num {
+        color: #fff;
+      }
 
       /* Grand Total row at the end of report */
       .grand-total-wrap {
@@ -623,7 +639,10 @@
             <tr class="subtotal-row">
               <td class="td-svc">SUBTOTAL</td>
               <td></td>
-              <td class="num sub-gross" th:text="${#numbers.formatDecimal(claim.subTotalGross, 1, 'COMMA', 3, 'POINT')}">
+              <td
+                class="num sub-gross"
+                th:text="${#numbers.formatDecimal(claim.subTotalGross, 1, 'COMMA', 3, 'POINT')}"
+              >
                 0.000
               </td>
               <td class="num sub-net" th:text="${#numbers.formatDecimal(claim.subTotalNet,   1, 'COMMA', 3, 'POINT')}">

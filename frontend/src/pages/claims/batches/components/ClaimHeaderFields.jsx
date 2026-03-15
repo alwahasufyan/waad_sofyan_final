@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-    Grid, Typography, Autocomplete, TextField, Stack, FormControlLabel, Checkbox, Box, Chip
+    Typography, Autocomplete, TextField, Stack, FormControlLabel, Checkbox, Box, Chip
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 
@@ -36,10 +36,14 @@ export const ClaimHeaderFields = ({
     t
 }) => {
     return (
-        <Grid container spacing={3} sx={{ width: '100%', m: 0 }}>
+        <Box sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr' },
+            gap: 3,
+            width: '100%'
+        }}>
             {/* Column 1: Patient & Pre-approval */}
-            <Grid item xs={12} sm={4}>
-                <Stack spacing={2}>
+            <Stack spacing={2}>
                     <Box>
                         <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500, display: 'block', mb: 0.5, fontSize: '0.75rem' }}>
                             {t('claimEntry.patient')} <Typography component="span" color="error.main">*</Typography>
@@ -93,12 +97,10 @@ export const ClaimHeaderFields = ({
                             noOptionsText="لا توجد موافقات مسبقة"
                         />
                     </Box>
-                </Stack>
-            </Grid>
+            </Stack>
 
             {/* Column 2: Diagnosis & Complaint */}
-            <Grid item xs={12} sm={4}>
-                <Stack spacing={2}>
+            <Stack spacing={2}>
                     <Box>
                         <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500, display: 'block', mb: 0.5, fontSize: '0.75rem' }}>
                             {t('claimEntry.diagnosis')}
@@ -119,12 +121,10 @@ export const ClaimHeaderFields = ({
                             sx={inlineSx} 
                         />
                     </Box>
-                </Stack>
-            </Grid>
+            </Stack>
 
             {/* Column 3: Coverage Context & Annual Summary */}
-            <Grid item xs={12} sm={4}>
-                <Stack spacing={1.5}>
+            <Stack spacing={1.5}>
                     <Box>
                         <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500, display: 'block', mb: 0.5, fontSize: '0.75rem' }}>
                             سياق التغطية (Context)
@@ -202,9 +202,8 @@ export const ClaimHeaderFields = ({
                             <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 400, color: 'text.disabled' }}>— اختر مستفيداً —</Typography>
                         )}
                     </Box>
-                </Stack>
-            </Grid>
-        </Grid>
+            </Stack>
+        </Box>
     );
 };
 

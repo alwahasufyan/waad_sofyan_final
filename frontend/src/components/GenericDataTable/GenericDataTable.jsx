@@ -241,8 +241,7 @@ const GenericDataTable = ({
       sx={{
         position: stickyHeader ? 'sticky' : 'static',
         top: 0,
-        zIndex: 10,
-        backgroundColor: 'background.paper'
+        zIndex: 10
       }}
     >
       {table.getHeaderGroups().map((headerGroup) => (
@@ -252,7 +251,7 @@ const GenericDataTable = ({
             {headerGroup.headers.map((header) => (
               <TableCell
                 key={header.id}
-                align={header.column.columnDef.align || 'right'}
+                align={header.column.columnDef.align || 'center'}
                 sx={{
                   fontWeight: 'bold',
                   backgroundColor: 'primary.lighter',
@@ -261,25 +260,28 @@ const GenericDataTable = ({
                   minWidth: header.column.columnDef.minWidth || 100,
                   width: header.column.columnDef.width,
                   maxWidth: header.column.columnDef.maxWidth,
-                  whiteSpace: 'normal',
-                  overflowWrap: 'anywhere'
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden'
                 }}
               >
                 {header.isPlaceholder ? null : (
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'space-between' }}>
-                    {header.column.getCanSort() ? (
-                      <TableSortLabel
-                        active={header.column.getIsSorted() !== false}
-                        direction={header.column.getIsSorted() || 'asc'}
-                        onClick={header.column.getToggleSortingHandler()}
-                        IconComponent={header.column.getIsSorted() === 'desc' ? ArrowDownwardIcon : ArrowUpwardIcon}
-                      >
+                  header.column.getCanSort() ? (
+                    <TableSortLabel
+                      active={header.column.getIsSorted() !== false}
+                      direction={header.column.getIsSorted() || 'asc'}
+                      onClick={header.column.getToggleSortingHandler()}
+                      hideSortIcon
+                      sx={{ width: '100%', justifyContent: 'inherit', cursor: 'pointer' }}
+                    >
+                      <Typography variant="subtitle2" component="span">
                         {flexRender(header.column.columnDef.header, header.getContext())}
-                      </TableSortLabel>
-                    ) : (
-                      <Typography variant="subtitle2">{flexRender(header.column.columnDef.header, header.getContext())}</Typography>
-                    )}
-                  </Box>
+                      </Typography>
+                    </TableSortLabel>
+                  ) : (
+                    <Typography variant="subtitle2">
+                      {flexRender(header.column.columnDef.header, header.getContext())}
+                    </Typography>
+                  )
                 )}
               </TableCell>
             ))}
@@ -358,7 +360,8 @@ const GenericDataTable = ({
                   py: compact ? 1.3 : 1.2,
                   px: compact ? 1 : 2,
                   whiteSpace: 'normal',
-                  overflowWrap: 'anywhere'
+                  overflowWrap: 'anywhere',
+                  overflow: 'hidden'
                 }}
               >
                 {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -405,7 +408,7 @@ const GenericDataTable = ({
         sx={{
           minHeight: disableInternalScroll ? 'auto' : minHeight,
           maxHeight: disableInternalScroll ? 'none' : maxHeight,
-          overflowX: 'hidden',
+          overflowX: 'visible',
           overflowY: disableInternalScroll ? 'visible' : 'auto',
           '&::-webkit-scrollbar': {
             width: '0.375rem',
@@ -420,7 +423,7 @@ const GenericDataTable = ({
         <Table
           stickyHeader={disableInternalScroll ? false : stickyHeader}
           size={compact ? 'small' : tableSize}
-          sx={{ tableLayout: 'fixed', width: '100%' }}
+          sx={{ tableLayout: 'auto', width: '100%', borderCollapse: 'collapse', borderSpacing: 0, minWidth: '100%' }}
         >
           {renderTableHeader()}
           {renderTableBody()}

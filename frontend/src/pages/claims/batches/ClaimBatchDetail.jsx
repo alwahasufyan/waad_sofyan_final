@@ -38,7 +38,6 @@ import {
     Business as BusinessIcon,
     ReceiptLong as ReceiptIcon,
     FileDownload as ExcelIcon,
-    PictureAsPdf as PdfIcon,
     Refresh as RefreshIcon,
     FilterAltOff as FilterAltOffIcon,
     PauseCircle as SuspendIcon
@@ -53,11 +52,6 @@ import MainCard from 'components/MainCard';
 import { ModernPageHeader } from 'components/tba';
 import GenericDataTable from 'components/GenericDataTable';
 import useTableState from 'hooks/useTableState';
-import BatchPrintReport from './components/BatchPrintReport';
-import RejectedBatchPrintReport from './components/RejectedBatchPrintReport';
-
-// services
-import { useReactToPrint } from 'react-to-print';
 import claimsService from 'services/api/claims.service';
 import employersService from 'services/api/employers.service';
 import providersService from 'services/api/providers.service';
@@ -89,9 +83,7 @@ export default function ClaimBatchDetail() {
 
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
-    const [printClaims, setPrintClaims] = useState([]);
     const [selectedClaimIds, setSelectedClaimIds] = useState([]);
-    const [singleClaimForPrint, setSingleClaimForPrint] = useState(null);
     const [suspendDialogOpen, setSuspendDialogOpen] = useState(false);
     const [suspendComment, setSuspendComment] = useState('');
     const [suspendingClaimId, setSuspendingClaimId] = useState(null);
@@ -99,9 +91,6 @@ export default function ClaimBatchDetail() {
         initialPageSize: 10,
         defaultSort: { field: 'serviceDate', direction: 'desc' }
     });
-    const batchReportRef = useRef(null);
-    const rejectedReportRef = useRef(null);
-    const singleClaimPrintRef = useRef(null);
     const { enqueueSnackbar } = useSnackbar();
     const queryClient = useQueryClient();
 
@@ -202,11 +191,6 @@ export default function ClaimBatchDetail() {
         return items;
     }, [claimsResponse, searchTerm, statusFilter]);
 
-    // Keep print payload synced with current list until user requests detailed refresh.
-    useEffect(() => {
-        setPrintClaims(claims || []);
-    }, [claims]);
-
     const sortedClaims = useMemo(() => {
         const sorting = tableState.sorting?.[0];
         if (!sorting?.id) return claims;
@@ -286,7 +270,7 @@ export default function ClaimBatchDetail() {
             { header: '#', key: 'index', width: '0.625rem' },
             { header: 'المرجع', key: 'ref', width: '1.5625rem' },
             { header: 'مقدم الخدمة', key: 'provider', width: '3.125rem' },
-            { header: 'المريض', key: 'patient', width: '1.875rem' },
+            { header: 'المستفيد', key: 'patient', width: '1.875rem' },
             { header: 'تاريخ الخدمة', key: 'serviceDate', width: '1.125rem' },
             { header: 'الحالة', key: 'status', width: '0.9375rem' },
             { header: 'المبلغ الإجمالي', key: 'amount', width: '1.25rem' },
@@ -328,41 +312,21 @@ export default function ClaimBatchDetail() {
         window.URL.revokeObjectURL(url);
     };
 
-    const loadDetailedClaimsForPrint = async () => {
-        if (!claims || claims.length === 0) {
-            setPrintClaims([]);
+    // فتح التقرير الموحد (كل المطالبات أو المحددة)
+    const handlePrint = () => {
+        const ids = selectedClaimIds.length > 0
+            ? selectedClaimIds
+            : claims.map(c => c.id);
+        if (ids.length === 0) {
+            enqueueSnackbar('لا توجد مطالبات للطباعة', { variant: 'warning' });
             return;
         }
-
-        const detailed = await Promise.all(
-            claims.map(async (claim) => {
-                try {
-                    if (!claim?.id) return claim;
-                    const fresh = await claimsService.getById(claim.id);
-                    return { ...claim, ...fresh };
-                } catch {
-                    return claim;
-                }
-            })
-        );
-
-        setPrintClaims(detailed);
+        navigate(`/reports/claims/statement-preview?ids=${ids.join(',')}`);
     };
 
-    const handlePrint = useReactToPrint({
-        contentRef: batchReportRef,
-        documentTitle: `تقرير_المطالبات_${year}_${String(month).padStart(2, '0')}`,
-        pageStyle: `@page { size: A4 portrait; margin: 15mm; } body { direction: rtl; -webkit-print-color-adjust: exact; print-color-adjust: exact; }`,
-        onBeforePrint: async () => {
-            await loadDetailedClaimsForPrint();
-        }
-    });
-
-    const handlePrintSingle = useReactToPrint({
-        contentRef: singleClaimPrintRef,
-        documentTitle: `مطالبة_${batchCode}`,
-        pageStyle: `@page { size: A4 portrait; margin: 15mm; } body { direction: rtl; -webkit-print-color-adjust: exact; print-color-adjust: exact; }`,
-    });
+    const handlePrintSingle = (claimId) => {
+        navigate(`/reports/claims/statement-preview?ids=${claimId}`);
+    };
 
     const handleDownloadPdf = async () => {
         // Validate batchId: extract only numeric/UUID-safe chars to prevent injection
@@ -396,14 +360,39 @@ export default function ClaimBatchDetail() {
         }
     };
 
-    const handleRejectedReport = useReactToPrint({
-        contentRef: rejectedReportRef,
-        documentTitle: `تقرير_المرفوضات_${batchCode}`,
-        pageStyle: `@page { size: A4 portrait; margin: 15mm; } body { direction: rtl; -webkit-print-color-adjust: exact; print-color-adjust: exact; }`,
-        onBeforePrint: async () => {
-            await loadDetailedClaimsForPrint();
+    // فتح تقرير المرفوضات - يجلب التفاصيل ويفلتر المطالبات التي فيها بند واحد مرفوض على الأقل
+    const handleRejectedReport = async () => {
+        if (!claims || claims.length === 0) {
+            enqueueSnackbar('لا توجد مطالبات', { variant: 'warning' });
+            return;
         }
-    });
+        enqueueSnackbar('جاري تحميل البيانات...', { variant: 'info' });
+        const detailed = await Promise.all(
+            claims.map(async (c) => {
+                try { return { ...c, ...await claimsService.getById(c.id) }; }
+                catch { return c; }
+            })
+        );
+        const rejectedIds = detailed
+            .filter(c => {
+                if (c.lines && c.lines.length > 0) {
+                    return c.lines.some(l =>
+                        l.rejected === true ||
+                        (l.refusedAmount != null && parseFloat(l.refusedAmount) > 0)
+                    );
+                }
+                return (
+                    (c.rejectedAmount != null && parseFloat(c.rejectedAmount) > 0) ||
+                    (c.totalRejected  != null && parseFloat(c.totalRejected)  > 0)
+                );
+            })
+            .map(c => c.id);
+        if (rejectedIds.length === 0) {
+            enqueueSnackbar('لا توجد مطالبات مرفوضة في هذه الدفعة', { variant: 'warning' });
+            return;
+        }
+        navigate(`/reports/claims/statement-preview?ids=${rejectedIds.join(',')}`);
+    };
 
     // Row selection helpers
     const allCurrentIds = useMemo(() => sortedClaims.map(c => c.id), [sortedClaims]);
@@ -426,19 +415,18 @@ export default function ClaimBatchDetail() {
 
     // Table Columns
     const columns = [
-        { id: 'select', label: '', minWidth: '2.5rem', align: 'center', sortable: false },
-        { id: 'index', label: '#', minWidth: '1.875rem', align: 'center', sortable: false },
-        { id: 'ref', label: 'المرجع', minWidth: '3.125rem', sortable: false },
-        { id: 'provider', label: 'مقدم الخدمة', minWidth: '9.375rem', sortable: false },
-        { id: 'patient', label: 'الاسم (المريض)', minWidth: '15.625rem', sortable: true },
-        { id: 'serviceDate', label: 'تاريخ الخدمة', minWidth: '5.0rem', align: 'center', sortable: true },
-        { id: 'status', label: 'الحالة', minWidth: '5.0rem', align: 'center', sortable: true },
-        { id: 'amount', label: 'الإجمالي', minWidth: '6.875rem', align: 'right', sortable: true },
-        { id: 'covered', label: 'المعتمد', minWidth: '6.875rem', align: 'right', sortable: true },
-        { id: 'refused', label: 'المرفوض', minWidth: '6.25rem', align: 'right', sortable: true },
-        { id: 'copay', label: 'نصيب المؤمن', minWidth: '6.25rem', align: 'right', sortable: true },
-        { id: 'paid', label: 'المستحق', minWidth: '6.875rem', align: 'right', sortable: true },
-        { id: 'actions', label: 'إجراءات', minWidth: '6.875rem', align: 'center', sortable: false }
+        { id: 'select',      label: '',                minWidth: '2.5rem',  align: 'center', sortable: false },
+        { id: 'index',       label: '#',               minWidth: '2.5rem',  align: 'center', sortable: false },
+        { id: 'ref',         label: 'المرجع',          minWidth: '8rem',  align: 'center',       sortable: false },
+        { id: 'provider',    label: 'مقدم الخدمة',    minWidth: '7rem',   align: 'center' ,    sortable: false },
+        { id: 'patient',     label: 'الاسم (المستفيد)', minWidth: '10rem',   align: 'cenetr'  ,               sortable: true  },
+        { id: 'serviceDate', label: 'تاريخ الخدمة',  minWidth: '7rem',    align: 'center', sortable: true  },
+        { id: 'status',      label: 'الحالة',          minWidth: '6rem',    align: 'center', sortable: true  },
+        { id: 'amount',      label: 'الإجمالي',        minWidth: '5rem',  align: 'center',  sortable: true  },
+        { id: 'covered',     label: 'المعتمد',         minWidth: '5rem',  align: 'center',  sortable: true  },
+        { id: 'refused',     label: 'المرفوض',         minWidth: '5.5rem',  align: 'center',  sortable: true  },
+        { id: 'copay',       label: 'نصيب المستفيد',    minWidth: '5rem',    align: 'center',  sortable: true  },
+        { id: 'actions',     label: 'إجراءات',         minWidth: '5rem',  align: 'center', sortable: false }
     ];
 
     // Totals for footer
@@ -516,13 +504,13 @@ export default function ClaimBatchDetail() {
                 );
             case 'patient':
                 return (
-                    <Stack direction="row" spacing={1} alignItems="center">
-                        <Avatar sx={{ width: '1.5rem', height: '1.5rem', fontSize: '0.7rem', bgcolor: 'secondary.light' }}>
+                    <Stack direction="row" spacing={1} alignItems="center" sx={{ overflow: 'hidden', minWidth: 0 }}>
+                        <Avatar sx={{ width: '1.5rem', height: '1.5rem', fontSize: '0.7rem', bgcolor: 'secondary.light', flexShrink: 0 }}>
                             {claim.memberName?.charAt(0)}
                         </Avatar>
-                        <Box>
-                            <Typography variant="body2" fontWeight={600}>{claim.memberName}</Typography>
-                            <Typography variant="caption" color="text.secondary">{claim.memberCardNumber}</Typography>
+                        <Box sx={{ overflow: 'hidden', minWidth: 0 }}>
+                            <Typography variant="body2" fontWeight={600} noWrap>{claim.memberName}</Typography>
+                            <Typography variant="caption" color="text.secondary" noWrap>{claim.memberCardNumber}</Typography>
                         </Box>
                     </Stack>
                 );
@@ -582,17 +570,7 @@ export default function ClaimBatchDetail() {
                         <Tooltip title="طباعة مطالبة واحدة">
                             <IconButton
                                 color="info"
-                                onClick={async () => {
-                                    try {
-                                        const fresh = await claimsService.getById(claim.id);
-                                        setSingleClaimForPrint({ ...claim, ...fresh });
-                                        // wait for state + DOM update then trigger print
-                                        setTimeout(() => handlePrintSingle(), 300);
-                                    } catch {
-                                        setSingleClaimForPrint(claim);
-                                        setTimeout(() => handlePrintSingle(), 300);
-                                    }
-                                }}
+                                onClick={() => handlePrintSingle(claim.id)}
                             >
                                 <PrintIcon fontSize="small" sx={{ fontSize: '1.2rem' }} />
                             </IconButton>
@@ -606,44 +584,7 @@ export default function ClaimBatchDetail() {
 
     return (
         <>
-        <Box sx={{ height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column', px: { xs: 2, sm: 3 } }}>
-
-            {/* INVISIBLE PRINT COMPONENT - Batch (all or selected) */}
-            <BatchPrintReport
-                ref={batchReportRef}
-                claims={selectedClaimIds.length > 0
-                    ? (printClaims.length ? printClaims : claims).filter(c => selectedClaimIds.includes(c.id))
-                    : (printClaims.length ? printClaims : claims)
-                }
-                batchCode={batchCode}
-                employer={employer}
-                provider={provider}
-                month={month}
-                year={year}
-            />
-
-            <RejectedBatchPrintReport
-                ref={rejectedReportRef}
-                claims={printClaims.length ? printClaims : claims}
-                batchCode={batchCode}
-                employer={employer}
-                provider={provider}
-                month={month}
-                year={year}
-            />
-
-            {/* INVISIBLE PRINT COMPONENT - Single claim */}
-            {singleClaimForPrint && (
-                <BatchPrintReport
-                    ref={singleClaimPrintRef}
-                    claims={[singleClaimForPrint]}
-                    batchCode={batchCode}
-                    employer={employer}
-                    provider={provider}
-                    month={month}
-                    year={year}
-                />
-            )}
+        <Box sx={{ display: 'flex', flexDirection: 'column', px: { xs: 2, sm: 3 }, pb: 2 }}>
 
             <ModernPageHeader
                 title={<span dir="ltr">{batchCode}</span>}
@@ -688,12 +629,7 @@ export default function ClaimBatchDetail() {
                             variant="outlined"
                             color="info"
                             startIcon={<PrintIcon />}
-                            onClick={async () => {
-                                if (selectedClaimIds.length > 0) {
-                                    await loadDetailedClaimsForPrint();
-                                }
-                                handlePrint();
-                            }}
+                            onClick={handlePrint}
                             sx={{ borderRadius: '0.375rem', height: '2.5rem' }}
                         >
                             {selectedClaimIds.length > 0
@@ -704,7 +640,7 @@ export default function ClaimBatchDetail() {
                         <Button
                             variant="outlined"
                             color="error"
-                            startIcon={<PdfIcon />}
+                            startIcon={<PrintIcon />}
                             onClick={handleRejectedReport}
                             sx={{ borderRadius: '0.375rem', height: '2.5rem', borderColor: 'error.main', color: 'error.main' }}
                         >
@@ -745,8 +681,8 @@ export default function ClaimBatchDetail() {
                 }
             />
 
-            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, mt: -1 }}>
-                <Stack spacing={1.5} sx={{ height: '100%' }}>
+            <Box sx={{ mt: -1 }}>
+                <Stack spacing={1.5}>
                     {/* Filter Bar - Matches Beneficiaries standard */}
                     <MainCard sx={{ p: '8px !important', flexShrink: 0 }}>
                         <Stack direction="row" spacing={1.5} alignItems="center">
@@ -822,18 +758,16 @@ export default function ClaimBatchDetail() {
                                 إعادة ضبط
                             </Button>
 
-                            {/* Select-all control */}
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, px: 1, borderRadius: 1, border: '1px solid', borderColor: 'divider', height: '2.5rem', bgcolor: 'background.paper' }}>
-                                <Checkbox
+                            {selectedClaimIds.length > 0 && (
+                                <Chip
+                                    label={`${selectedClaimIds.length} محددة`}
                                     size="small"
-                                    checked={allSelected}
-                                    indeterminate={someSelected}
-                                    onChange={handleToggleAll}
+                                    color="primary"
+                                    variant="outlined"
+                                    onDelete={() => setSelectedClaimIds([])}
+                                    sx={{ height: '2.5rem', borderRadius: 1, fontWeight: 600, fontSize: '0.8rem' }}
                                 />
-                                <Typography variant="caption" fontWeight={400} sx={{ whiteSpace: 'nowrap', color: selectedClaimIds.length > 0 ? 'primary.main' : 'text.secondary' }}>
-                                    {selectedClaimIds.length > 0 ? `${selectedClaimIds.length} محددة` : 'تحديد الكل'}
-                                </Typography>
-                            </Box>
+                            )}
                         </Stack>
                     </MainCard>
 
@@ -841,7 +775,17 @@ export default function ClaimBatchDetail() {
                     <GenericDataTable
                         columns={columns.map((c) => ({
                             accessorKey: c.id,
-                            header: c.label,
+                            header: c.id === 'select'
+                                ? () => (
+                                    <Checkbox
+                                        size="small"
+                                        checked={allSelected}
+                                        indeterminate={someSelected}
+                                        onChange={handleToggleAll}
+                                        onClick={(e) => e.stopPropagation()}
+                                    />
+                                  )
+                                : c.label,
                             minWidth: c.minWidth,
                             align: c.align,
                             enableSorting: c.sortable !== false,
@@ -870,15 +814,14 @@ export default function ClaimBatchDetail() {
                     {/* Totals Footer */}
                     {claims.length > 0 && (
                         <MainCard sx={{ p: '10px 16px !important', flexShrink: 0, bgcolor: 'grey.50', borderTop: '2px solid', borderColor: 'divider' }}>
-                            <Stack direction="row" spacing={2} justifyContent="flex-end" alignItems="center" flexWrap="wrap">
+                            <Stack direction="row" spacing={2} justifyContent="flex-start" alignItems="center" flexWrap="wrap">
                                 <Typography variant="caption" color="text.secondary" fontWeight={400} sx={{ mr: 'auto' }}>
                                     الإجماليات ({claims.length} مطالبة)
                                 </Typography>
                                 <Chip label={`الإجمالي: ${totals.amount.toFixed(2)}`} size="small" sx={{ fontWeight: 400 }} />
                                 <Chip label={`المعتمد: ${totals.covered.toFixed(2)}`} color="success" size="small" sx={{ fontWeight: 400 }} />
                                 <Chip label={`المرفوض: ${totals.refused.toFixed(2)}`} color="error" size="small" sx={{ fontWeight: 400 }} />
-                                <Chip label={`نصيب المؤمن: ${totals.copay.toFixed(2)}`} color="info" size="small" sx={{ fontWeight: 400 }} />
-                                <Chip label={`المستحق: ${totals.paid.toFixed(2)}`} color="secondary" size="small" sx={{ fontWeight: 600, fontSize: '0.8rem' }} />
+                                <Chip label={`نصيب المستفيد: ${totals.copay.toFixed(2)}`} color="info" size="small" sx={{ fontWeight: 400 }} />
                             </Stack>
                         </MainCard>
                     )}
