@@ -202,8 +202,14 @@ export const ClaimLineRow = ({
                         <Typography variant="caption" color={line.usageExhausted ? "error.main" : "warning.dark"} fontWeight={600} sx={{ fontSize: '0.75rem', px: '1.0rem', display: 'flex', alignItems: 'center', gap: 1 }}>
                             {line.usageExhausted ? <RejectIcon sx={{ fontSize: '0.875rem' }} /> : <WarningIcon sx={{ fontSize: '0.875rem' }} />}
                             {line.usageExhausted ? "⚠️ رصيد المنفعة استنفذ بالكامل: " : "⚠️ تجاوز سقف المنفعة المحدد: "}
-                            {line.usageDetails?.timesLimit > 0 && `(تم استهلاك ${line.usageDetails.usedCount} من ${line.usageDetails.timesLimit} مرّة)`}
-                            {line.usageDetails?.amountLimit > 0 && ` (تم استهلاك ${line.usageDetails.usedAmount} من ${line.usageDetails.amountLimit} د.ل)`}
+                            {line.usageDetails?.timesLimit > 0 && `(سيُّسجَّل ${(line.usageDetails.totalUsedCount || 0) + 1} من أصل ${line.usageDetails.timesLimit} مرّة/سنة)`}
+                            {line.usageDetails?.amountLimit > 0 && (() => {
+                                const prev = parseFloat(line.usageDetails.totalUsedAmount || 0);
+                                const curr = parseFloat(line.usageDetails.currentRequestedAmount || 0);
+                                const limit = parseFloat(line.usageDetails.amountLimit || 0);
+                                const total = parseFloat((prev + curr).toFixed(2));
+                                return ` (مستخدم مسبقاً: ${prev.toFixed(2)} + المطلوب حالياً: ${curr.toFixed(2)} = ${total} د.ل يتجاوز الحد ${limit.toFixed(2)} د.ل)`;
+                            })()}
                         </Typography>
                     </TableCell>
                 </TableRow>

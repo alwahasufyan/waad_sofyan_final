@@ -279,7 +279,17 @@ public class ClaimMapper {
             }
 
             boolean isRejected = Boolean.TRUE.equals(lineDto.getRejected());
-            BigDecimal lineRefused = isRejected ? lineRequestedTotal : priceExcessRefusal;
+
+            // lineRefused = max(priceExcessRefusal, clientRefusedAmount)
+            // The client computes limit-based refusals (timesLimit / amountLimit) that the
+            // backend mapper cannot independently recompute here. We trust the larger
+            // value.
+            BigDecimal clientRefused = lineDto.getRefusedAmount() != null
+                    ? lineDto.getRefusedAmount()
+                    : BigDecimal.ZERO;
+            BigDecimal lineRefused = isRejected
+                    ? lineRequestedTotal
+                    : priceExcessRefusal.max(clientRefused);
 
             ClaimLine line = ClaimLine.builder()
                     .claim(claim)
@@ -546,8 +556,13 @@ public class ClaimMapper {
             if (Boolean.TRUE.equals(lineDto.getRejected())) {
                 lineRefused = lineRequestedTotal;
             } else {
-                // Refused = price excess only; frontend value is ignored for security
-                lineRefused = priceExcessRefusal;
+                // lineRefused = max(priceExcessRefusal, clientRefusedAmount)
+                // The client computes limit-based refusals (timesLimit / amountLimit) that
+                // cannot be recomputed independently here; take the larger value.
+                BigDecimal clientRefused = lineDto.getRefusedAmount() != null
+                        ? lineDto.getRefusedAmount()
+                        : BigDecimal.ZERO;
+                lineRefused = priceExcessRefusal.max(clientRefused);
 
                 // Net Available (Allowed base) = resolvedTotal - (any other refusal beyond
                 // price)

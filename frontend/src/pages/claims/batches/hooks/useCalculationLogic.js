@@ -120,6 +120,7 @@ export function useCalculationLogic({ applyBenefits, policyInfo }) {
                 ...usage,
                 totalUsedCount,
                 totalUsedAmount,
+                currentRequestedAmount: effectiveTotal,
                 remainingAmount: usage.amountLimit > 0 ? Math.max(0, usage.amountLimit - totalUsedAmount - approvedTotalForCoverage) : null
             } : null
         };
