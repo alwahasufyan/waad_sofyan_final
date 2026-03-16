@@ -8,6 +8,8 @@ export const ClaimTotalsFooter = ({
     saving,
     isDirty,
     setIsClaimRejected,
+    setIsDirty,
+    setRejectionInput,
     openRejectDialog,
     totals,
     theme,
@@ -38,7 +40,7 @@ export const ClaimTotalsFooter = ({
                     رفض المطالبة
                 </Button>
             ) : isClaimRejected ? (
-                <Button variant="text" onClick={() => setIsClaimRejected(false)} sx={{ fontWeight: 500 }}>
+                <Button variant="text" onClick={() => { setIsClaimRejected(false); setIsDirty?.(true); if (typeof setRejectionInput === 'function') setRejectionInput(''); }} sx={{ fontWeight: 500 }}>
                     تغيير للقبول
                 </Button>
             ) : null}

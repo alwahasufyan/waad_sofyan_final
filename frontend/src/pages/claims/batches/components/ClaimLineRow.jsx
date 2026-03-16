@@ -53,7 +53,7 @@ export const ClaimLineRow = ({
                             getOptionLabel={o => o.label || o.serviceName || ''}
                             isOptionEqualToValue={(opt, val) =>
                                 (opt?.pricingItemId != null && opt.pricingItemId === val?.pricingItemId) ||
-                                (opt?.serviceCode != null && opt.serviceCode === val?.serviceCode)
+                                (opt?.serviceCode != null && (opt.serviceCode === val?.serviceCode || opt.serviceCode === val?.medicalServiceCode))
                             }
                             renderInput={(params) => (
                                 <TextField {...params} variant="standard" 

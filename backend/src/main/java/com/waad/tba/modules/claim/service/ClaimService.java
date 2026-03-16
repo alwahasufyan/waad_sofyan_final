@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.waad.tba.common.exception.BusinessRuleException;
+import com.waad.tba.common.exception.ClaimStateTransitionException;
 import com.waad.tba.common.exception.ResourceNotFoundException;
 import com.waad.tba.common.service.ArchitecturalGuardService;
 import com.waad.tba.modules.benefitpolicy.service.BenefitPolicyCoverageService;
@@ -579,6 +580,8 @@ public class ClaimService {
                 claim.setApprovedAmount(null);
                 claim.setPatientCoPay(null);
                 claim.setNetProviderAmount(null);
+                // مسح سبب الرفض عند إعادة القبول
+                claim.setReviewerComment(null);
                 // Use StateMachine for proper transition validation and audit
                 claimStateMachine.transition(claim, newStatus, currentUser);
                 log.info("↩️ REJECTED claim {} re-opened to APPROVED by admin via StateMachine", id);
@@ -587,6 +590,15 @@ public class ClaimService {
                 // is not allowed). Just saving the updated data is sufficient.
                 log.debug("ℹ️ Claim {} stays REJECTED — skipping StateMachine self-transition", id);
             }
+        } else if (dto.getStatus() != null && claim.getStatus() == ClaimStatus.APPROVED
+                && dto.getStatus() == ClaimStatus.REJECTED) {
+            // مطالبة مقبولة يريد المراجع رفضها — يجب وجود سبب رفض
+            if (claim.getReviewerComment() == null || claim.getReviewerComment().isBlank()) {
+                throw new ClaimStateTransitionException(
+                        "Cannot reject claim without reviewer comment. Please provide rejection reason.");
+            }
+            claim.setStatus(ClaimStatus.REJECTED);
+            log.info("🔴 APPROVED claim {} changed to REJECTED by {}", id, currentUser.getEmail());
         }
 
         // DRAFT line edits (services/categories/quantities) with backend contract

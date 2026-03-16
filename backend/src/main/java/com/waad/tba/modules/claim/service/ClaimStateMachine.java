@@ -199,6 +199,10 @@ public class ClaimStateMachine {
                 case SETTLED, APPROVED -> Set.of(ROLE_ACCOUNTANT);
                 default -> Set.of();
             };
+            case REJECTED -> switch (to) {
+                case APPROVED, REJECTED -> Set.of(ROLE_ACCOUNTANT, ROLE_REVIEWER);
+                default -> Set.of();
+            };
             default -> Set.of();
         };
     }
@@ -215,8 +219,11 @@ public class ClaimStateMachine {
                 }
             }
             case APPROVED -> {
-                if (claim.getApprovedAmount() == null ||
-                        claim.getApprovedAmount().compareTo(java.math.BigDecimal.ZERO) <= 0) {
+                // When re-opening from REJECTED, approvedAmount is intentionally null
+                // so calculateFields() can re-derive it — skip the check in that case.
+                if (claim.getStatus() != ClaimStatus.REJECTED &&
+                        (claim.getApprovedAmount() == null ||
+                                claim.getApprovedAmount().compareTo(java.math.BigDecimal.ZERO) <= 0)) {
                     throw new ClaimStateTransitionException(
                             "Cannot approve claim without approved amount. Please set approvedAmount > 0.");
                 }

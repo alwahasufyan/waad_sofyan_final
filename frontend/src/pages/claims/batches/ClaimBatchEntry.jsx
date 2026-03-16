@@ -361,11 +361,13 @@ export default function ClaimBatchEntry() {
             setRejectionInput(editingClaim.reviewerComment || '');
 
             setLines(editingClaim.lines.map(l => {
-                // المطابقة: 1) pricingItemId (الأدق لأن الكود قد يختلف بين SV-xxxx وWE-xxxx)
-                //             2) serviceCode كاحتياط للبنود الجديدة
+                // المطابقة: 1) pricingItemId (الأدق)
+                //             2) serviceCode أو medicalServiceCode كاحتياط
+                const lineCode = l.medicalServiceCode || l.serviceCode;
+                const lineName = l.medicalServiceName || l.serviceName;
                 const svc = serviceOptions.find(s =>
                     (s.pricingItemId != null && l.pricingItemId != null && s.pricingItemId === l.pricingItemId) ||
-                    (s.serviceCode && l.serviceCode && s.serviceCode === l.serviceCode)
+                    (s.serviceCode && lineCode && s.serviceCode === lineCode)
                 );
                 // سعر العقد الحي من بيانات العقد — 65 بدلاً من 70 المدخل
                 const cp = svc ? (svc.contractPrice || 0) : 0;
@@ -376,9 +378,9 @@ export default function ClaimBatchEntry() {
                     : parseFloat(l.unitPrice) || 0;
 
                 const serviceObj = svc || {
-                    serviceCode: l.serviceCode,
-                    serviceName: l.serviceName,
-                    label: `${l.serviceCode ? '[' + l.serviceCode + '] ' : ''}${l.serviceName || ''}`
+                    serviceCode: lineCode,
+                    serviceName: lineName,
+                    label: `${lineCode ? '[' + lineCode + '] ' : ''}${lineName || ''}`
                 };
                 const line = {
                     id: l.id || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 15)),
@@ -1070,6 +1072,8 @@ export default function ClaimBatchEntry() {
                             saving={saving}
                             isDirty={isDirty}
                             setIsClaimRejected={setIsClaimRejected}
+                            setIsDirty={setIsDirty}
+                            setRejectionInput={setRejectionInput}
                             openRejectDialog={openRejectDialog}
                             totals={totals}
                             theme={theme}
