@@ -583,9 +583,9 @@ public class ClaimService {
                 claimStateMachine.transition(claim, newStatus, currentUser);
                 log.info("↩️ REJECTED claim {} re-opened to APPROVED by admin via StateMachine", id);
             } else if (newStatus == ClaimStatus.REJECTED) {
-                // Stays REJECTED — StateMachine allows REJECTED→REJECTED (self-transition for
-                // comment update)
-                claimStateMachine.transition(claim, newStatus, currentUser);
+                // Already REJECTED — skip StateMachine (self-transition on terminal state
+                // is not allowed). Just saving the updated data is sufficient.
+                log.debug("ℹ️ Claim {} stays REJECTED — skipping StateMachine self-transition", id);
             }
         }
 

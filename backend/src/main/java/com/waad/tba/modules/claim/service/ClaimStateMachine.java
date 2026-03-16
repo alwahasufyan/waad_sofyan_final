@@ -117,7 +117,9 @@ public class ClaimStateMachine {
             return; // No-op, allow same status
         }
 
-        if (from.isTerminal()) {
+        // Terminal states block all transitions EXCEPT those explicitly listed in
+        // canTransitionTo() — e.g. REJECTED can be re-opened to APPROVED by admin.
+        if (from.isTerminal() && !from.canTransitionTo(to)) {
             throw new ClaimStateTransitionException(
                     from.name(), to.name(),
                     "Cannot transition from terminal state " + from.name());

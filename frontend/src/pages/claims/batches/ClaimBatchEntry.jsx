@@ -44,6 +44,7 @@ import * as medicalCategoriesService from 'services/api/medical-categories.servi
 import providerContractsService from 'services/api/provider-contracts.service';
 import claimBatchesService from 'services/api/claim-batches.service';
 import { claimRejectionReasonsService } from 'services/api/claim-rejection-reasons.service';
+import systemSettingsService from 'services/api/systemSettings.service';
 
 import { useCalculationLogic } from './hooks/useCalculationLogic';
 import { useCoverageLogic } from './hooks/useCoverageLogic';
@@ -264,14 +265,25 @@ export default function ClaimBatchEntry() {
         enabled: !!employerId && !!providerId
     });
 
+    const { data: backdatedMonthsSetting } = useQuery({
+        queryKey: ['system-setting-backdated-months'],
+        queryFn: () => systemSettingsService.getAll().then(settings => {
+            const s = settings?.find(x => x.settingKey === 'CLAIM_BACKDATED_MONTHS');
+            return s ? parseInt(s.settingValue, 10) : 3;
+        }),
+        staleTime: 5 * 60 * 1000,
+    });
+    const allowedBackdatedMonths = backdatedMonthsSetting ?? 3;
+
     const isExpiredBatch = useMemo(() => {
         if (!month || !year) return false;
         const now = new Date();
         const currentYM = now.getFullYear() * 12 + now.getMonth();
         const targetYM = year * 12 + (month - 1);
-        // FIX: >= 3 is correct — 3 months back is the LAST allowed month
-        return (currentYM - targetYM) >= 3;
-    }, [month, year]);
+        const diff = currentYM - targetYM;
+        if (allowedBackdatedMonths === 0) return diff > 0;
+        return diff > allowedBackdatedMonths;
+    }, [month, year, allowedBackdatedMonths]);
 
     const { data: preAuthResults, isFetching: searchingPreAuth } = useQuery({
         queryKey: ['preauth-search', preAuthSearch, member?.id],
@@ -561,9 +573,17 @@ export default function ClaimBatchEntry() {
 
     const confirmRejection = () => {
         if (rejectType === 'claim') {
+            if (!rejectionInput?.trim()) {
+                enqueueSnackbar('يجب إدخال سبب الرفض', { variant: 'warning' });
+                return;
+            }
             setIsClaimRejected(true);
             setIsDirty(true);
         } else {
+            if (!rejectionInput?.trim()) {
+                enqueueSnackbar('يجب إدخال سبب رفض البند', { variant: 'warning' });
+                return;
+            }
             updateLine(rejectIdx, { rejected: true, rejectionReason: rejectionInput });
         }
         setRejectDialogOpen(false);
@@ -598,8 +618,15 @@ export default function ClaimBatchEntry() {
 
             const effectivelyRejected = isClaimRejected || anyLineRejected || anyRefusedAmount;
 
-            // إذا لم يدخل المستخدم سبب رفض صريح، نستخدم أول سبب تلقائي موجود في البنود
-            let effectiveRejectionReason = rejectionInput || null;
+            // إذا كانت المطالبة مرفوضة كلياً — يجب إدخال سبب رفض
+            let effectiveRejectionReason = rejectionInput?.trim() || null;
+            if (isClaimRejected && !effectiveRejectionReason) {
+                enqueueSnackbar('يجب إدخال سبب رفض المطالبة قبل الحفظ', { variant: 'error' });
+                setSaving(false);
+                isSavingRef.current = false;
+                return;
+            }
+            // للبنود المرفوضة فقط (دون رفض كلي) — نأخذ أول سبب من البنود أو سبب السعر
             if (effectivelyRejected && !effectiveRejectionReason) {
                 const autoReason = activeLines.find(l => l.rejectionReason)?.rejectionReason;
                 effectiveRejectionReason = autoReason || 'مبالغ مرفوضة بسبب تجاوز السعر أو السقف المتفق عليه';
@@ -913,7 +940,7 @@ export default function ClaimBatchEntry() {
                                 )}
                                 {(isExpiredBatch || (currentBatch && currentBatch.status !== 'OPEN')) && !loadingBatchMeta && (
                                     <Chip icon={<LockIcon sx={{ fontSize: '0.75rem' }} />} size="small"
-                                        label={isExpiredBatch ? "فترة منتهية (>3 أشهر)" : "الدفعة مغلقة — تعديل فقط"} 
+                                        label={isExpiredBatch ? `فترة منتهية (>${allowedBackdatedMonths} أشهر)` : "الدفعة مغلقة — تعديل فقط"} 
                                         color="secondary" variant="filled"
                                         sx={{ fontWeight: 500, fontSize: '0.75rem' }}
                                     />
