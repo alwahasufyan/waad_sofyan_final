@@ -2,6 +2,7 @@ package com.waad.tba.modules.settlement.service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.data.domain.Page;
@@ -47,6 +48,13 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 @RequiredArgsConstructor
 public class ProviderAccountService {
+
+        public record ProviderLedgerRepairResult(
+                        int scanned,
+                        int repaired,
+                        List<Long> repairedClaimIds,
+                        List<String> skippedReasons) {
+        }
 
         private final ProviderAccountRepository accountRepository;
         private final AccountTransactionRepository transactionRepository;
@@ -235,6 +243,38 @@ public class ProviderAccountService {
                                 claimId, claim.getProviderId(), amount, account.getRunningBalance());
 
                 return transaction;
+        }
+
+        /**
+         * Replay missing CLAIM_APPROVAL credits for approved claims that never reached
+         * the provider ledger.
+         */
+        @Transactional
+        public ProviderLedgerRepairResult repairMissingApprovalCredits(Long providerId, Long claimId, Long userId) {
+                List<Claim> orphanClaims = claimRepository.findApprovedClaimsMissingProviderCredit(
+                                ClaimStatus.APPROVED,
+                                providerId,
+                                claimId);
+
+                List<Long> repairedClaimIds = new ArrayList<>();
+                List<String> skippedReasons = new ArrayList<>();
+
+                for (Claim orphanClaim : orphanClaims) {
+                        try {
+                                creditOnClaimApproval(orphanClaim.getId(), userId);
+                                repairedClaimIds.add(orphanClaim.getId());
+                        } catch (IllegalStateException ex) {
+                                skippedReasons.add("claim=" + orphanClaim.getId() + ": " + ex.getMessage());
+                                log.warn("Skipping missing-credit repair for claim {}: {}",
+                                                orphanClaim.getId(), ex.getMessage());
+                        }
+                }
+
+                return new ProviderLedgerRepairResult(
+                                orphanClaims.size(),
+                                repairedClaimIds.size(),
+                                repairedClaimIds,
+                                skippedReasons);
         }
 
         // ═══════════════════════════════════════════════════════════════════════════

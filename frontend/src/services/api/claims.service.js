@@ -69,6 +69,25 @@ export const claimsService = {
   },
 
   /**
+   * List deleted (soft-deleted) claims
+   * @param {Object} params - Same filters as list()
+   */
+  listDeleted: async (params = {}) => {
+    try {
+      const queryParams = new URLSearchParams();
+      Object.keys(params).forEach((key) => {
+        if (params[key] !== undefined && params[key] !== null && params[key] !== '') {
+          queryParams.append(key, params[key]);
+        }
+      });
+      const response = await axiosClient.get(`${BASE_URL}/deleted?${queryParams.toString()}`);
+      return normalizePaginatedResponse(response);
+    } catch (error) {
+      throw handleClaimErrors(error);
+    }
+  },
+
+  /**
    * Get claim by ID
    * @param {number} id - Claim ID
    * @returns {Promise<Object>} Claim details
@@ -163,10 +182,41 @@ export const claimsService = {
    * @param {number} id - Claim ID
    * @returns {Promise<void>}
    */
-  remove: async (id) => {
+  remove: async (id, options = {}) => {
     try {
       if (!id) throw new Error('معرف المطالبة مطلوب');
-      const response = await axiosClient.delete(`${BASE_URL}/${id}`);
+      const queryParams = new URLSearchParams();
+      if (options?.reason) queryParams.append('reason', options.reason);
+      const suffix = queryParams.toString() ? `?${queryParams.toString()}` : '';
+      const response = await axiosClient.delete(`${BASE_URL}/${id}${suffix}`);
+      return unwrap(response);
+    } catch (error) {
+      throw handleClaimErrors(error);
+    }
+  },
+
+  /**
+   * Restore claim from deleted log
+   * @param {number} id - Claim ID
+   */
+  restore: async (id) => {
+    try {
+      if (!id) throw new Error('معرف المطالبة مطلوب');
+      const response = await axiosClient.post(`${BASE_URL}/${id}/restore`);
+      return unwrap(response);
+    } catch (error) {
+      throw handleClaimErrors(error);
+    }
+  },
+
+  /**
+   * Permanently delete claim from deleted log
+   * @param {number} id - Claim ID
+   */
+  hardDelete: async (id) => {
+    try {
+      if (!id) throw new Error('معرف المطالبة مطلوب');
+      const response = await axiosClient.delete(`${BASE_URL}/${id}/hard`);
       return unwrap(response);
     } catch (error) {
       throw handleClaimErrors(error);

@@ -259,11 +259,58 @@ public class ClaimController {
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
+    @GetMapping("/deleted")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "List deleted claims", description = "List soft-deleted claims from deleted log")
+    public ResponseEntity<ApiResponse<ClaimListResponse>> listDeletedClaims(
+            @RequestParam(name = "employerId", required = false) Long employerId,
+            @RequestParam(name = "providerId", required = false) Long providerId,
+            @RequestParam(name = "status", required = false) ClaimStatus status,
+            @RequestParam(name = "dateFrom", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(name = "dateTo", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+            @RequestParam(name = "createdDateFrom", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate createdDateFrom,
+            @RequestParam(name = "createdDateTo", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate createdDateTo,
+            @RequestParam(name = "page", defaultValue = "1") int page,
+            @RequestParam(name = "size", defaultValue = "20") int size,
+            @RequestParam(name = "sortBy", defaultValue = "createdAt") String sortBy,
+            @RequestParam(name = "sortDir", defaultValue = "desc") String sortDir,
+            @RequestParam(name = "search", required = false) String search) {
+
+        if (!ALLOWED_SORT_FIELDS.contains(sortBy)) {
+            log.warn("Invalid sort field requested for deleted claims: '{}', falling back to default 'createdAt'", sortBy);
+            sortBy = "createdAt";
+        }
+
+        Page<ClaimViewDto> claimsPage = claimService.listDeletedClaims(
+                employerId, providerId, status, dateFrom, dateTo, createdDateFrom, createdDateTo,
+                Math.max(0, page - 1), size, sortBy, sortDir, search);
+
+        ClaimListResponse response = apiMapper.toListResponse(claimsPage);
+
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
     @DeleteMapping("/{id:\\d+}")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'MEDICAL_REVIEWER', 'DATA_ENTRY', 'PROVIDER_STAFF')")
-    public ResponseEntity<ApiResponse<Void>> deleteClaim(@PathVariable("id") Long id) {
-        claimService.deleteClaim(id);
-        return ResponseEntity.ok(ApiResponse.success("Claim deleted successfully", null));
+    public ResponseEntity<ApiResponse<Void>> deleteClaim(
+            @PathVariable("id") Long id,
+            @RequestParam(name = "reason", required = false) String reason) {
+        claimService.deleteClaim(id, reason);
+        return ResponseEntity.ok(ApiResponse.success("Claim moved to deleted log", null));
+    }
+
+    @PostMapping("/{id:\\d+}/restore")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'MEDICAL_REVIEWER', 'DATA_ENTRY', 'PROVIDER_STAFF')")
+    public ResponseEntity<ApiResponse<Void>> restoreClaim(@PathVariable("id") Long id) {
+        claimService.restoreClaim(id);
+        return ResponseEntity.ok(ApiResponse.success("Claim restored successfully", null));
+    }
+
+    @DeleteMapping("/{id:\\d+}/hard")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'MEDICAL_REVIEWER', 'DATA_ENTRY', 'PROVIDER_STAFF')")
+    public ResponseEntity<ApiResponse<Void>> hardDeleteClaim(@PathVariable("id") Long id) {
+        claimService.hardDeleteClaim(id);
+        return ResponseEntity.ok(ApiResponse.success("Claim permanently deleted", null));
     }
 
     @GetMapping("/count")

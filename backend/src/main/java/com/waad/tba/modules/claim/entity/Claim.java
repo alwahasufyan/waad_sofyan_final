@@ -11,8 +11,10 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Entity
 @Table(name = "claims")
@@ -22,9 +24,14 @@ import java.util.List;
 @Builder
 public class Claim {
 
+    private static final DateTimeFormatter CLAIM_NUMBER_TS = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "claim_number", nullable = false, unique = true, length = 100)
+    private String claimNumber;
 
     /**
      * Optimistic Locking Version (PHASE 1: Race Condition Protection)
@@ -318,6 +325,15 @@ public class Claim {
     @Builder.Default
     private Boolean active = true;
 
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
+    @Column(name = "deleted_by", length = 255)
+    private String deletedBy;
+
+    @Column(name = "deletion_reason", columnDefinition = "TEXT")
+    private String deletionReason;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -334,6 +350,9 @@ public class Claim {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
+        if (claimNumber == null || claimNumber.isBlank()) {
+            claimNumber = generateClaimNumber();
+        }
         validateArchitecturalRules();
         calculateFields();
         validateBusinessRules();
@@ -365,14 +384,8 @@ public class Claim {
             throw new IllegalStateException("ARCHITECTURAL VIOLATION: Claim MUST have at least one service line");
         }
 
-        // RULE: Check if any line requires PA and validate preAuthorization
-        boolean anyLineRequiresPA = lines.stream()
-                .anyMatch(line -> Boolean.TRUE.equals(line.getRequiresPA()));
-
-        if (anyLineRequiresPA && preAuthorization == null && !Boolean.TRUE.equals(isBacklog)) {
-            throw new IllegalStateException(
-                    "يرجى إدخال رقم الموافقة المسبقة. المطالبة تحتوي على خدمات تتطلب موافقة مسبقة ولم يتم العثور على موافقة مرتبطة.");
-        }
+        // Linking a pre-authorization is preferred for services that require it,
+        // but manual claim entry and provider claim flows may save first and reconcile later.
     }
 
     private void validateBusinessRules() {
@@ -524,6 +537,12 @@ public class Claim {
         } else {
             differenceAmount = null;
         }
+    }
+
+    private String generateClaimNumber() {
+        String timestamp = LocalDateTime.now().format(CLAIM_NUMBER_TS);
+        String suffix = UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase();
+        return "CLM-" + timestamp + "-" + suffix;
     }
 
     // Helper methods for bidirectional relationships

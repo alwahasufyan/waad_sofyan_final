@@ -1023,11 +1023,6 @@ export default function ProviderClaimsSubmission() {
     }
 
     const requiresPreApproval = service.requiresPreApproval || service.requiresPreAuth || service.requiresPA || false;
-    if (requiresPreApproval) {
-      setError('هذه الخدمة تتطلب موافقة مسبقة ولا يمكن إضافتها مباشرة في المطالبة. يرجى إنشاء موافقة مسبقة أولاً.');
-      return;
-    }
-
     const isDuplicate = claimLines.some(l => l.id !== lineId && l.medicalServiceId === service.id);
     if (isDuplicate) {
       setError('هذه الخدمة مضافة بالفعل في بند آخر');
@@ -1245,8 +1240,7 @@ export default function ProviderClaimsSubmission() {
     }
 
     if (claimLines.some((l) => l.requiresPA) && !formData.preAuthorizationId) {
-      setError('يجب إدخال رقم الموافقة المسبقة لأن المطالبة تحتوي على خدمات تتطلب موافقة');
-      return false;
+      setError(null);
     }
 
     return true;
@@ -1654,9 +1648,9 @@ export default function ProviderClaimsSubmission() {
                                           <Tooltip title="يتم التحكم في هذه الخدمة عبر قواعد الوثيقة وتتطلب رقم موافقة مسبقة صالح">
                                             <Chip
                                               icon={<LockIcon sx={{ fontSize: '0.75rem !important' }} />}
-                                              label="مقفلة - تتطلب موافقة مسبقة"
+                                              label="تتطلب موافقة مسبقة"
                                               size="small"
-                                              color="error"
+                                              color="warning"
                                               variant="outlined"
                                               sx={{ fontSize: '0.75rem', height: '1.25rem' }}
                                             />

@@ -18,7 +18,7 @@
         }
         @bottom-center {
           content: "الصفحة " counter(page) " من " counter(pages);
-          font-family: "Cairo", "Segoe UI", Tahoma, sans-serif;
+          font-family: "Amiri", "Segoe UI", Tahoma, sans-serif;
           font-size: 8pt;
           color: #777;
         }
@@ -31,7 +31,7 @@
       }
 
       body {
-        font-family: "Cairo", "Segoe UI", Tahoma, Arial, sans-serif;
+        font-family: "Amiri", "Segoe UI", Tahoma, Arial, sans-serif;
         color: #1a1a1a;
         font-size: 10pt;
         line-height: 1.55;
@@ -462,7 +462,7 @@
         <span class="co-name" th:text="${report.reportTitle}">شركة وعد لإدارة النفقات الطبية</span>
       </span>
       <span class="h-right">
-        التاريخ &nbsp;<span th:text="${report.reportDate}">-</span><br />
+        التاريخ &nbsp;<span th:text="${T(com.waad.tba.modules.report.util.ReportFormatUtils).toEnglishDigits(report.reportDate)}">-</span><br />
         الصفحة &nbsp;<span class="page-number"></span>
       </span>
     </div>
@@ -481,7 +481,7 @@
         <span class="co-name" th:text="${report.reportTitle}">شركة وعد لإدارة النفقات الطبية</span>
       </span>
       <span class="h-right">
-        التاريخ &nbsp;<span th:text="${report.reportDate}">-</span><br />
+        التاريخ &nbsp;<span th:text="${T(com.waad.tba.modules.report.util.ReportFormatUtils).toEnglishDigits(report.reportDate)}">-</span><br />
         الصفحة &nbsp;1
       </span>
     </div>
@@ -504,7 +504,7 @@
           <td class="td-label">إجمالي القيمة المقدمة من المرفق:</td>
           <td
             class="td-value"
-            th:text="${#numbers.formatDecimal(report.grandTotalGross, 1, 'COMMA', 3, 'POINT')} + ' د.ل'"
+            th:text="${T(com.waad.tba.modules.report.util.ReportFormatUtils).formatAmount(report.grandTotalGross)} + ' د.ل'"
           >
             0.000 د.ل
           </td>
@@ -514,7 +514,7 @@
           <td class="td-label">إجمالي القيمة الغير مستحقة:</td>
           <td
             class="td-value red"
-            th:text="${#numbers.formatDecimal(report.grandTotalRejected, 1, 'COMMA', 3, 'POINT')} + ' د.ل'"
+            th:text="${T(com.waad.tba.modules.report.util.ReportFormatUtils).formatAmount(report.grandTotalRejected)} + ' د.ل'"
           >
             0.000 د.ل
           </td>
@@ -524,7 +524,7 @@
           <td class="td-label">إجمالي القيمة المدفوعة من المؤمّن:</td>
           <td
             class="td-value"
-            th:text="${#numbers.formatDecimal(report.grandTotalPatientShare, 1, 'COMMA', 3, 'POINT')} + ' د.ل'"
+            th:text="${T(com.waad.tba.modules.report.util.ReportFormatUtils).formatAmount(report.grandTotalPatientShare)} + ' د.ل'"
           >
             0.000 د.ل
           </td>
@@ -534,7 +534,7 @@
           <td class="td-label">صافي القيمة المستحق للمرفق:</td>
           <td
             class="td-value"
-            th:text="${#numbers.formatDecimal(report.grandTotalNet, 1, 'COMMA', 3, 'POINT')} + ' د.ل'"
+            th:text="${T(com.waad.tba.modules.report.util.ReportFormatUtils).formatAmount(report.grandTotalNet)} + ' د.ل'"
           >
             0.000 د.ل
           </td>
@@ -543,7 +543,7 @@
           <td class="td-bullet">•</td>
           <td class="td-label">عدد المطاليات المسلّمة:</td>
           <td class="td-value">
-            <span class="count-circle" th:text="${report.claimCount}">0</span>
+            <span class="count-circle" th:text="${T(com.waad.tba.modules.report.util.ReportFormatUtils).toEnglishDigits(report.claimCount)}">0</span>
           </td>
         </tr>
       </table>
@@ -570,7 +570,7 @@
           <tr>
             <td style="width: 50%">
               <span class="lbl">No.</span>
-              <span class="val" th:text="${claim.claimId}">-</span>
+              <span class="val" th:text="${T(com.waad.tba.modules.report.util.ReportFormatUtils).toEnglishDigits(claim.claimId)}">-</span>
             </td>
             <td style="width: 50%">
               <span class="lbl">Origin No.</span>
@@ -616,18 +616,18 @@
               <td class="td-svc" th:text="${item.medicalService}">-</td>
               <td
                 class="td-date"
-                th:text="${item.serviceDate != null} ? ${#temporals.format(item.serviceDate, 'dd-MM-yyyy')} : '-'"
+                th:text="${T(com.waad.tba.modules.report.util.ReportFormatUtils).formatDate(item.serviceDate)}"
               >
                 -
               </td>
-              <td class="num" th:text="${#numbers.formatDecimal(item.grossAmount, 1, 'COMMA', 3, 'POINT')}">0.000</td>
-              <td class="num col-grn" th:text="${#numbers.formatDecimal(item.netAmount, 1, 'COMMA', 3, 'POINT')}">
+              <td class="num" th:text="${T(com.waad.tba.modules.report.util.ReportFormatUtils).formatAmount(item.grossAmount)}">0.000</td>
+              <td class="num col-grn" th:text="${T(com.waad.tba.modules.report.util.ReportFormatUtils).formatAmount(item.netAmount)}">
                 0.000
               </td>
               <td
                 class="num col-red"
                 th:text="${item.rejectedAmount != null and item.rejectedAmount.compareTo(T(java.math.BigDecimal).ZERO) != 0}
-                                 ? ${#numbers.formatDecimal(item.rejectedAmount, 1, 'COMMA', 3, 'POINT')}
+                                 ? ${T(com.waad.tba.modules.report.util.ReportFormatUtils).formatAmount(item.rejectedAmount)}
                                  : '0.000'"
               >
                 0.000
@@ -641,17 +641,17 @@
               <td></td>
               <td
                 class="num sub-gross"
-                th:text="${#numbers.formatDecimal(claim.subTotalGross, 1, 'COMMA', 3, 'POINT')}"
+                th:text="${T(com.waad.tba.modules.report.util.ReportFormatUtils).formatAmount(claim.subTotalGross)}"
               >
                 0.000
               </td>
-              <td class="num sub-net" th:text="${#numbers.formatDecimal(claim.subTotalNet,   1, 'COMMA', 3, 'POINT')}">
+              <td class="num sub-net" th:text="${T(com.waad.tba.modules.report.util.ReportFormatUtils).formatAmount(claim.subTotalNet)}">
                 0.000
               </td>
               <td
                 class="num sub-rejected"
                 th:text="${claim.subTotalRejected != null and claim.subTotalRejected.compareTo(T(java.math.BigDecimal).ZERO) != 0}
-                                 ? ${#numbers.formatDecimal(claim.subTotalRejected, 1, 'COMMA', 3, 'POINT')}
+                                 ? ${T(com.waad.tba.modules.report.util.ReportFormatUtils).formatAmount(claim.subTotalRejected)}
                                  : '0.000'"
               >
                 0.000
@@ -672,7 +672,7 @@
               <div style="font-size: 7.5pt; margin-bottom: 2px">Gross</div>
               <div
                 class="num"
-                th:text="${#numbers.formatDecimal(report.grandTotalGross, 1, 'COMMA', 3, 'POINT')} + ' د.ل'"
+                th:text="${T(com.waad.tba.modules.report.util.ReportFormatUtils).formatAmount(report.grandTotalGross)} + ' د.ل'"
               >
                 0.000 د.ل
               </div>
@@ -682,7 +682,7 @@
               <div style="font-size: 7.5pt; margin-bottom: 2px">Net</div>
               <div
                 class="num"
-                th:text="${#numbers.formatDecimal(report.grandTotalNet, 1, 'COMMA', 3, 'POINT')} + ' د.ل'"
+                th:text="${T(com.waad.tba.modules.report.util.ReportFormatUtils).formatAmount(report.grandTotalNet)} + ' د.ل'"
               >
                 0.000 د.ل
               </div>
@@ -691,7 +691,7 @@
               <div style="font-size: 7.5pt; margin-bottom: 2px">Rejected</div>
               <div
                 class="num"
-                th:text="${#numbers.formatDecimal(report.grandTotalRejected, 1, 'COMMA', 3, 'POINT')} + ' د.ل'"
+                th:text="${T(com.waad.tba.modules.report.util.ReportFormatUtils).formatAmount(report.grandTotalRejected)} + ' د.ل'"
               >
                 0.000 د.ل
               </div>

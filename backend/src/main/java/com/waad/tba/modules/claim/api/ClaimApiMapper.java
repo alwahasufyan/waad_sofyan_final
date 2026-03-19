@@ -44,6 +44,7 @@ public class ClaimApiMapper {
          */
         public ClaimCreateDto toCreateDto(CreateClaimRequest request) {
                 return ClaimCreateDto.builder()
+                                .status(request.getStatus())
                                 .visitId(request.getVisitId())
                                 .memberId(request.getMemberId())
                                 .providerId(request.getProviderId())
@@ -56,11 +57,11 @@ public class ClaimApiMapper {
                                 .lines(request.getLines().stream()
                                                 .map(this::toClaimLineDto)
                                                 .collect(Collectors.toList()))
-                                .status(request.getStatus())
                                 .complaint(request.getComplaint())
                                 .rejectionReason(request.getRejectionReason())
                                 .manualCategoryEnabled(request.getManualCategoryEnabled())
                                 .primaryCategoryCode(request.getPrimaryCategoryCode())
+                                .claimBatchId(request.getClaimBatchId())
                                 .build();
         }
 
@@ -77,6 +78,7 @@ public class ClaimApiMapper {
                                 .serviceCategoryName(lineRequest.getServiceCategoryName())
                                 .quantity(lineRequest.getQuantity())
                                 .unitPrice(lineRequest.getUnitPrice())
+                                .refusedAmount(lineRequest.getRefusedAmount())
                                 .rejected(lineRequest.getRejected())
                                 .rejectionReason(lineRequest.getRejectionReason())
                                 .build();
@@ -127,8 +129,7 @@ public class ClaimApiMapper {
                                                                 .unitPrice(line.getUnitPrice() != null
                                                                                 ? line.getUnitPrice()
                                                                                 : line.getGrossAmount())
-                                                                // refusedAmount from client is never trusted; backend
-                                                                // recomputes it
+                                                                .refusedAmount(line.getRefusedAmount())
                                                                 .rejected(line.getRejected())
                                                                 .rejectionReason(line.getRejectionReason())
                                                                 .build())
@@ -285,6 +286,9 @@ public class ClaimApiMapper {
 
                                 // Audit trail (READ-ONLY)
                                 .active(dto.getActive())
+                                .deletedAt(dto.getDeletedAt())
+                                .deletedBy(dto.getDeletedBy())
+                                .deletionReason(dto.getDeletionReason())
                                 .createdAt(dto.getCreatedAt())
                                 .updatedAt(dto.getUpdatedAt())
                                 .createdBy(dto.getCreatedBy())

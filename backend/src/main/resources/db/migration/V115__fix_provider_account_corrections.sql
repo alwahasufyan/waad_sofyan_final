@@ -19,6 +19,23 @@ DECLARE
     v_account_id  BIGINT;
     v_curr_bal    NUMERIC(14,2);
 BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'provider_accounts'
+          AND column_name = 'running_balance'
+    ) OR NOT EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'provider_accounts'
+          AND column_name = 'total_approved'
+    ) THEN
+        RAISE NOTICE 'Skipping V115: provider_accounts uses legacy balance columns in this schema path.';
+        RETURN;
+    END IF;
+
     SELECT id, running_balance
       INTO v_account_id, v_curr_bal
       FROM provider_accounts

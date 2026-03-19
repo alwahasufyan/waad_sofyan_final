@@ -38,6 +38,12 @@ public class ProviderContractPricingItemResponseDto {
     
     // Category name (for imported items - display/grouping)
     private String categoryName;
+
+    // Sub-category name (for imported items - display/grouping)
+    private String subCategoryName;
+
+    // Provider specialty label (for imported items)
+    private String specialty;
     
     // Quantity (for imported items)
     private Integer quantity;
@@ -150,6 +156,8 @@ public class ProviderContractPricingItemResponseDto {
                 .serviceName(displayServiceName)
                 .serviceCode(entity.getServiceCode())
                 .categoryName(effectiveCategoryName)
+                .subCategoryName(entity.getSubCategoryName())
+                .specialty(entity.getSpecialty())
                 .quantity(entity.getQuantity())
                 .medicalCategory(categoryDto)
                 .effectiveCategory(effectiveCategoryDto)

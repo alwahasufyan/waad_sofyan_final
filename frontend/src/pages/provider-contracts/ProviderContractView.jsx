@@ -72,6 +72,8 @@ import {
   , CloudUpload as CloudUploadIcon
   , Download as DownloadIcon
   , InsertDriveFile as FileIcon
+  , Save as SaveIcon
+  , RestartAlt as ResetIcon
 } from '@mui/icons-material';
 
 // Project Components
@@ -182,11 +184,20 @@ const getCategoryHierarchy = (item, categoriesList = []) => {
           subCode: categoryEntity.code || '-'
         };
       }
+
+      const importedSubName = item?.subCategoryName || '-';
+      const importedSubEntity = importedSubName !== '-'
+        ? categoriesList.find((c) =>
+            String(c.parentId) === String(categoryEntity.id) &&
+            (c.nameAr === importedSubName || c.name === importedSubName)
+          )
+        : null;
+
       return {
         main: categoryEntity.nameAr || categoryEntity.name,
-        sub: '-',
+        sub: importedSubEntity ? (importedSubEntity.nameAr || importedSubEntity.name) : importedSubName,
         mainCode: categoryEntity.code || '-',
-        subCode: '-'
+        subCode: importedSubEntity?.code || '-'
       };
     }
   }
@@ -210,6 +221,69 @@ const getCategoryHierarchy = (item, categoriesList = []) => {
 };
 
 const getCategoryObject = (item) => item?.medicalCategory || item?.effectiveCategory || item?.category || null;
+
+const findCategoryByName = (categoriesList = [], name, parentId = undefined) => {
+  if (!name) return null;
+
+  return categoriesList.find((category) => {
+    const sameParent = parentId === undefined ? true : String(category.parentId || '') === String(parentId || '');
+    return sameParent && (category.nameAr === name || category.name === name || category.code === name);
+  }) || null;
+};
+
+const buildInlinePricingDraft = (item, categoriesList = []) => {
+  const categoryObject = getCategoryObject(item);
+  let mainCategoryId = null;
+  let subCategoryId = null;
+
+  if (categoryObject) {
+    if (categoryObject.parentId) {
+      mainCategoryId = categoryObject.parentId;
+      subCategoryId = categoryObject.id;
+    } else {
+      mainCategoryId = categoryObject.id;
+    }
+  } else {
+    const hierarchy = getCategoryHierarchy(item, categoriesList);
+    const mainCategory = findCategoryByName(categoriesList, hierarchy.main, null);
+    const subCategory = mainCategory ? findCategoryByName(categoriesList, hierarchy.sub, mainCategory.id) : null;
+
+    mainCategoryId = mainCategory?.id || null;
+    subCategoryId = subCategory?.id || null;
+  }
+
+  const contractPrice = item?.contractPrice ?? item?.basePrice ?? '';
+
+  return {
+    mainCategoryId,
+    subCategoryId,
+    contractPrice: contractPrice === null || contractPrice === undefined ? '' : String(contractPrice),
+    originalMainCategoryId: mainCategoryId,
+    originalSubCategoryId: subCategoryId,
+    originalContractPrice: contractPrice === null || contractPrice === undefined ? '' : String(contractPrice)
+  };
+};
+
+const isInlinePricingDraftDirty = (draft) => {
+  if (!draft) return false;
+
+  return String(draft.mainCategoryId || '') !== String(draft.originalMainCategoryId || '') ||
+    String(draft.subCategoryId || '') !== String(draft.originalSubCategoryId || '') ||
+    String(draft.contractPrice || '') !== String(draft.originalContractPrice || '');
+};
+
+const buildFallbackCategoryOption = (itemId, label, parentId = null, level = 'main') => {
+  if (!label || label === '-') return null;
+
+  return {
+    id: `fallback-${level}-${itemId}-${label}`,
+    nameAr: label,
+    name: label,
+    code: label,
+    parentId,
+    isFallbackOption: true
+  };
+};
 
 // ═══════════════════════════════════════════════════════════════════════════
 // HELPER COMPONENTS
@@ -277,6 +351,8 @@ const ProviderContractView = () => {
   const [uploadingPricingFile, setUploadingPricingFile] = useState(false);
   const [selectedPricingItem, setSelectedPricingItem] = useState(null);
   const [clearAllDialogOpen, setClearAllDialogOpen] = useState(false);
+  const [inlinePricingDrafts, setInlinePricingDrafts] = useState({});
+  const [savingPricingItemIds, setSavingPricingItemIds] = useState({});
   const [pricingForm, setPricingForm] = useState({
     medicalServiceId: null,
     mainCategoryId: null,
@@ -326,7 +402,7 @@ const ProviderContractView = () => {
   // NOTE: Medical services are now fetched dynamically by MedicalServiceSelector component
 
   // Fetch Medical Categories for Dropdown
-  const { data: medicalCategories = [] } = useQuery({
+  const { data: medicalCategories = [], error: medicalCategoriesError } = useQuery({
     queryKey: ['medicalCategories'],
     queryFn: async () => {
       const data = await getAllMedicalCategories();
@@ -390,7 +466,7 @@ const ProviderContractView = () => {
           }
 
           // Refresh pricing items
-          queryClient.invalidateQueries(['provider-contract-pricing', id]);
+          queryClient.invalidateQueries({ queryKey: ['provider-contract-pricing', id] });
           setExcelImportDialogOpen(false);
           setSelectedPricingFile(null);
         }
@@ -468,7 +544,7 @@ const ProviderContractView = () => {
     mutationFn: () => deleteAllPricingItems(id),
     onSuccess: (count) => {
       enqueueSnackbar(`تم حذف ${count} بند تسعير بنجاح. يمكنك الآن استيراد القائمة الجديدة.`, { variant: 'success' });
-      queryClient.invalidateQueries(['provider-contract-pricing', id]);
+      queryClient.invalidateQueries({ queryKey: ['provider-contract-pricing', id] });
       queryClient.invalidateQueries(['provider-contract', id]);
       setClearAllDialogOpen(false);
       setPricingPage(0);
@@ -483,7 +559,7 @@ const ProviderContractView = () => {
     mutationFn: (data) => addPricingItem(id, data),
     onSuccess: () => {
       enqueueSnackbar('تم إضافة الخدمة بنجاح', { variant: 'success' });
-      queryClient.invalidateQueries(['provider-contract-pricing', id]);
+      queryClient.invalidateQueries({ queryKey: ['provider-contract-pricing', id] });
       setAddPricingDialogOpen(false);
       setPricingForm({ medicalServiceId: null, basePrice: '', contractPrice: '', notes: '' });
     },
@@ -496,13 +572,17 @@ const ProviderContractView = () => {
     mutationFn: (data) => updatePricingItem(selectedPricingItem.id, data),
     onSuccess: () => {
       enqueueSnackbar('تم تحديث الخدمة بنجاح', { variant: 'success' });
-      queryClient.invalidateQueries(['provider-contract-pricing', id]);
+      queryClient.invalidateQueries({ queryKey: ['provider-contract-pricing', id] });
       setEditPricingDialogOpen(false);
       setSelectedPricingItem(null);
     },
     onError: (err) => {
       enqueueSnackbar(err.message || 'فشل تحديث الخدمة', { variant: 'error' });
     }
+  });
+
+  const inlineUpdatePricingMutation = useMutation({
+    mutationFn: ({ pricingId, data }) => updatePricingItem(pricingId, data)
   });
 
   const addMedicalServiceMutation = useMutation({
@@ -516,7 +596,7 @@ const ProviderContractView = () => {
     mutationFn: () => deletePricingItem(selectedPricingItem.id),
     onSuccess: () => {
       enqueueSnackbar('تم حذف الخدمة بنجاح', { variant: 'success' });
-      queryClient.invalidateQueries(['provider-contract-pricing', id]);
+      queryClient.invalidateQueries({ queryKey: ['provider-contract-pricing', id] });
       setDeletePricingDialogOpen(false);
       setSelectedPricingItem(null);
     },
@@ -537,6 +617,10 @@ const ProviderContractView = () => {
     return PRICING_MODEL_CONFIG[contract?.pricingModel] || { label: contract?.pricingModel };
   }, [contract?.pricingModel]);
 
+  const canQuickEditPricing = useMemo(() => {
+    return contract?.canModifyPricing ?? (contract?.status !== CONTRACT_STATUS.TERMINATED);
+  }, [contract?.canModifyPricing, contract?.status]);
+
   const pricingItems = useMemo(() => {
     return pricingItemsData?.content || contract?.pricingItems || [];
   }, [pricingItemsData, contract?.pricingItems]);
@@ -544,6 +628,14 @@ const ProviderContractView = () => {
   const totalPricingItems = useMemo(() => {
     return pricingItemsData?.totalElements ?? pricingItems.length;
   }, [pricingItemsData, pricingItems]);
+
+  useEffect(() => {
+    const nextDrafts = {};
+    pricingItems.forEach((item) => {
+      nextDrafts[item.id] = buildInlinePricingDraft(item, medicalCategories);
+    });
+    setInlinePricingDrafts(nextDrafts);
+  }, [pricingItems, medicalCategories]);
 
   const pricingTimeline = useMemo(() => {
     return [...pricingItems]
@@ -731,6 +823,104 @@ const ProviderContractView = () => {
     setDeletePricingDialogOpen(true);
   }, []);
 
+  const updateInlinePricingDraft = useCallback((itemId, updater) => {
+    setInlinePricingDrafts((prev) => {
+      const currentDraft = prev[itemId];
+      if (!currentDraft) return prev;
+
+      const updates = typeof updater === 'function' ? updater(currentDraft) : updater;
+
+      return {
+        ...prev,
+        [itemId]: {
+          ...currentDraft,
+          ...updates
+        }
+      };
+    });
+  }, []);
+
+  const handleInlineMainCategoryChange = useCallback((itemId, nextMainCategory) => {
+    updateInlinePricingDraft(itemId, (draft) => {
+      const nextMainCategoryId = nextMainCategory?.id || null;
+      const subStillValid = nextMainCategoryId && draft.subCategoryId
+        ? medicalCategories.some((category) =>
+            String(category.id) === String(draft.subCategoryId) && String(category.parentId) === String(nextMainCategoryId)
+          )
+        : false;
+
+      return {
+        mainCategoryId: nextMainCategoryId,
+        subCategoryId: subStillValid ? draft.subCategoryId : null
+      };
+    });
+  }, [medicalCategories, updateInlinePricingDraft]);
+
+  const handleInlineSubCategoryChange = useCallback((itemId, nextSubCategory) => {
+    updateInlinePricingDraft(itemId, (draft) => ({
+      mainCategoryId: nextSubCategory?.parentId || draft.mainCategoryId || null,
+      subCategoryId: nextSubCategory?.id || null
+    }));
+  }, [updateInlinePricingDraft]);
+
+  const handleInlinePriceChange = useCallback((itemId, nextValue) => {
+    updateInlinePricingDraft(itemId, { contractPrice: nextValue });
+  }, [updateInlinePricingDraft]);
+
+  const handleInlineReset = useCallback((item) => {
+    setInlinePricingDrafts((prev) => ({
+      ...prev,
+      [item.id]: buildInlinePricingDraft(item, medicalCategories)
+    }));
+  }, [medicalCategories]);
+
+  const handleInlineSave = useCallback(async (item) => {
+    const draft = inlinePricingDrafts[item.id];
+    if (!draft) return;
+
+    const priceValue = parseFloat(draft.contractPrice);
+    if (!Number.isFinite(priceValue) || priceValue <= 0) {
+      enqueueSnackbar('أدخل سعر عقد صحيح أكبر من صفر', { variant: 'warning' });
+      return;
+    }
+
+    const medicalCategoryId = draft.subCategoryId || draft.mainCategoryId || null;
+
+    try {
+      setSavingPricingItemIds((prev) => ({ ...prev, [item.id]: true }));
+
+      await inlineUpdatePricingMutation.mutateAsync({
+        pricingId: item.id,
+        data: {
+          medicalCategoryId,
+          basePrice: priceValue,
+          contractPrice: priceValue
+        }
+      });
+
+      setInlinePricingDrafts((prev) => ({
+        ...prev,
+        [item.id]: {
+          ...prev[item.id],
+          originalMainCategoryId: prev[item.id].mainCategoryId,
+          originalSubCategoryId: prev[item.id].subCategoryId,
+          originalContractPrice: prev[item.id].contractPrice
+        }
+      }));
+
+      queryClient.invalidateQueries({ queryKey: ['provider-contract-pricing', id] });
+      enqueueSnackbar('تم حفظ التعديل السريع', { variant: 'success' });
+    } catch (err) {
+      enqueueSnackbar(err?.message || 'فشل حفظ التعديل السريع', { variant: 'error' });
+    } finally {
+      setSavingPricingItemIds((prev) => {
+        const next = { ...prev };
+        delete next[item.id];
+        return next;
+      });
+    }
+  }, [enqueueSnackbar, id, inlinePricingDrafts, inlineUpdatePricingMutation, queryClient]);
+
   // ─────────────────────────────────────────────────────────────────────────
   // RENDER - LOADING STATE
   // ─────────────────────────────────────────────────────────────────────────
@@ -882,6 +1072,12 @@ const ProviderContractView = () => {
 
         {/* Pricing Items Tab */}
         <TabPanel value={activeTab} index={0}>
+          {medicalCategoriesError && (
+            <Alert severity="warning" sx={{ mb: '1rem' }}>
+              لم يتم تحميل قائمة التصنيفات من النظام. القيم المحفوظة ستبقى ظاهرة، لكن تعديل التصنيف يتطلب رجوع طلبات التصنيفات للعمل بدون 401.
+            </Alert>
+          )}
+
           {/* Search and Excel Upload */}
           <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} sx={{ mb: '1.0rem' }} alignItems={{ xs: 'stretch', md: 'center' }}>
             <TextField
@@ -991,10 +1187,11 @@ const ProviderContractView = () => {
                 <TableRow sx={{ backgroundColor: 'grey.50' }}>
                   <TableCell sx={{ width: '7.5rem' }}>كود الخدمة</TableCell>
                   <TableCell sx={{ minWidth: '15.625rem' }}>اسم الخدمة</TableCell>
-                  <TableCell sx={{ minWidth: '11.25rem' }}>التصنيف الرئيسي</TableCell>
-                  <TableCell sx={{ minWidth: '11.25rem' }}>البند (التصنيف الفرعي)</TableCell>
-                  <TableCell align="right" sx={{ width: '7.5rem' }}>سعر العقد</TableCell>
-                  <TableCell align="center" sx={{ width: '6.25rem' }}>الإجراءات</TableCell>
+                  <TableCell sx={{ minWidth: '14rem' }}>التصنيف الرئيسي</TableCell>
+                  <TableCell sx={{ minWidth: '14rem' }}>البند (التصنيف الفرعي)</TableCell>
+                  <TableCell sx={{ minWidth: '10rem' }}>التخصص</TableCell>
+                  <TableCell align="right" sx={{ width: '9rem' }}>سعر العقد</TableCell>
+                  <TableCell align="center" sx={{ width: '9rem' }}>الإجراءات</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -1014,7 +1211,15 @@ const ProviderContractView = () => {
                   </TableRow>
                 ) : (
                   pricingItems.map((item, index) => (
-                    <TableRow key={item.id || index} hover sx={{ '&:last-child td, &:last-child th': { border: 0 }, '&:nth-of-type(even)': { bgcolor: 'grey.25' } }}>
+                    <TableRow
+                      key={item.id || index}
+                      hover
+                      sx={{
+                        '&:last-child td, &:last-child th': { border: 0 },
+                        '&:nth-of-type(even)': { bgcolor: 'grey.25' },
+                        ...(isInlinePricingDraftDirty(inlinePricingDrafts[item.id]) ? { bgcolor: 'warning.lighter' } : {})
+                      }}
+                    >
                       <TableCell>
                         {(() => {
                           const service = getServiceDisplay(item);
@@ -1044,42 +1249,110 @@ const ProviderContractView = () => {
                       </TableCell>
                       <TableCell>
                         {(() => {
+                          const draft = inlinePricingDrafts[item.id] || buildInlinePricingDraft(item, medicalCategories);
                           const hierarchy = getCategoryHierarchy(item, medicalCategories);
+                          const selectedMainCategory = mainCategoriesList.find((category) => String(category.id) === String(draft.mainCategoryId)) ||
+                            buildFallbackCategoryOption(item.id, hierarchy.main, null, 'main');
+                          const mainCategoryOptions = selectedMainCategory?.isFallbackOption
+                            ? [selectedMainCategory, ...mainCategoriesList]
+                            : mainCategoriesList;
+
                           return (
-                            <Stack spacing={0.25}>
-                              {hierarchy.mainCode !== '-' && (
-                                <Chip label={hierarchy.mainCode} size="small" variant="outlined" sx={{ width: 'fit-content', opacity: 0.7 }} />
-                              )}
-                              <Typography variant="body2" fontWeight={500}>
-                                {hierarchy.main}
-                              </Typography>
-                            </Stack>
+                            <Autocomplete
+                              size="small"
+                              disablePortal
+                              options={mainCategoryOptions}
+                              value={selectedMainCategory}
+                              onChange={(event, nextValue) => handleInlineMainCategoryChange(item.id, nextValue)}
+                              getOptionLabel={(option) => option?.nameAr || option?.name || option?.code || ''}
+                              isOptionEqualToValue={(option, value) => String(option.id) === String(value.id)}
+                              disabled={!canQuickEditPricing || Boolean(savingPricingItemIds[item.id])}
+                              renderInput={(params) => <TextField {...params} placeholder="اختر تصنيفاً رئيسياً" size="small" />}
+                            />
                           );
                         })()}
                       </TableCell>
                       <TableCell>
                         {(() => {
+                          const draft = inlinePricingDrafts[item.id] || buildInlinePricingDraft(item, medicalCategories);
                           const hierarchy = getCategoryHierarchy(item, medicalCategories);
+                          const filteredSubCategories = medicalCategories.filter(
+                            (category) => String(category.parentId || '') === String(draft.mainCategoryId || '')
+                          );
+                          const selectedSubCategory = filteredSubCategories.find(
+                            (category) => String(category.id) === String(draft.subCategoryId)
+                          ) || buildFallbackCategoryOption(item.id, hierarchy.sub, draft.mainCategoryId || null, 'sub');
+                          const subCategoryOptions = selectedSubCategory?.isFallbackOption
+                            ? [selectedSubCategory, ...filteredSubCategories]
+                            : filteredSubCategories;
+
                           return (
-                            <Stack spacing={0.25}>
-                              {hierarchy.subCode !== '-' && (
-                                <Chip label={hierarchy.subCode} size="small" variant="outlined" sx={{ width: 'fit-content', opacity: 0.7 }} />
-                              )}
-                              <Typography variant="body2" color="text.secondary">
-                                {hierarchy.sub}
-                              </Typography>
-                            </Stack>
+                            <Autocomplete
+                              size="small"
+                              disablePortal
+                              options={subCategoryOptions}
+                              value={selectedSubCategory}
+                              onChange={(event, nextValue) => handleInlineSubCategoryChange(item.id, nextValue)}
+                              getOptionLabel={(option) => option?.nameAr || option?.name || option?.code || ''}
+                              isOptionEqualToValue={(option, value) => String(option.id) === String(value.id)}
+                              disabled={!canQuickEditPricing || !draft.mainCategoryId || Boolean(savingPricingItemIds[item.id])}
+                              renderInput={(params) => <TextField {...params} placeholder="اختر بنداً فرعياً" size="small" />}
+                            />
                           );
                         })()}
                       </TableCell>
-                      <TableCell align="right">
-                        <Typography fontWeight={700} color="primary.main">
-                          {formatCurrency(item.contractPrice)}
+                      <TableCell>
+                        <Typography variant="body2" color="text.secondary">
+                          {item?.specialty || '-'}
                         </Typography>
+                      </TableCell>
+                      <TableCell align="right">
+                        {(() => {
+                          const draft = inlinePricingDrafts[item.id] || buildInlinePricingDraft(item, medicalCategories);
+                          return (
+                            <TextField
+                              size="small"
+                              type="number"
+                              value={draft.contractPrice}
+                              onChange={(event) => handleInlinePriceChange(item.id, event.target.value)}
+                              onKeyDown={(event) => {
+                                if (event.key === 'Enter') {
+                                  event.preventDefault();
+                                  handleInlineSave(item);
+                                }
+                              }}
+                              disabled={!canQuickEditPricing || Boolean(savingPricingItemIds[item.id])}
+                              inputProps={{ min: 0, step: '0.01', style: { textAlign: 'right' } }}
+                              sx={{ width: '8rem' }}
+                            />
+                          );
+                        })()}
                       </TableCell>
 
                       <TableCell align="center">
                         <Stack direction="row" spacing={1} justifyContent="center">
+                          {isInlinePricingDraftDirty(inlinePricingDrafts[item.id]) && (
+                            <Tooltip title="حفظ سريع">
+                              <span>
+                                <IconButton
+                                  size="small"
+                                  color="success"
+                                  onClick={() => handleInlineSave(item)}
+                                  disabled={Boolean(savingPricingItemIds[item.id])}
+                                >
+                                  {savingPricingItemIds[item.id] ? <CircularProgress size={16} /> : <SaveIcon fontSize="small" />}
+                                </IconButton>
+                              </span>
+                            </Tooltip>
+                          )}
+
+                          {isInlinePricingDraftDirty(inlinePricingDrafts[item.id]) && (
+                            <Tooltip title="تراجع">
+                              <IconButton size="small" color="inherit" onClick={() => handleInlineReset(item)}>
+                                <ResetIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          )}
 
                           <Tooltip title="تعديل السعر">
                             <IconButton size="small" color="primary" onClick={() => handleOpenEditPricing(item)}>

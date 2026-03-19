@@ -3,71 +3,56 @@ UPDATE benefit_policies SET annual_limit = 60000.00, default_coverage_percent = 
 DELETE FROM benefit_policy_rules WHERE benefit_policy_id = 1;
 
 INSERT INTO benefit_policy_rules (benefit_policy_id, medical_category_id, coverage_percent, amount_limit, times_limit, notes, active, created_at, requires_pre_approval) 
-SELECT 1, id, 75, 3000.00, NULL, 'سقف الكشوفات والأخصائيين والتحاليل خارج المستشفى', true, CURRENT_TIMESTAMP, false 
-FROM medical_categories WHERE code = 'ROOT-OP';
+SELECT 1, id, 75, 3000.00, NULL, 'سقف العيادات الخارجية العام ويشمل الكشوفات والتحاليل الأساسية', true, CURRENT_TIMESTAMP, false 
+FROM medical_categories WHERE code = 'CAT-OUTPAT';
 INSERT INTO benefit_policy_rules (benefit_policy_id, medical_category_id, coverage_percent, amount_limit, times_limit, notes, active, created_at, requires_pre_approval) 
-SELECT 1, id, 75, NULL, NULL, 'الإيواء والعلاج داخل المستشفى (بدون سقف عام)', true, CURRENT_TIMESTAMP, false 
-FROM medical_categories WHERE code = 'ROOT-IP';
+SELECT 1, id, 75, NULL, NULL, 'الإيواء العام داخل المستشفى بدون سقف عام مستقل', true, CURRENT_TIMESTAMP, true 
+FROM medical_categories WHERE code = 'CAT-INPAT';
 INSERT INTO benefit_policy_rules (benefit_policy_id, medical_category_id, coverage_percent, amount_limit, times_limit, notes, active, created_at, requires_pre_approval) 
-SELECT 1, id, 75, NULL, NULL, 'خدمات الأسنان العامة', true, CURRENT_TIMESTAMP, false 
-FROM medical_categories WHERE code = 'ROOT-DENT';
+SELECT 1, id, 75, NULL, NULL, 'الإيواء العام والخدمات التمريضية الأساسية', true, CURRENT_TIMESTAMP, true 
+FROM medical_categories WHERE code = 'SUB-INPAT-GENERAL';
 INSERT INTO benefit_policy_rules (benefit_policy_id, medical_category_id, coverage_percent, amount_limit, times_limit, notes, active, created_at, requires_pre_approval) 
-SELECT 1, id, 75, 4000.00, NULL, 'سقف الولادة الطبيعية والقيصرية', true, CURRENT_TIMESTAMP, false 
-FROM medical_categories WHERE code = 'ROOT-MAT';
+SELECT 1, id, 75, 1500.00, NULL, 'التمريض المنزلي بحد مالي مستقل', true, CURRENT_TIMESTAMP, true 
+FROM medical_categories WHERE code = 'SUB-INPAT-HOME-NURSING';
 INSERT INTO benefit_policy_rules (benefit_policy_id, medical_category_id, coverage_percent, amount_limit, times_limit, notes, active, created_at, requires_pre_approval) 
-SELECT 1, id, 75, 3000.00, NULL, 'كشوفات الأخصائيين والممارسين (يتبع سقف العيادات)', true, CURRENT_TIMESTAMP, false 
-FROM medical_categories WHERE code = 'SUB-CONSULT';
+SELECT 1, id, 75, 10000.00, 20, 'العلاج الطبيعي أثناء الإيواء بحد أقصى 20 جلسة', true, CURRENT_TIMESTAMP, false 
+FROM medical_categories WHERE code = 'SUB-INPAT-PHYSIO';
 INSERT INTO benefit_policy_rules (benefit_policy_id, medical_category_id, coverage_percent, amount_limit, times_limit, notes, active, created_at, requires_pre_approval) 
-SELECT 1, id, 75, 3000.00, NULL, 'التحاليل والمختبرات (يتبع سقف العيادات)', true, CURRENT_TIMESTAMP, false 
-FROM medical_categories WHERE code = 'SUB-LAB';
+SELECT 1, id, 75, 25000.00, NULL, 'إصابات العمل كمنافع خاصة مرتبطة بالإيواء', true, CURRENT_TIMESTAMP, false 
+FROM medical_categories WHERE code = 'SUB-INPAT-WORK-INJ';
 INSERT INTO benefit_policy_rules (benefit_policy_id, medical_category_id, coverage_percent, amount_limit, times_limit, notes, active, created_at, requires_pre_approval) 
-SELECT 1, id, 75, NULL, NULL, 'الأشعة في العيادات الخارجية (بدون سقف مخصص)', true, CURRENT_TIMESTAMP, false 
-FROM medical_categories WHERE code = 'SUB-RAD';
+SELECT 1, id, 75, 3000.00, NULL, 'الطب النفسي والجلسات المرتبطة به', true, CURRENT_TIMESTAMP, false 
+FROM medical_categories WHERE code = 'SUB-INPAT-PSYCH';
 INSERT INTO benefit_policy_rules (benefit_policy_id, medical_category_id, coverage_percent, amount_limit, times_limit, notes, active, created_at, requires_pre_approval) 
-SELECT 1, id, 75, 15000.00, NULL, 'الأدوية والعلاجات الروتينية', true, CURRENT_TIMESTAMP, false 
-FROM medical_categories WHERE code = 'SUB-PHARMA';
+SELECT 1, id, 75, 4000.00, NULL, 'الولادة الطبيعية والقيصرية', true, CURRENT_TIMESTAMP, true 
+FROM medical_categories WHERE code = 'SUB-INPAT-DELIVERY';
 INSERT INTO benefit_policy_rules (benefit_policy_id, medical_category_id, coverage_percent, amount_limit, times_limit, notes, active, created_at, requires_pre_approval) 
-SELECT 1, id, 75, 1500.00, NULL, 'قاعدة مستقلة للإقامة والتمريض (سقف استثنائي)', true, CURRENT_TIMESTAMP, false 
-FROM medical_categories WHERE code = 'SUB-STAY';
+SELECT 1, id, 75, 4000.00, NULL, 'مضاعفات الحمل وما يرتبط بها من إقامة', true, CURRENT_TIMESTAMP, true 
+FROM medical_categories WHERE code = 'SUB-INPAT-PREG-COMP';
 INSERT INTO benefit_policy_rules (benefit_policy_id, medical_category_id, coverage_percent, amount_limit, times_limit, notes, active, created_at, requires_pre_approval) 
-SELECT 1, id, 75, NULL, NULL, 'العمليات الجراحية والتخدير', true, CURRENT_TIMESTAMP, false 
-FROM medical_categories WHERE code = 'SUB-SURGERY';
+SELECT 1, id, 75, NULL, NULL, 'التصنيف العام للعيادات الخارجية', true, CURRENT_TIMESTAMP, false 
+FROM medical_categories WHERE code = 'SUB-OUTPAT-GENERAL';
 INSERT INTO benefit_policy_rules (benefit_policy_id, medical_category_id, coverage_percent, amount_limit, times_limit, notes, active, created_at, requires_pre_approval) 
-SELECT 1, id, 75, NULL, NULL, 'العناية الفائقة ICU/CCU', true, CURRENT_TIMESTAMP, false 
-FROM medical_categories WHERE code = 'SUB-ICU';
+SELECT 1, id, 75, 1500.00, NULL, 'الأشعة العامة ضمن العيادات الخارجية', true, CURRENT_TIMESTAMP, false 
+FROM medical_categories WHERE code = 'SUB-OUTPAT-RAD';
 INSERT INTO benefit_policy_rules (benefit_policy_id, medical_category_id, coverage_percent, amount_limit, times_limit, notes, active, created_at, requires_pre_approval) 
-SELECT 1, id, 75, 10000.00, 20, 'العلاج الطبيعي (بحد أقصى 20 زيارة)', true, CURRENT_TIMESTAMP, false 
-FROM medical_categories WHERE code = 'SUB-PHYSIO';
+SELECT 1, id, 75, NULL, NULL, 'الرنين المغناطيسي والأشعة المتقدمة', true, CURRENT_TIMESTAMP, false 
+FROM medical_categories WHERE code = 'SUB-OUTPAT-MRI';
 INSERT INTO benefit_policy_rules (benefit_policy_id, medical_category_id, coverage_percent, amount_limit, times_limit, notes, active, created_at, requires_pre_approval) 
-SELECT 1, id, 75, NULL, NULL, 'كشف - خلع - حشو - تنظيف', true, CURRENT_TIMESTAMP, false 
-FROM medical_categories WHERE code = 'SUB-DENT-REG';
-INSERT INTO benefit_policy_rules (benefit_policy_id, medical_category_id, coverage_percent, amount_limit, times_limit, notes, active, created_at, requires_pre_approval) 
-SELECT 1, id, 50, NULL, NULL, 'تركيب - تقويم - زراعة', true, CURRENT_TIMESTAMP, false 
-FROM medical_categories WHERE code = 'SUB-DENT-COS';
-INSERT INTO benefit_policy_rules (benefit_policy_id, medical_category_id, coverage_percent, amount_limit, times_limit, notes, active, created_at, requires_pre_approval) 
-SELECT 1, id, 75, 500.00, NULL, 'النظارات الطبية (نظارة واحدة في السنة)', true, CURRENT_TIMESTAMP, false 
-FROM medical_categories WHERE code = 'SUB-VISION';
-INSERT INTO benefit_policy_rules (benefit_policy_id, medical_category_id, coverage_percent, amount_limit, times_limit, notes, active, created_at, requires_pre_approval) 
-SELECT 1, id, 75, 4000.00, NULL, 'الولادة ومتابعة الحمل', true, CURRENT_TIMESTAMP, false 
-FROM medical_categories WHERE code = 'SUB-MATERNITY';
-INSERT INTO benefit_policy_rules (benefit_policy_id, medical_category_id, coverage_percent, amount_limit, times_limit, notes, active, created_at, requires_pre_approval) 
-SELECT 1, id, 75, NULL, NULL, 'حالات الطوارئ والإسعاف', true, CURRENT_TIMESTAMP, false 
-FROM medical_categories WHERE code = 'SUB-EMERGENCY';
-INSERT INTO benefit_policy_rules (benefit_policy_id, medical_category_id, coverage_percent, amount_limit, times_limit, notes, active, created_at, requires_pre_approval) 
-SELECT 1, id, 75, NULL, NULL, 'الإسعاف المحلي', true, CURRENT_TIMESTAMP, false 
-FROM medical_categories WHERE code = 'SUB-AMBULANCE';
+SELECT 1, id, 75, 15000.00, NULL, 'العلاجات والأدوية في العيادات الخارجية', true, CURRENT_TIMESTAMP, false 
+FROM medical_categories WHERE code = 'SUB-OUTPAT-DRUGS';
 INSERT INTO benefit_policy_rules (benefit_policy_id, medical_category_id, coverage_percent, amount_limit, times_limit, notes, active, created_at, requires_pre_approval) 
 SELECT 1, id, 75, 1500.00, NULL, 'الأجهزة والمعدات الطبية', true, CURRENT_TIMESTAMP, false 
-FROM medical_categories WHERE code = 'SUB-SUPPLIES';
+FROM medical_categories WHERE code = 'SUB-OUTPAT-DEVICES';
 INSERT INTO benefit_policy_rules (benefit_policy_id, medical_category_id, coverage_percent, amount_limit, times_limit, notes, active, created_at, requires_pre_approval) 
-SELECT 1, id, 75, 3000.00, NULL, 'الطب النفسي (أدوية وجلسات)', true, CURRENT_TIMESTAMP, false 
-FROM medical_categories WHERE code = 'SUB-PSYCH';
+SELECT 1, id, 75, 10000.00, 20, 'العلاج الطبيعي في العيادات الخارجية بحد أقصى 20 جلسة', true, CURRENT_TIMESTAMP, false 
+FROM medical_categories WHERE code = 'SUB-OUTPAT-PHYSIO';
 INSERT INTO benefit_policy_rules (benefit_policy_id, medical_category_id, coverage_percent, amount_limit, times_limit, notes, active, created_at, requires_pre_approval) 
-SELECT 1, id, 75, NULL, NULL, 'غسيل الكلى', true, CURRENT_TIMESTAMP, false 
-FROM medical_categories WHERE code = 'SUB-DIALYSIS';
+SELECT 1, id, 75, NULL, NULL, 'خدمات الأسنان الروتينية', true, CURRENT_TIMESTAMP, false 
+FROM medical_categories WHERE code = 'SUB-OUTPAT-DENTAL-ROUTINE';
 INSERT INTO benefit_policy_rules (benefit_policy_id, medical_category_id, coverage_percent, amount_limit, times_limit, notes, active, created_at, requires_pre_approval) 
-SELECT 1, id, 100, NULL, NULL, 'علاج الأورام - تغطية كاملة', true, CURRENT_TIMESTAMP, false 
-FROM medical_categories WHERE code = 'SUB-ONCOLOGY';
+SELECT 1, id, 50, NULL, NULL, 'خدمات الأسنان التجميلية والتركيبات', true, CURRENT_TIMESTAMP, false 
+FROM medical_categories WHERE code = 'SUB-OUTPAT-DENTAL-COSMETIC';
 INSERT INTO benefit_policy_rules (benefit_policy_id, medical_category_id, coverage_percent, amount_limit, times_limit, notes, active, created_at, requires_pre_approval) 
-SELECT 1, id, 75, 25000.00, NULL, 'إصابات العمل', true, CURRENT_TIMESTAMP, false 
-FROM medical_categories WHERE code = 'SUB-WORK-INJ';
+SELECT 1, id, 75, 500.00, 1, 'النظارة الطبية مرة واحدة سنوياً', true, CURRENT_TIMESTAMP, false 
+FROM medical_categories WHERE code = 'SUB-OUTPAT-GLASSES';

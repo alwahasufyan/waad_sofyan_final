@@ -44,7 +44,7 @@ public class ClaimBatchController {
         
         ClaimBatch batch = claimBatchService.getExistingBatch(providerId, employerId, year, month);
         if (batch == null) {
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.ok().build();
         }
         return ResponseEntity.ok(ClaimBatchResponse.from(batch));
     }

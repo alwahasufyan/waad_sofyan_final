@@ -8,6 +8,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.springframework.context.ApplicationEventPublisher;
@@ -271,9 +272,12 @@ public class ClaimService {
         // ARCHITECTURAL GUARD: Validate system invariants before processing
         // ═══════════════════════════════════════════════════════════════════════════
         List<Long> serviceIds = dto.getLines() != null
-                ? dto.getLines().stream().map(ClaimLineDto::getMedicalServiceId).toList()
+            ? dto.getLines().stream().map(ClaimLineDto::getMedicalServiceId).filter(Objects::nonNull).toList()
                 : List.of();
-        architecturalGuard.guardClaimCreation(dto.getVisitId(), serviceIds);
+        architecturalGuard.guardClaimHasVisit(dto.getVisitId());
+        if (!serviceIds.isEmpty()) {
+            architecturalGuard.guardClaimHasServices(serviceIds);
+        }
 
         // ═══════════════════════════════════════════════════════════════════════════
         // STEP 2: Pre-fetch data for Pure Mapping (Phase 2 Performance Hardening)
@@ -312,7 +316,9 @@ public class ClaimService {
         }
 
         // Fetch medical services in bulk for mapping
-        Map<Long, MedicalService> medicalServiceMap = medicalServiceRepository.findAllById(serviceIds).stream()
+        Map<Long, MedicalService> medicalServiceMap = serviceIds.isEmpty()
+            ? Collections.emptyMap()
+            : medicalServiceRepository.findAllById(serviceIds).stream()
                 .collect(Collectors.toMap(MedicalService::getId, s -> s));
 
         // Resolve Claim Batch (Phase 11)
@@ -330,7 +336,8 @@ public class ClaimService {
         }
 
         Claim claim = claimMapper.toEntity(dto, visit, provider, preAuth, claimBatch, medicalServiceMap);
-        // Status set to APPROVED by mapper — direct entry model (no review workflow)
+        ClaimStatus initialStatus = dto.getStatus() != null ? dto.getStatus() : ClaimStatus.DRAFT;
+        claim.setStatus(initialStatus);
         Claim savedClaim = claimRepository.save(claim);
 
         // Record creation in audit trail
@@ -338,17 +345,7 @@ public class ClaimService {
             claimAuditService.recordCreation(savedClaim, currentUser);
         }
 
-        log.info("✅ Claim {} created in APPROVED status (Direct Implementation)", savedClaim.getId());
-
-        // Credit provider account immediately upon creation (same as approval event)
-        if (savedClaim.getProviderId() != null && savedClaim.getApprovedAmount() != null) {
-            eventPublisher.publishEvent(new ClaimApprovedEvent(
-                    this,
-                    savedClaim.getId(),
-                    savedClaim.getProviderId(),
-                    currentUser != null ? currentUser.getId() : null));
-            log.info("📤 [EVENT] Published ClaimApprovedEvent for claim {} (direct entry)", savedClaim.getId());
-        }
+        log.info("✅ Claim {} created with status {}", savedClaim.getId(), savedClaim.getStatus());
 
         // ═══════════════════════════════════════════════════════════════════════════
         // PHASE 5: Auto-mark PreAuthorization as USED when linked to claim
@@ -378,6 +375,15 @@ public class ClaimService {
                         "⚠️ Pre-authorization {} has status {} (expected APPROVED or ACKNOWLEDGED). Not auto-marking as USED.",
                         linkedPreAuth.getId(), linkedPreAuth.getStatus());
             }
+        }
+
+        if (savedClaim.getStatus() == ClaimStatus.APPROVED && savedClaim.getProviderId() != null) {
+            eventPublisher.publishEvent(new ClaimApprovedEvent(
+                    this,
+                    savedClaim.getId(),
+                    savedClaim.getProviderId(),
+                    currentUser != null ? currentUser.getId() : null));
+            log.info("📤 ClaimApprovedEvent published for newly-created APPROVED claim {}", savedClaim.getId());
         }
 
         return claimMapper.toViewDto(savedClaim);
@@ -569,37 +575,8 @@ public class ClaimService {
             claim.setManualCategoryEnabled(dto.getManualCategoryEnabled());
         }
 
-        // Allow status update when re-editing a REJECTED claim (admin corrects and
-        // re-approves)
         ClaimStatus prevStatus = claim.getStatus();
-        if (dto.getStatus() != null && claim.getStatus() == ClaimStatus.REJECTED) {
-            ClaimStatus newStatus = dto.getStatus();
-            if (newStatus == ClaimStatus.APPROVED) {
-                // Reset financial fields set to 0 during REJECTED so calculateFields()
-                // re-derives them
-                claim.setApprovedAmount(null);
-                claim.setPatientCoPay(null);
-                claim.setNetProviderAmount(null);
-                // مسح سبب الرفض عند إعادة القبول
-                claim.setReviewerComment(null);
-                // Use StateMachine for proper transition validation and audit
-                claimStateMachine.transition(claim, newStatus, currentUser);
-                log.info("↩️ REJECTED claim {} re-opened to APPROVED by admin via StateMachine", id);
-            } else if (newStatus == ClaimStatus.REJECTED) {
-                // Already REJECTED — skip StateMachine (self-transition on terminal state
-                // is not allowed). Just saving the updated data is sufficient.
-                log.debug("ℹ️ Claim {} stays REJECTED — skipping StateMachine self-transition", id);
-            }
-        } else if (dto.getStatus() != null && claim.getStatus() == ClaimStatus.APPROVED
-                && dto.getStatus() == ClaimStatus.REJECTED) {
-            // مطالبة مقبولة يريد المراجع رفضها — يجب وجود سبب رفض
-            if (claim.getReviewerComment() == null || claim.getReviewerComment().isBlank()) {
-                throw new ClaimStateTransitionException(
-                        "Cannot reject claim without reviewer comment. Please provide rejection reason.");
-            }
-            claim.setStatus(ClaimStatus.REJECTED);
-            log.info("🔴 APPROVED claim {} changed to REJECTED by {}", id, currentUser.getEmail());
-        }
+        ClaimStatus requestedStatus = dto.getStatus();
 
         // DRAFT line edits (services/categories/quantities) with backend contract
         // re-pricing
@@ -614,6 +591,23 @@ public class ClaimService {
                             .collect(Collectors.toMap(MedicalService::getId, s -> s));
 
             claimMapper.replaceClaimLinesForDraft(claim, dto.getLines(), medicalServiceMap);
+        }
+
+        if (requestedStatus != null) {
+            if (requestedStatus == ClaimStatus.APPROVED) {
+                if (claim.getStatus() == ClaimStatus.REJECTED) {
+                    claim.setReviewerComment(null);
+                }
+                claim.setStatus(ClaimStatus.APPROVED);
+                log.info("✅ Direct-entry claim {} saved as APPROVED", id);
+            } else if (requestedStatus == ClaimStatus.REJECTED) {
+                if (claim.getReviewerComment() == null || claim.getReviewerComment().isBlank()) {
+                    throw new ClaimStateTransitionException(
+                            "Cannot reject claim without reviewer comment. Please provide rejection reason.");
+                }
+                claim.setStatus(ClaimStatus.REJECTED);
+                log.info("🔴 Direct-entry claim {} saved as REJECTED", id);
+            }
         }
 
         // Save and return
@@ -887,6 +881,48 @@ public class ClaimService {
             log.debug("✅ [BYPASS] User {} bypasses reviewer isolation", currentUser.getId());
 
             claimsPage = claimRepository.searchPagedWithFilters(
+                    keyword, employerId, providerId, status, dateFrom, dateTo, createdAtFrom, createdAtTo, pageable);
+        }
+
+        return claimsPage.map(claimMapper::toViewDto);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ClaimViewDto> listDeletedClaims(Long employerId, Long providerId, ClaimStatus status, LocalDate dateFrom,
+            LocalDate dateTo, LocalDate createdDateFrom, LocalDate createdDateTo,
+            int page, int size, String sortBy, String sortDir, String search) {
+        log.debug(
+                "🗂️ Listing deleted claims. employerId={}, providerId={}, status={}, page={}, size={}, sortBy={}, sortDir={}, search={}",
+                employerId, providerId, status, page, size, sortBy, sortDir, search);
+
+        User currentUser = authorizationService.getCurrentUser();
+        if (currentUser == null) {
+            return Page.empty();
+        }
+
+        if (authorizationService.isEmployerAdmin(currentUser)) {
+            employerId = currentUser.getEmployerId();
+        }
+
+        Sort.Direction direction = "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
+        String keyword = (search != null && !search.trim().isEmpty()) ? search.trim() : "";
+
+        LocalDateTime createdAtFrom = createdDateFrom != null ? createdDateFrom.atStartOfDay() : null;
+        LocalDateTime createdAtTo = createdDateTo != null ? createdDateTo.plusDays(1).atStartOfDay() : null;
+
+        Page<Claim> claimsPage;
+        if (reviewerIsolationService.isSubjectToIsolation(currentUser)) {
+            List<Long> allowedProviderIds = reviewerIsolationService.getAllowedProviderIds(currentUser);
+            if (allowedProviderIds.isEmpty()) {
+                return Page.empty();
+            }
+
+            claimsPage = claimRepository.searchPagedDeletedWithFiltersAndReviewerProviders(
+                    keyword, allowedProviderIds, employerId, status, dateFrom, dateTo, createdAtFrom, createdAtTo,
+                    pageable);
+        } else {
+            claimsPage = claimRepository.searchPagedDeletedWithFilters(
                     keyword, employerId, providerId, status, dateFrom, dateTo, createdAtFrom, createdAtTo, pageable);
         }
 
@@ -1450,42 +1486,116 @@ public class ClaimService {
     }
 
     /**
-     * Delete a claim (Phase MVP).
-     * 
-     * Handles manual cleanup of RESTRICTED foreign keys (audit logs, batch items)
-     * before deleting the main entity.
+     * Soft-delete claim to deleted log.
+     * Keeps data for restore or permanent deletion.
      */
     @Transactional
-    public void deleteClaim(Long id) {
-        log.info("🗑️ Deleting claim id: {}", id);
+    public void deleteClaim(Long id, String deletionReason) {
+        log.info("🗑️ Soft deleting claim id: {}", id);
 
         Claim claim = claimRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Claim", "id", id));
 
-        // 1. Business Validation: Cannot delete BATCHED or SETTLED claims
-        // (settlement_batch_items and settlement_batches were dropped by V117)
-        if (claim.getStatus() == ClaimStatus.BATCHED || claim.getStatus() == ClaimStatus.SETTLED) {
-            throw new BusinessRuleException("لا يمكن حذف مطالبة في حالة مفعلة أو مسواة");
+        if (!Boolean.TRUE.equals(claim.getActive())) {
+            throw new BusinessRuleException("المطالبة موجودة بالفعل في سجل المحذوفات");
         }
 
-        // 2. Manual Cleanup for RESTRICTED tables (bypass DB constraint fails)
-        // Note: audit logs have ON DELETE RESTRICT, so purge them first.
+        User currentUser = authorizationService.getCurrentUser();
 
-        log.warn("🧹 Cleaning up constrained data for claim {}...", id);
+        if (hasFinancialImpact(claim) && claim.getProviderId() != null) {
+            eventPublisher.publishEvent(new ClaimReversalEvent(
+                    this, claim.getId(), claim.getProviderId(),
+                    currentUser != null ? currentUser.getId() : null));
+            log.info("📤 ClaimReversalEvent published for soft-deleted claim {}", claim.getId());
+        }
 
-        // Delete Audit Logs
+        String reason = deletionReason != null && !deletionReason.isBlank()
+                ? deletionReason.trim()
+                : "حذف من سجل الدفعات";
+
+        claim.setActive(false);
+        claim.setDeletedAt(LocalDateTime.now());
+        claim.setDeletedBy(currentUser != null ? currentUser.getUsername() : "system");
+        claim.setDeletionReason(reason);
+
+        claimRepository.save(claim);
+        claimRepository.flush();
+
+        log.info("✅ Claim {} moved to deleted log", id);
+    }
+
+    @Transactional
+    public void restoreClaim(Long id) {
+        log.info("♻️ Restoring claim id: {}", id);
+
+        Claim claim = claimRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Claim", "id", id));
+
+        if (Boolean.TRUE.equals(claim.getActive())) {
+            throw new BusinessRuleException("المطالبة ليست ضمن سجل المحذوفات");
+        }
+
+        User currentUser = authorizationService.getCurrentUser();
+
+        claim.setActive(true);
+        claim.setDeletedAt(null);
+        claim.setDeletedBy(null);
+        claim.setDeletionReason(null);
+
+        claimRepository.save(claim);
+        claimRepository.flush();
+
+        if (hasFinancialImpact(claim) && claim.getProviderId() != null) {
+            eventPublisher.publishEvent(new ClaimApprovedEvent(
+                    this,
+                    claim.getId(),
+                    claim.getProviderId(),
+                    currentUser != null ? currentUser.getId() : null));
+            log.info("📤 ClaimApprovedEvent published for restored claim {}", claim.getId());
+        }
+
+        log.info("✅ Claim {} restored from deleted log", id);
+    }
+
+    /**
+     * Permanently delete claim from deleted log.
+     */
+    @Transactional
+    public void hardDeleteClaim(Long id) {
+        log.warn("⚠️ Hard deleting claim id: {}", id);
+
+        Claim claim = claimRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Claim", "id", id));
+
+        if (Boolean.TRUE.equals(claim.getActive())) {
+            throw new BusinessRuleException("الحذف النهائي مسموح فقط للمطالبات الموجودة في سجل المحذوفات");
+        }
+
         em.createNativeQuery("DELETE FROM claim_audit_logs WHERE claim_id = :cid")
                 .setParameter("cid", id)
                 .executeUpdate();
 
-        // 3. Execute main entity deletion
-        // (lines, attachments, history will be deleted by DB-level CASCADE)
         claimRepository.delete(claim);
-
-        // 4. Force synchronization NOW to ensure failure happens inside this method if
-        // any FK remains
         claimRepository.flush();
 
-        log.info("✅ Claim {} and its associations successfully deleted. Limits recalculated.", id);
+        log.info("✅ Claim {} permanently deleted", id);
+    }
+
+    private boolean hasFinancialImpact(Claim claim) {
+        if (claim == null) {
+            return false;
+        }
+
+        if (claim.getStatus() == ClaimStatus.APPROVED
+                || claim.getStatus() == ClaimStatus.BATCHED
+                || claim.getStatus() == ClaimStatus.SETTLED) {
+            return true;
+        }
+
+        if (claim.getPaidAmount() != null && claim.getPaidAmount().compareTo(BigDecimal.ZERO) > 0) {
+            return true;
+        }
+
+        return claim.getApprovedAmount() != null && claim.getApprovedAmount().compareTo(BigDecimal.ZERO) > 0;
     }
 }

@@ -263,26 +263,35 @@ export default function ClaimBatchDetail() {
     // -------------------------------------------------------------------------
 
     const handleExportExcel = async () => {
+        const exportClaims = selectedClaimIds.length > 0
+            ? claims.filter((c) => selectedClaimIds.includes(c.id))
+            : claims;
+
+        if (!exportClaims || exportClaims.length === 0) {
+            enqueueSnackbar('لا توجد بيانات للتصدير', { variant: 'warning' });
+            return;
+        }
+
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet('المطالبات');
 
         worksheet.columns = [
-            { header: '#', key: 'index', width: '0.625rem' },
-            { header: 'المرجع', key: 'ref', width: '1.5625rem' },
-            { header: 'مقدم الخدمة', key: 'provider', width: '3.125rem' },
-            { header: 'المستفيد', key: 'patient', width: '1.875rem' },
-            { header: 'تاريخ الخدمة', key: 'serviceDate', width: '1.125rem' },
-            { header: 'الحالة', key: 'status', width: '0.9375rem' },
-            { header: 'المبلغ الإجمالي', key: 'amount', width: '1.25rem' },
-            { header: 'المعتمد', key: 'covered', width: '1.25rem' },
-            { header: 'المرفوض', key: 'refused', width: '1.25rem' },
-            { header: 'نصيب المؤمن عليه', key: 'copay', width: '1.375rem' },
-            { header: 'المستحق للمزود', key: 'paid', width: '1.25rem' }
+            { header: '#', key: 'index', width: 8 },
+            { header: 'المرجع', key: 'ref', width: 20 },
+            { header: 'مقدم الخدمة', key: 'provider', width: 35 },
+            { header: 'المستفيد', key: 'patient', width: 25 },
+            { header: 'تاريخ الخدمة', key: 'serviceDate', width: 16 },
+            { header: 'الحالة', key: 'status', width: 14 },
+            { header: 'المبلغ الإجمالي', key: 'amount', width: 16 },
+            { header: 'المعتمد', key: 'covered', width: 16 },
+            { header: 'المرفوض', key: 'refused', width: 16 },
+            { header: 'نصيب المؤمن عليه', key: 'copay', width: 18 },
+            { header: 'المستحق للمزود', key: 'paid', width: 16 }
         ];
 
         worksheet.views = [{ rightToLeft: true }];
 
-        claims.forEach((c, idx) => {
+        exportClaims.forEach((c, idx) => {
             worksheet.addRow({
                 index: idx + 1,
                 ref: `${batchCode}/${String(idx + 1).padStart(4, '0')}`,
@@ -381,7 +390,14 @@ export default function ClaimBatchDetail() {
                         (l.refusedAmount != null && parseFloat(l.refusedAmount) > 0)
                     );
                 }
+
+                const status = String(c.status || '').toUpperCase();
+                if (status === 'REJECTED') {
+                    return true;
+                }
+
                 return (
+                    (c.refusedAmount != null && parseFloat(c.refusedAmount) > 0) ||
                     (c.rejectedAmount != null && parseFloat(c.rejectedAmount) > 0) ||
                     (c.totalRejected  != null && parseFloat(c.totalRejected)  > 0)
                 );
@@ -447,7 +463,7 @@ export default function ClaimBatchDetail() {
     const getStatusChip = (status, refusedAmount = 0) => {
         const config = {
             'APPROVED': refusedAmount > 0
-                ? { label: 'مرفوضة', color: 'error', bgcolor: '#fff1f0', border: '#ffa39e' }
+                ? { label: 'اعتماد جزئي', color: 'warning', bgcolor: '#fff7e6', border: '#ffd591' }
                 : { label: 'معتمدة', color: 'success', bgcolor: '#f6ffed', border: '#b7eb8f' },
             'SETTLED': { label: 'تمت التسوية', color: 'success', bgcolor: '#f6ffed', border: '#b7eb8f' },
             'PAID': { label: 'مدفوعة', color: 'success', bgcolor: '#f6ffed', border: '#b7eb8f' },

@@ -5,6 +5,8 @@ import com.waad.tba.common.excel.dto.ExcelImportResult.ImportError;
 import com.waad.tba.common.excel.dto.ExcelImportResult.ImportError.ErrorType;
 import com.waad.tba.common.excel.dto.ExcelImportResult.ImportSummary;
 import com.waad.tba.common.exception.BusinessRuleException;
+import com.waad.tba.modules.medicaltaxonomy.entity.MedicalCategory;
+import com.waad.tba.modules.medicaltaxonomy.repository.MedicalCategoryRepository;
 import com.waad.tba.modules.providercontract.entity.ProviderContract;
 import com.waad.tba.modules.providercontract.entity.ProviderContractPricingItem;
 import com.waad.tba.modules.providercontract.repository.ProviderContractPricingItemRepository;
@@ -43,6 +45,7 @@ public class PriceListExcelTemplateService {
 
     private final ProviderContractRepository contractRepository;
     private final ProviderContractPricingItemRepository pricingRepository;
+    private final MedicalCategoryRepository medicalCategoryRepository;
     private final PlatformTransactionManager transactionManager;
 
     private static final String SHEET_NAME = "Pricing_Template";
@@ -546,24 +549,49 @@ public class PriceListExcelTemplateService {
         if (contractPrice == null)
             contractPrice = BigDecimal.ZERO;
 
-        String categoryName = null;
+        String rawCategoryName = null;
         Integer categoryIdx = columnIndices.get("main_category");
         if (categoryIdx == null)
             categoryIdx = columnIndices.get("provider_category");
         if (categoryIdx != null) {
-            categoryName = getCellStringValue(row.getCell(categoryIdx));
-            if (categoryName != null)
-                categoryName = truncate(categoryName.trim(), 255);
+            rawCategoryName = getCellStringValue(row.getCell(categoryIdx));
+            if (rawCategoryName != null)
+                rawCategoryName = truncate(rawCategoryName.trim(), 255);
         }
 
-        // If no main category, try sub-category
-        if (categoryName == null) {
-            Integer subCategoryIdx = columnIndices.get("sub_category");
-            if (subCategoryIdx != null) {
-                categoryName = getCellStringValue(row.getCell(subCategoryIdx));
-                if (categoryName != null)
-                    categoryName = truncate(categoryName.trim(), 255);
-            }
+        String rawSubCategoryName = null;
+        Integer subCategoryIdx = columnIndices.get("sub_category");
+        if (subCategoryIdx != null) {
+            rawSubCategoryName = getCellStringValue(row.getCell(subCategoryIdx));
+            if (rawSubCategoryName != null)
+                rawSubCategoryName = truncate(rawSubCategoryName.trim(), 255);
+        }
+
+        MedicalCategory resolvedCategory = resolveMedicalCategory(rawCategoryName, rawSubCategoryName);
+
+        String categoryName = rawCategoryName;
+        String subCategoryName = rawSubCategoryName;
+
+        if (resolvedCategory != null) {
+            subCategoryName = resolvedCategory.getParentId() != null ? displayCategoryName(resolvedCategory) : null;
+            categoryName = resolvedCategory.getParentId() != null
+                    ? medicalCategoryRepository.findById(resolvedCategory.getParentId())
+                            .map(this::displayCategoryName)
+                            .orElse(displayCategoryName(resolvedCategory))
+                    : displayCategoryName(resolvedCategory);
+        } else if (categoryName == null) {
+            // If no main category, keep the imported sub-category visible as a fallback.
+            categoryName = subCategoryName;
+        }
+
+        String specialty = null;
+        Integer specialtyIdx = columnIndices.get("provider_specialty");
+        if (specialtyIdx == null)
+            specialtyIdx = columnIndices.get("specialty");
+        if (specialtyIdx != null) {
+            specialty = getCellStringValue(row.getCell(specialtyIdx));
+            if (specialty != null)
+                specialty = truncate(specialty.trim(), 255);
         }
 
         Integer notesIdx = columnIndices.get("notes");
@@ -575,7 +603,10 @@ public class PriceListExcelTemplateService {
                 .contract(contract)
                 .serviceName(serviceName)
                 .serviceCode(serviceCode)
+                .medicalCategory(resolvedCategory)
                 .categoryName(categoryName)
+                .subCategoryName(subCategoryName)
+                .specialty(specialty)
                 .basePrice(basePrice)
                 .contractPrice(contractPrice)
                 .notes(notes)
@@ -594,11 +625,20 @@ public class PriceListExcelTemplateService {
     private boolean upsertPricingItem(ProviderContract contract, ProviderContractPricingItem draft) {
         Optional<ProviderContractPricingItem> existing = Optional.empty();
 
-        if (draft.getServiceCode() != null) {
+        if (draft.getServiceName() != null) {
+            existing = pricingRepository.findByContractIdAndImportIdentityActiveTrue(
+                contract.getId(),
+                draft.getServiceCode(),
+                draft.getServiceName(),
+                draft.getCategoryName(),
+                draft.getSubCategoryName());
+        }
+        if (existing.isEmpty() && draft.getServiceCode() != null && draft.getServiceName() == null) {
             existing = pricingRepository
                     .findByContractIdAndServiceCodeActiveTrue(contract.getId(), draft.getServiceCode());
         }
-        if (existing.isEmpty()) {
+        if (existing.isEmpty() && draft.getServiceCode() == null && draft.getServiceName() != null
+            && draft.getCategoryName() == null && draft.getSubCategoryName() == null) {
             existing = pricingRepository
                     .findByContractIdAndServiceNameActiveTrue(contract.getId(), draft.getServiceName());
         }
@@ -606,7 +646,10 @@ public class PriceListExcelTemplateService {
         if (existing.isPresent()) {
             ProviderContractPricingItem item = existing.get();
             item.setServiceCode(draft.getServiceCode());
+            item.setMedicalCategory(draft.getMedicalCategory());
             item.setCategoryName(draft.getCategoryName());
+            item.setSubCategoryName(draft.getSubCategoryName());
+            item.setSpecialty(draft.getSpecialty());
             item.setBasePrice(draft.getBasePrice());
             item.setContractPrice(draft.getContractPrice());
             item.setNotes(draft.getNotes());
@@ -676,6 +719,50 @@ public class PriceListExcelTemplateService {
             default:
                 return null;
         }
+    }
+
+    private MedicalCategory resolveMedicalCategory(String rawCategoryName, String rawSubCategoryName) {
+        if (rawSubCategoryName != null && !rawSubCategoryName.isBlank()) {
+            MedicalCategory subCategory = findCategoryByCodeOrName(rawSubCategoryName);
+            if (subCategory != null) {
+                return subCategory;
+            }
+        }
+
+        if (rawCategoryName != null && !rawCategoryName.isBlank()) {
+            return findCategoryByCodeOrName(rawCategoryName);
+        }
+
+        return null;
+    }
+
+    private MedicalCategory findCategoryByCodeOrName(String value) {
+        String trimmed = value == null ? null : value.trim();
+        if (trimmed == null || trimmed.isBlank()) {
+            return null;
+        }
+
+        return medicalCategoryRepository.findActiveByCode(trimmed)
+                .or(() -> medicalCategoryRepository.findFirstByName(trimmed).filter(MedicalCategory::isActive))
+                .or(() -> medicalCategoryRepository.findFirstByNameAr(trimmed).filter(MedicalCategory::isActive))
+                .or(() -> medicalCategoryRepository.findFirstByNameEn(trimmed).filter(MedicalCategory::isActive))
+                .orElse(null);
+    }
+
+    private String displayCategoryName(MedicalCategory category) {
+        if (category == null) {
+            return null;
+        }
+
+        if (category.getNameAr() != null && !category.getNameAr().isBlank()) {
+            return truncate(category.getNameAr().trim(), 255);
+        }
+
+        if (category.getName() != null && !category.getName().isBlank()) {
+            return truncate(category.getName().trim(), 255);
+        }
+
+        return truncate(category.getCode(), 255);
     }
 
     private ExcelImportResult buildErrorResult(ImportSummary summary, List<ImportError> errors, String message) {

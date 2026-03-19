@@ -268,8 +268,6 @@ public class ProviderContractPricingItemService {
                 .contract(contract)
                 .medicalService(service)
                 .medicalCategory(categoryOverride)
-                .categoryName(
-                        categoryOverride != null ? categoryOverride.getName() : resolveCategoryNameForService(service))
                 .basePrice(basePrice)
                 .contractPrice(contractPrice)
                 .effectiveFrom(dto.getEffectiveFrom() != null ? dto.getEffectiveFrom() : java.time.LocalDate.now())
@@ -277,6 +275,13 @@ public class ProviderContractPricingItemService {
                 .notes(dto.getNotes())
                 .active(true)
                 .build();
+
+        if (categoryOverride != null) {
+            applyImportedCategorySelection(item, categoryOverride);
+        } else {
+            item.setCategoryName(resolveCategoryNameForService(service));
+            item.setSubCategoryName(null);
+        }
 
         // Discount is calculated in @PrePersist
         item = pricingRepository.save(item);
@@ -336,6 +341,7 @@ public class ProviderContractPricingItemService {
             item.setServiceName(service.getName());
             item.setServiceCode(service.getCode());
             item.setCategoryName(resolveCategoryNameForService(service));
+            item.setSubCategoryName(null);
         }
 
         if (dto.getMedicalCategoryId() != null) {
@@ -343,7 +349,7 @@ public class ProviderContractPricingItemService {
                     .orElseThrow(() -> new BusinessRuleException(
                             "Medical category not found: " + dto.getMedicalCategoryId()));
             item.setMedicalCategory(categoryOverride);
-            item.setCategoryName(categoryOverride.getName());
+            applyImportedCategorySelection(item, categoryOverride);
         }
 
         // Apply updates
@@ -685,6 +691,25 @@ public class ProviderContractPricingItemService {
         }
 
         return null;
+    }
+
+    private void applyImportedCategorySelection(ProviderContractPricingItem item, MedicalCategory selectedCategory) {
+        if (selectedCategory == null) {
+            item.setMedicalCategory(null);
+            item.setCategoryName(null);
+            item.setSubCategoryName(null);
+            return;
+        }
+
+        if (selectedCategory.getParentId() != null) {
+            MedicalCategory parent = medicalCategoryRepository.findById(selectedCategory.getParentId()).orElse(null);
+            item.setCategoryName(parent != null ? parent.getName() : selectedCategory.getName());
+            item.setSubCategoryName(selectedCategory.getName());
+            return;
+        }
+
+        item.setCategoryName(selectedCategory.getName());
+        item.setSubCategoryName(null);
     }
 
     // ═══════════════════════════════════════════════════════════════════════════

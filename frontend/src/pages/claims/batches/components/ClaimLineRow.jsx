@@ -1,11 +1,11 @@
 import React, { Fragment } from 'react';
 import {
     TableRow, TableCell, Stack, Autocomplete, TextField, Chip,
-    Tooltip, Typography, IconButton, alpha, createFilterOptions
+    Tooltip, Typography, IconButton, alpha, createFilterOptions, Box
 } from '@mui/material';
 
 const serviceFilter = createFilterOptions({
-    stringify: (opt) => `${opt.serviceCode || opt.code || ''} ${opt.serviceName || opt.name || ''}`,
+    stringify: (opt) => `${opt.serviceCode || opt.code || ''} ${opt.serviceName || opt.name || ''} ${opt.categoryName || ''} ${opt.subCategoryName || ''}`,
     ignoreAccents: true,
     ignoreCase: true,
     trim: true,
@@ -27,13 +27,61 @@ export const ClaimLineRow = ({
     idx,
     theme,
     serviceOptions,
+    serviceCategoryOptions,
     loadingServices,
     updateLine,
     handleServiceChange,
     removeLine,
     openRejectDialog,
-    policyInfo
+    policyInfo,
+    readOnly = false
 }) => {
+    const handleQuantityChange = (value) => {
+        const digitsOnly = String(value ?? '').replace(/\D/g, '');
+        updateLine(idx, { quantity: digitsOnly });
+    };
+
+    const handleApprovedAmountChange = (value) => {
+        const sanitized = String(value ?? '').replace(/[^0-9.]/g, '');
+        const normalized = sanitized.split('.');
+        const formatted = normalized.length > 2
+            ? `${normalized[0]}.${normalized.slice(1).join('')}`
+            : sanitized;
+        updateLine(idx, { approvedAmountInput: formatted });
+    };
+
+    const normalizeApprovedAmountOnBlur = () => {
+        const maxAllowed = Math.max(0, requestedTotal - limitRefusedAmount);
+        const parsed = Number.parseFloat(line.approvedAmountInput);
+        const nextValue = Number.isFinite(parsed) && parsed >= 0
+            ? Math.min(parsed, maxAllowed).toFixed(2)
+            : maxAllowed.toFixed(2);
+        updateLine(idx, { approvedAmountInput: nextValue });
+    };
+
+    const normalizeQuantityOnBlur = () => {
+        const parsed = Number.parseInt(line.quantity, 10);
+        updateLine(idx, { quantity: Number.isInteger(parsed) && parsed > 0 ? String(parsed) : '1' });
+    };
+
+    const filteredServiceOptions = line.serviceFilterKey
+        ? serviceOptions.filter((service) => service.filterCategoryKey === line.serviceFilterKey)
+        : serviceOptions;
+    const selectedCategory = serviceCategoryOptions.find((category) => category.key === line.serviceFilterKey) || null;
+    const requestedTotal = parseFloat(line.requestedTotal ?? line.total ?? 0);
+    const limitRefusedAmount = parseFloat(line.limitRefusedAmount || 0);
+    const maxApprovedAmount = Math.max(0, requestedTotal - limitRefusedAmount);
+    const partialRefusalEnabled = Boolean(line.partialRefusalEnabled);
+
+    const togglePartialRefusal = () => {
+        updateLine(idx, {
+            partialRefusalEnabled: !partialRefusalEnabled,
+            approvedAmountInput: maxApprovedAmount.toFixed(2),
+            rejected: false,
+            rejectionReason: partialRefusalEnabled ? '' : line.rejectionReason
+        });
+    };
+
     return (
         <Fragment>
             <TableRow sx={{ 
@@ -45,41 +93,107 @@ export const ClaimLineRow = ({
                     <Stack spacing={0.5}>
                         <Autocomplete
                             size="small"
-                            options={serviceOptions}
+                            options={serviceCategoryOptions}
+                            disabled={readOnly}
+                            value={selectedCategory}
+                            onChange={(_, value) => updateLine(idx, { serviceFilterKey: value?.key || '' })}
+                            getOptionLabel={(option) => option?.label || ''}
+                            isOptionEqualToValue={(option, value) => option?.key === value?.key}
+                            renderInput={(params) => (
+                                <TextField
+                                    {...params}
+                                    variant="standard"
+                                    placeholder="فلتر التصنيف اختياري"
+                                    inputProps={{ ...params.inputProps, style: { textAlign: 'right' } }}
+                                />
+                            )}
+                            renderOption={(props, option) => (
+                                <Box component="li" {...props} sx={{ display: 'flex', justifyContent: 'space-between', gap: 1 }}>
+                                    <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>{option.label}</Typography>
+                                    <Typography variant="caption" color="text.secondary">{option.count}</Typography>
+                                </Box>
+                            )}
+                            clearOnEscape
+                            noOptionsText="لا توجد تصنيفات بالخدمات الحالية"
+                        />
+                        <Autocomplete
+                            size="small"
+                            options={filteredServiceOptions}
                             loading={loadingServices}
+                            disabled={readOnly}
                             value={line.service || null}
                             onChange={(_, val) => handleServiceChange(idx, val)}
                             filterOptions={serviceFilter}
                             getOptionLabel={o => o.label || o.serviceName || ''}
+                            groupBy={(option) => option.categoryName || 'غير مصنف'}
                             isOptionEqualToValue={(opt, val) =>
                                 (opt?.pricingItemId != null && opt.pricingItemId === val?.pricingItemId) ||
                                 (opt?.serviceCode != null && (opt.serviceCode === val?.serviceCode || opt.serviceCode === val?.medicalServiceCode))
                             }
+                            renderOption={(props, option) => (
+                                <Box component="li" {...props} sx={{ display: 'block' }}>
+                                    <Typography variant="body2" sx={{ fontSize: '0.82rem', fontWeight: 500 }}>
+                                        {option.label || option.serviceName || ''}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                        {option.subCategoryName
+                                            ? `${option.categoryName || 'غير مصنف'} / ${option.subCategoryName}`
+                                            : (option.categoryName || 'غير مصنف')}
+                                    </Typography>
+                                </Box>
+                            )}
                             renderInput={(params) => (
                                 <TextField {...params} variant="standard" 
-                                    placeholder={loadingServices ? "جاري التحميل..." : "ابحث عن خدمة..."}
+                                    placeholder={loadingServices ? "جاري التحميل..." : "ابحث عن خدمة أو كود أو تصنيف..."}
                                     inputProps={{ ...params.inputProps, style: { textAlign: 'right' } }}
                                 />
                             )}
-                            noOptionsText={loadingServices ? "جاري تحميل خدمات العقد..." : "لم يتم العثور على خدمات في العقد"}
+                            noOptionsText={loadingServices
+                                ? "جاري تحميل خدمات العقد..."
+                                : (line.serviceFilterKey
+                                    ? "لا توجد خدمات ضمن هذا التصنيف"
+                                    : "لم يتم العثور على خدمات في العقد")}
                         />
 
                     </Stack>
                 </TableCell>
                 <TableCell align="center">
-                    <TextField variant="standard" type="number" value={line.quantity}
-                        onChange={e => updateLine(idx, { quantity: e.target.value })} sx={inlineSx} />
+                    <TextField
+                        variant="standard"
+                        type="text"
+                        value={line.quantity}
+                        disabled={readOnly}
+                        onChange={e => handleQuantityChange(e.target.value)}
+                        onBlur={normalizeQuantityOnBlur}
+                        sx={inlineSx}
+                        inputProps={{ inputMode: 'numeric', pattern: '[0-9]*', min: 1 }}
+                    />
                 </TableCell>
                 <TableCell align="center">
-                    <Tooltip title={line.contractPrice > 0 && line.unitPrice > line.contractPrice ? `السعر يتجاوز العقد (${line.contractPrice})` : ''} arrow>
+                    <Tooltip
+                        title={line.service?.pricingItemId || line.service?.medicalServiceId
+                            ? `سعر العقد ثابت لهذه الخدمة: ${line.contractPrice || line.unitPrice || 0}`
+                            : (line.contractAdjustmentAmount > 0
+                                ? `سيُحسب بسعر العقد (${line.contractPrice}) بدلاً من السعر المُدخل`
+                                : '')}
+                        arrow
+                    >
                         <TextField variant="standard" type="number" value={line.unitPrice}
-                            onChange={e => updateLine(idx, { unitPrice: e.target.value })}
+                            disabled={readOnly || Boolean(line.service?.pricingItemId || line.service?.medicalServiceId)}
                             sx={{
                                 ...inlineSx,
+                                '& .MuiInputBase-root.Mui-disabled': {
+                                    color: 'text.primary',
+                                    WebkitTextFillColor: 'inherit'
+                                },
                                 '& input': {
                                     ...inlineSx['& input'],
-                                    color: line.contractPrice > 0 && line.unitPrice > line.contractPrice ? 'error.main' : 'inherit',
-                                    fontWeight: line.contractPrice > 0 && line.unitPrice > line.contractPrice ? 900 : 'inherit'
+                                    color: (line.service?.pricingItemId || line.service?.medicalServiceId)
+                                        ? 'text.primary'
+                                        : (line.contractAdjustmentAmount > 0 ? 'warning.dark' : 'inherit'),
+                                    fontWeight: (line.service?.pricingItemId || line.service?.medicalServiceId || line.contractAdjustmentAmount > 0)
+                                        ? 700
+                                        : 'inherit'
                                 }
                             }}
                         />
@@ -139,26 +253,64 @@ export const ClaimLineRow = ({
                     )}
                 </TableCell>
                 <TableCell align="center">
-                    {(() => {
-                        const refusedVal = line.rejected ? (line.total || 0) : (line.refusedAmount || 0);
-                        if (refusedVal <= 0) {
-                            return (
-                                <Typography variant="body2" sx={{ fontSize: '0.85rem', color: 'text.disabled' }}>
-                                    —
+                    {line.rejected ? (
+                        <Tooltip title={line.rejectionReason || 'الخدمة مرفوضة بالكامل'} arrow>
+                            <Typography variant="body2" sx={{ fontSize: '0.85rem', fontWeight: 700, color: 'error.main' }}>
+                                {(line.total || 0).toFixed(2)}
+                            </Typography>
+                        </Tooltip>
+                    ) : (
+                        <Stack spacing={0.35} alignItems="center">
+                            <Stack direction="row" spacing={0.5} alignItems="center" justifyContent="center">
+                                <Typography variant="body2" sx={{ fontWeight: 700, color: 'text.secondary' }}>x</Typography>
+                                <TextField
+                                    variant="standard"
+                                    type="text"
+                                    value={line.approvedAmountInput ?? ''}
+                                    disabled={readOnly || !partialRefusalEnabled}
+                                    onChange={(e) => handleApprovedAmountChange(e.target.value)}
+                                    onBlur={normalizeApprovedAmountOnBlur}
+                                    placeholder="0.00"
+                                    sx={{
+                                        ...inlineSx,
+                                        minWidth: '4.5rem',
+                                        '& .MuiInputBase-root.Mui-disabled': {
+                                            color: 'text.primary',
+                                            WebkitTextFillColor: 'inherit'
+                                        },
+                                        '& input': {
+                                            ...inlineSx['& input'],
+                                            color: (line.refusedAmount || 0) > 0 ? 'warning.dark' : 'success.main',
+                                            fontWeight: 700
+                                        }
+                                    }}
+                                    inputProps={{ inputMode: 'decimal' }}
+                                />
+                            </Stack>
+                            <Chip
+                                size="small"
+                                clickable={!readOnly}
+                                onClick={togglePartialRefusal}
+                                disabled={readOnly}
+                                color={partialRefusalEnabled ? 'warning' : 'default'}
+                                variant={partialRefusalEnabled ? 'filled' : 'outlined'}
+                                label={partialRefusalEnabled ? 'إلغاء الرفض الجزئي' : 'رفض جزئي'}
+                                sx={{ height: '1.3rem', fontSize: '0.68rem', fontWeight: 600 }}
+                            />
+                            {line.limitRefusedAmount > 0 && (
+                                <Tooltip title={line.rejectionReason || 'جزء من المبلغ مرفوض تلقائياً بسبب سقف المنفعة'} arrow>
+                                    <Typography variant="caption" color="warning.dark" sx={{ fontSize: '0.7rem', whiteSpace: 'nowrap' }}>
+                                        تلقائي: {Number(line.limitRefusedAmount || 0).toFixed(2)}
+                                    </Typography>
+                                </Tooltip>
+                            )}
+                            {(line.manualRefusedAmount || 0) > 0 && (
+                                <Typography variant="caption" color="error.main" sx={{ fontSize: '0.7rem', whiteSpace: 'nowrap' }}>
+                                    مرفوض: {Number(line.manualRefusedAmount || 0).toFixed(2)}
                                 </Typography>
-                            );
-                        }
-                        const tooltipTitle = line.rejected
-                            ? (line.rejectionReason || 'الخدمة مرفوضة بالكامل')
-                            : (line.rejectionReason || `تجاوز سعر العقد (${line.contractPrice > 0 ? line.contractPrice : '—'})`);
-                        return (
-                            <Tooltip title={tooltipTitle} arrow>
-                                <Typography variant="body2" sx={{ fontSize: '0.85rem', fontWeight: 700, color: 'error.main' }}>
-                                    {refusedVal.toFixed(2)}
-                                </Typography>
-                            </Tooltip>
-                        );
-                    })()}
+                            )}
+                        </Stack>
+                    )}
                 </TableCell>
                 <TableCell align="center">
                     <Stack spacing={0} alignItems="center">
@@ -178,10 +330,13 @@ export const ClaimLineRow = ({
                 <TableCell align="left">
                     <Stack direction="row" spacing={0} justifyContent="flex-start" sx={{ '& .MuiIconButton-root': { p: 0.5 } }}>
                         <IconButton size="small" color={line.rejected ? "error" : "default"}
-                            onClick={() => line.rejected ? updateLine(idx, { rejected: false }) : openRejectDialog('line', idx)}>
+                            disabled={readOnly}
+                            onClick={() => line.rejected
+                                ? updateLine(idx, { rejected: false, rejectionReason: '', partialRefusalEnabled: false })
+                                : openRejectDialog('line', idx)}>
                             <RejectIcon sx={{ fontSize: '0.9375rem' }} />
                         </IconButton>
-                        <IconButton size="small" color="error" onClick={() => removeLine(idx)}>
+                        <IconButton size="small" color="error" disabled={readOnly} onClick={() => removeLine(idx)}>
                             <DeleteIcon sx={{ fontSize: '0.9375rem' }} />
                         </IconButton>
                     </Stack>

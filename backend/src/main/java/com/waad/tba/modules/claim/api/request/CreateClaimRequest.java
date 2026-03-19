@@ -147,6 +147,13 @@ public class CreateClaimRequest {
     @Size(max = 50, message = "Primary category code must not exceed 50 characters")
     private String primaryCategoryCode;
 
+    /**
+     * Optional: Target monthly batch for this claim.
+     * When provided, the backend validates it is still open and matches provider/employer.
+     */
+    @Positive(message = "Claim Batch ID must be positive")
+    private Long claimBatchId;
+
     // ═══════════════════════════════════════════════════════════════════════════
     // ⛔ FORBIDDEN FIELDS - FINANCIAL SAFETY
     // ═══════════════════════════════════════════════════════════════════════════
@@ -208,6 +215,12 @@ public class CreateClaimRequest {
          * For backlog claims, this is used as the source of truth.
          */
         private java.math.BigDecimal unitPrice;
+
+        /**
+         * Optional manual refusal amount for direct-entry adjudication.
+         * Used to derive approved amount while preserving contract pricing.
+         */
+        private java.math.BigDecimal refusedAmount;
 
         /**
          * Whether this specific line is rejected by the provider

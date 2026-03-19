@@ -7,7 +7,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 @Component
 @Order(60)
@@ -18,7 +17,6 @@ public class PdfSettingsInitializer implements CommandLineRunner {
     private final PdfCompanySettingsRepository repository;
 
     @Override
-    @Transactional
     public void run(String... args) {
         log.info("[PdfSettingsInitializer] Checking PDF settings...");
         try {

@@ -298,6 +298,24 @@ public class ClaimResponse {
     private Boolean active;
 
     /**
+     * Soft-delete timestamp (null when active)
+     * READ-ONLY - Set when claim moved to deleted log
+     */
+    private LocalDateTime deletedAt;
+
+    /**
+     * User who soft-deleted the claim
+     * READ-ONLY - Set by backend
+     */
+    private String deletedBy;
+
+    /**
+     * Reason for soft deletion
+     * READ-ONLY - Set by backend
+     */
+    private String deletionReason;
+
+    /**
      * Creation timestamp
      * READ-ONLY - Set by backend on creation
      */

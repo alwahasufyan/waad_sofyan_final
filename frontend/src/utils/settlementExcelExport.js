@@ -1,5 +1,65 @@
 import ExcelJS from 'exceljs';
 
+const applyCellBorder = (cell, color) => {
+  cell.border = {
+    top: { style: 'thin', color: { argb: color } },
+    left: { style: 'thin', color: { argb: color } },
+    bottom: { style: 'thin', color: { argb: color } },
+    right: { style: 'thin', color: { argb: color } }
+  };
+};
+
+const styleTitleRow = (worksheet, range, value, font = {}) => {
+  worksheet.mergeCells(range);
+  const cell = worksheet.getCell(range.split(':')[0]);
+  cell.value = value;
+  cell.font = font;
+  cell.alignment = { horizontal: 'center', vertical: 'middle' };
+};
+
+const styleHeaderRow = (row, fillColor) => {
+  row.eachCell((cell) => {
+    cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fillColor } };
+    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+    applyCellBorder(cell, 'FFCBD5E1');
+  });
+};
+
+const styleDataRow = (row, numericColumns = [], wrapColumns = []) => {
+  row.eachCell((cell, colNumber) => {
+    applyCellBorder(cell, 'FFE2E8F0');
+
+    if (numericColumns.includes(colNumber)) {
+      cell.numFmt = '#,##0.00';
+      cell.alignment = { horizontal: 'right', vertical: 'middle' };
+      return;
+    }
+
+    cell.alignment = {
+      horizontal: wrapColumns.includes(colNumber) ? 'right' : 'center',
+      vertical: 'middle',
+      wrapText: wrapColumns.includes(colNumber)
+    };
+  });
+};
+
+const styleTotalsRow = (row, numericColumns = []) => {
+  row.eachCell((cell, colNumber) => {
+    cell.font = { bold: true };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
+    applyCellBorder(cell, 'FF94A3B8');
+
+    if (numericColumns.includes(colNumber)) {
+      cell.numFmt = '#,##0.00';
+      cell.alignment = { horizontal: 'right', vertical: 'middle' };
+      return;
+    }
+
+    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+  });
+};
+
 const downloadWorkbook = async (workbook, filename) => {
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer], {
@@ -29,38 +89,25 @@ export const exportProviderAccountTransactionsToExcel = async ({ providerName, t
   });
 
   worksheet.columns = [
-    { header: 'التاريخ', key: 'createdAt', width: '1.5rem' },
-    { header: 'نوع الحركة', key: 'transactionTypeLabel', width: '1.0rem' },
-    { header: 'الدائن', key: 'creditAmount', width: '0.875rem' },
-    { header: 'المدين', key: 'debitAmount', width: '0.875rem' },
-    { header: 'رصيد الحركة', key: 'runningBalanceAfter', width: '1.0rem' },
-    { header: 'المرجع', key: 'reference', width: '1.125rem' },
-    { header: 'الوصف', key: 'description', width: '4.375rem' }
+    { key: 'createdAt', width: 20 },
+    { key: 'transactionTypeLabel', width: 18 },
+    { key: 'creditAmount', width: 14 },
+    { key: 'debitAmount', width: 14 },
+    { key: 'runningBalanceAfter', width: 16 },
+    { key: 'reference', width: 18 },
+    { key: 'description', width: 44 }
   ];
 
-  worksheet.mergeCells('A1:G1');
-  worksheet.getCell('A1').value = `حركات حساب مقدم الخدمة - ${providerName || '-'}`;
-  worksheet.getCell('A1').font = { bold: true, size: 14 };
-  worksheet.getCell('A1').alignment = { horizontal: 'center', vertical: 'middle' };
-
-  worksheet.mergeCells('A2:G2');
-  worksheet.getCell('A2').value = `تاريخ التصدير: ${exportDate || new Date().toLocaleString('ar-LY')}`;
-  worksheet.getCell('A2').font = { size: 10, color: { argb: 'FF666666' } };
-  worksheet.getCell('A2').alignment = { horizontal: 'center', vertical: 'middle' };
+  styleTitleRow(worksheet, 'A1:G1', `حركات حساب مقدم الخدمة - ${providerName || '-'}`, { bold: true, size: 14 });
+  styleTitleRow(worksheet, 'A2:G2', `تاريخ التصدير: ${exportDate || new Date().toLocaleString('ar-LY')}`, {
+    size: 10,
+    color: { argb: 'FF666666' }
+  });
 
   const headerRowNumber = 4;
   const headerRow = worksheet.getRow(headerRowNumber);
-  headerRow.eachCell((cell) => {
-    cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0D9488' } };
-    cell.alignment = { horizontal: 'center', vertical: 'middle' };
-    cell.border = {
-      top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
-      left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
-      bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } },
-      right: { style: 'thin', color: { argb: 'FFCBD5E1' } }
-    };
-  });
+  headerRow.values = ['التاريخ', 'نوع الحركة', 'الدائن', 'المدين', 'رصيد الحركة', 'المرجع', 'الوصف'];
+  styleHeaderRow(headerRow, 'FF0D9488');
 
   rows.forEach((tx) => {
     const row = worksheet.addRow({
@@ -72,21 +119,7 @@ export const exportProviderAccountTransactionsToExcel = async ({ providerName, t
       reference: tx.reference,
       description: tx.description
     });
-
-    row.eachCell((cell, colNumber) => {
-      cell.border = {
-        top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
-        left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
-        bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
-        right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
-      };
-      if (colNumber === 3 || colNumber === 4 || colNumber === 5) {
-        cell.numFmt = '#,##0.00';
-        cell.alignment = { horizontal: 'right', vertical: 'middle' };
-      } else {
-        cell.alignment = { horizontal: colNumber === 7 ? 'right' : 'center', vertical: 'middle', wrapText: colNumber === 7 };
-      }
-    });
+    styleDataRow(row, [3, 4, 5], [7]);
   });
 
   const totals = rows.reduce(
@@ -100,28 +133,14 @@ export const exportProviderAccountTransactionsToExcel = async ({ providerName, t
 
   const totalsRow = worksheet.addRow({
     createdAt: '',
-    transactionTypeLabel: '',
+    transactionTypeLabel: 'الإجماليات',
     creditAmount: totals.credit,
     debitAmount: totals.debit,
     runningBalanceAfter: totals.credit - totals.debit,
     reference: '',
     description: ''
   });
-
-  totalsRow.eachCell((cell, colNumber) => {
-    cell.font = { bold: true };
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
-    cell.border = {
-      top: { style: 'thin', color: { argb: 'FF94A3B8' } },
-      left: { style: 'thin', color: { argb: 'FF94A3B8' } },
-      bottom: { style: 'thin', color: { argb: 'FF94A3B8' } },
-      right: { style: 'thin', color: { argb: 'FF94A3B8' } }
-    };
-    if (colNumber === 3 || colNumber === 4 || colNumber === 5) {
-      cell.numFmt = '#,##0.00';
-      cell.alignment = { horizontal: 'right', vertical: 'middle' };
-    }
-  });
+  styleTotalsRow(totalsRow, [3, 4, 5]);
 
   worksheet.views = [{ state: 'frozen', xSplit: 0, ySplit: headerRowNumber }];
 
@@ -140,40 +159,27 @@ export const exportAccountsListToExcel = async ({ accounts = [] }) => {
   });
 
   worksheet.columns = [
-    { header: 'مقدم الخدمة', key: 'providerName', width: '1.875rem' },
-    { header: 'النوع', key: 'providerType', width: '1.0rem' },
-    { header: 'الرصيد الحالي', key: 'runningBalance', width: '1.125rem' },
-    { header: 'إجمالي المعتمد', key: 'totalApproved', width: '1.125rem' },
-    { header: 'إجمالي المدفوع', key: 'totalPaid', width: '1.125rem' },
-    { header: 'فجوة السداد', key: 'gapAmount', width: '1.0rem' },
-    { header: 'نسبة السداد %', key: 'coveragePercent', width: '0.875rem' },
-    { header: 'آخر حركة', key: 'lastActivityAt', width: '1.0rem' },
-    { header: 'مطالبات معلقة', key: 'pendingClaimsCount', width: '0.875rem' }
+    { key: 'providerName', width: 28 },
+    { key: 'providerType', width: 16 },
+    { key: 'runningBalance', width: 16 },
+    { key: 'totalApproved', width: 16 },
+    { key: 'totalPaid', width: 16 },
+    { key: 'gapAmount', width: 16 },
+    { key: 'coveragePercent', width: 14 },
+    { key: 'lastActivityAt', width: 20 },
+    { key: 'pendingClaimsCount', width: 14 }
   ];
 
-  worksheet.mergeCells('A1:I1');
-  worksheet.getCell('A1').value = 'الدفعات المالية لمقدمي الخدمة';
-  worksheet.getCell('A1').font = { bold: true, size: 14 };
-  worksheet.getCell('A1').alignment = { horizontal: 'center', vertical: 'middle' };
-
-  worksheet.mergeCells('A2:I2');
-  worksheet.getCell('A2').value = `تاريخ التصدير: ${new Date().toLocaleString('ar-LY')}`;
-  worksheet.getCell('A2').font = { size: 10, color: { argb: 'FF666666' } };
-  worksheet.getCell('A2').alignment = { horizontal: 'center', vertical: 'middle' };
+  styleTitleRow(worksheet, 'A1:I1', 'الدفعات المالية لمقدمي الخدمة', { bold: true, size: 14 });
+  styleTitleRow(worksheet, 'A2:I2', `تاريخ التصدير: ${new Date().toLocaleString('ar-LY')}`, {
+    size: 10,
+    color: { argb: 'FF666666' }
+  });
 
   const headerRowNumber = 4;
   const headerRow = worksheet.getRow(headerRowNumber);
-  headerRow.eachCell((cell) => {
-    cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0A4D8C' } };
-    cell.alignment = { horizontal: 'center', vertical: 'middle' };
-    cell.border = {
-      top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
-      left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
-      bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } },
-      right: { style: 'thin', color: { argb: 'FFCBD5E1' } }
-    };
-  });
+  headerRow.values = ['مقدم الخدمة', 'النوع', 'الرصيد الحالي', 'إجمالي المعتمد', 'إجمالي المدفوع', 'فجوة السداد', 'نسبة السداد %', 'آخر حركة', 'مطالبات معلقة'];
+  styleHeaderRow(headerRow, 'FF0A4D8C');
 
   accounts.forEach((acc) => {
     const row = worksheet.addRow({
@@ -189,24 +195,9 @@ export const exportAccountsListToExcel = async ({ accounts = [] }) => {
       lastActivityAt: acc.lastActivityAt || acc.updatedAt || acc.createdAt || '-',
       pendingClaimsCount: acc.pendingClaimsCount ?? acc.transactionCount ?? 0
     });
-
-    row.eachCell((cell, colNumber) => {
-      cell.border = {
-        top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
-        left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
-        bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
-        right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
-      };
-      if (colNumber >= 3 && colNumber <= 6) {
-        cell.numFmt = '#,##0.00';
-        cell.alignment = { horizontal: 'right', vertical: 'middle' };
-      } else if (colNumber === 7) {
-        cell.numFmt = '0.0';
-        cell.alignment = { horizontal: 'center', vertical: 'middle' };
-      } else {
-        cell.alignment = { horizontal: 'center', vertical: 'middle' };
-      }
-    });
+    styleDataRow(row, [3, 4, 5, 6], []);
+    row.getCell(7).numFmt = '0.0';
+    row.getCell(7).alignment = { horizontal: 'center', vertical: 'middle' };
   });
 
   worksheet.views = [{ state: 'frozen', xSplit: 0, ySplit: headerRowNumber }];

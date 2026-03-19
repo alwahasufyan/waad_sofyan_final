@@ -13,15 +13,14 @@ import {
     TableCell, TableContainer, TableHead, TableRow, Chip, Paper,
     Checkbox, FormControlLabel, Tooltip, alpha, TableFooter,
     InputAdornment, Alert, Dialog, DialogTitle, DialogContent,
-    DialogActions, Pagination
+    DialogActions, Pagination, Drawer
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import {
     Save as SaveIcon, Add as AddIcon, Delete as DeleteIcon,
-    Receipt as ReceiptIcon, CheckCircle as DoneIcon,
+    Receipt as ReceiptIcon,
     ArrowBack as BackIcon, Close as DiscardIcon, History as HistoryIcon,
-    Search as SearchIcon, LocalPrintshop as PrintIcon,
-    FileDownload as FileDownloadIcon, WarningAmber as WarningIcon,
+    Search as SearchIcon, WarningAmber as WarningIcon,
     VerifiedUser as PolicyIcon, Info as InfoIcon, Block as RejectIcon,
     Cancel as CancelIcon, AttachFile as AttachFileIcon,
     Lock as LockIcon, AddCircleOutline as AddReasonIcon
@@ -63,11 +62,34 @@ const MONTHS_AR = [
 const newLine = () => ({
     id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 15),
     service: null, serviceName: '', serviceCode: '',
+    serviceFilterKey: '',
     quantity: 1, unitPrice: 0, contractPrice: 0, byCompany: 0, byEmployee: 0,
     refusalTypes: '', total: 0, coveragePercent: null,
+    partialRefusalEnabled: false,
+    approvedAmountInput: '', manualRefusedAmount: '', limitRefusedAmount: 0, refusedAmount: 0,
     requiresPreApproval: false, notCovered: false,
     rejected: false, rejectionReason: ''
 });
+
+const normalizePositiveInteger = (value) => {
+    const parsed = Number.parseInt(value, 10);
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+};
+
+const isPopulatedClaimLine = (line) => Boolean(
+    line?.service?.medicalServiceId ||
+    line?.service?.pricingItemId ||
+    line?.serviceName ||
+    line?.serviceCode
+);
+
+const getCanonicalUnitPrice = (line) => {
+    const enteredPrice = Math.max(0, parseFloat(line?.unitPrice) || 0);
+    const contractPrice = Math.max(0, parseFloat(line?.contractPrice) || 0);
+    return contractPrice > 0 ? Math.min(enteredPrice, contractPrice) : enteredPrice;
+};
+
+const FINALIZED_CLAIM_STATUSES = new Set(['APPROVED', 'REJECTED', 'BATCHED', 'SETTLED', 'PAID']);
 
 // أنماط حقول الجدول القابلة للتعديل
 const inlineSx = {
@@ -130,11 +152,17 @@ export default function ClaimBatchEntry() {
     const [rejectionInput, setRejectionInput] = useState('');
     const [isClaimRejected, setIsClaimRejected] = useState(false);
     const [page, setPage] = useState(0);
+    const [deletedPage, setDeletedPage] = useState(0);
     const [attachments, setAttachments] = useState([]);
     const [editingClaimId, setEditingClaimId] = useState(initialClaimId);
     const [preAuthId, setPreAuthId] = useState('');
     const [preAuthSearch, setPreAuthSearch] = useState('');
     const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+    const [confirmRestoreId, setConfirmRestoreId] = useState(null);
+    const [confirmHardDeleteId, setConfirmHardDeleteId] = useState(null);
+    const [deleteReasonInput, setDeleteReasonInput] = useState('');
+    const [showDeletedLog, setShowDeletedLog] = useState(false);
+    const [batchSidebarOpen, setBatchSidebarOpen] = useState(false);
 
     // ✅ Claim Category Context (Manual Rule Selection)
     const [manualCategoryEnabled, setManualCategoryEnabled] = useState(true);
@@ -220,10 +248,29 @@ export default function ClaimBatchEntry() {
         },
         enabled: !!employerId && !!providerId
     });
+    const { data: deletedBatchData, isLoading: loadingDeletedBatch } = useQuery({
+        queryKey: ['batch-claims-deleted-entry', employerId, providerId, month, year, deletedPage],
+        queryFn: async () => {
+            if (!employerId || !providerId || isNaN(month) || isNaN(year)) return null;
+            const lastDay = new Date(year, month, 0).getDate();
+            return claimsService.listDeleted({
+                employerId,
+                providerId,
+                dateFrom: `${year}-${String(month).padStart(2, '0')}-01`,
+                dateTo: `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`,
+                size: 20,
+                page: deletedPage,
+                sortBy: 'createdAt',
+                sortDir: 'desc'
+            });
+        },
+        enabled: !!employerId && !!providerId
+    });
     const { data: contractedRaw, isLoading: loadingServices } = useQuery({
         queryKey: ['contracted-services', providerId],
         queryFn: () => providerContractsService.getAllContractedServices(providerId),
-        enabled: !!providerId
+        enabled: !!providerId,
+        staleTime: 0
     });
     const { data: activeContract, isLoading: loadingContract } = useQuery({
         queryKey: ['provider-active-contract', providerId],
@@ -296,6 +343,7 @@ export default function ClaimBatchEntry() {
     // ── Helper to refresh all batch related views ───────────────────────────
     const invalidateBatchData = useCallback(() => {
         queryClient.invalidateQueries({ queryKey: ['batch-claims-entry'] });
+        queryClient.invalidateQueries({ queryKey: ['batch-claims-deleted-entry'] });
         queryClient.invalidateQueries({ queryKey: ['batch-claims-detail'] });
         queryClient.invalidateQueries({ queryKey: ['batch-stats'] });
         queryClient.invalidateQueries({ queryKey: ['claim-batch-current'] });
@@ -352,6 +400,11 @@ export default function ClaimBatchEntry() {
         staleTime: 0
     });
 
+    const isReadOnlyClaim = useMemo(() => {
+        if (!editingClaimId || !editingClaim?.status) return false;
+        return FINALIZED_CLAIM_STATUSES.has(String(editingClaim.status).toUpperCase());
+    }, [editingClaimId, editingClaim?.status]);
+
     useEffect(() => {
         if (editingClaim) {
             setMember({ id: editingClaim.memberId, fullName: editingClaim.memberName, cardNumber: editingClaim.memberNationalNumber });
@@ -378,6 +431,9 @@ export default function ClaimBatchEntry() {
                     : parseFloat(l.unitPrice) || 0;
 
                 const serviceObj = svc || {
+                    medicalServiceId: l.medicalServiceId || null,
+                    categoryId: l.serviceCategoryId || l.appliedCategoryId || null,
+                    pricingItemId: l.pricingItemId || null,
                     serviceCode: lineCode,
                     serviceName: lineName,
                     label: `${lineCode ? '[' + lineCode + '] ' : ''}${lineName || ''}`
@@ -385,10 +441,16 @@ export default function ClaimBatchEntry() {
                 const line = {
                     id: l.id || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 15)),
                     service: serviceObj,
+                    serviceFilterKey: serviceObj.filterCategoryKey || '',
                     quantity: l.quantity,
-                    unitPrice: enteredPrice,
+                    unitPrice: cp > 0 ? cp : enteredPrice,
                     contractPrice: cp,
                     coveragePercent: l.coveragePercent,
+                    partialRefusalEnabled: !l.rejected && Number(l.refusedAmount || 0) > 0,
+                    approvedAmountInput: l.rejected
+                        ? '0.00'
+                        : Math.max(0, ((enteredPrice * (l.quantity || 1)) - (parseFloat(l.refusedAmount) || 0))).toFixed(2),
+                    manualRefusedAmount: l.rejected ? '' : (l.refusedAmount != null ? String(l.refusedAmount) : ''),
                     rejected: l.rejected,
                     rejectionReason: l.rejectionReason
                 };
@@ -425,19 +487,55 @@ export default function ClaimBatchEntry() {
         return items.map(s => {
             const code = s.serviceCode || s.code || '';
             const name = s.serviceName || s.name || '';
+            const categoryName = s.categoryName || 'غير مصنف';
+            const subCategoryName = s.subCategoryName || s.subcategoryName || '';
+            const filterCategoryKey = s.categoryId != null ? `id:${s.categoryId}` : `name:${categoryName}`;
             return {
                 ...s,
                 label: `${code ? '[' + code + '] ' : ''}${name}`,
+                medicalServiceId: s.medicalServiceId ?? s.id ?? null,
                 serviceName: name,
                 serviceCode: code,
+                categoryId: s.categoryId ?? s.medicalCategoryId ?? null,
+                categoryName,
+                subCategoryName,
+                filterCategoryKey,
                 pricingItemId: s.pricingItemId,
                 contractPrice: s.contractPrice || 0
             };
+        }).sort((left, right) => {
+            const leftCategory = left.categoryName || '';
+            const rightCategory = right.categoryName || '';
+            if (leftCategory !== rightCategory) {
+                return leftCategory.localeCompare(rightCategory, 'ar');
+            }
+            return (left.serviceName || '').localeCompare(right.serviceName || '', 'ar');
         });
     }, [contractedRaw]);
 
+    const serviceCategoryOptions = useMemo(() => {
+        const categoryMap = new Map();
+        serviceOptions.forEach((service) => {
+            const key = service.filterCategoryKey || `name:${service.categoryName || 'غير مصنف'}`;
+            if (!categoryMap.has(key)) {
+                categoryMap.set(key, {
+                    key,
+                    id: service.categoryId ?? null,
+                    label: service.categoryName || 'غير مصنف',
+                    count: 0
+                });
+            }
+            categoryMap.get(key).count += 1;
+        });
+        return Array.from(categoryMap.values()).sort((left, right) =>
+            left.label.localeCompare(right.label, 'ar')
+        );
+    }, [serviceOptions]);
+
     const batchContent = useMemo(() =>
         batchData?.data?.items ?? batchData?.items ?? batchData?.data?.content ?? batchData?.content ?? [], [batchData]);
+    const deletedBatchContent = useMemo(() =>
+        deletedBatchData?.data?.items ?? deletedBatchData?.items ?? deletedBatchData?.data?.content ?? deletedBatchData?.content ?? [], [deletedBatchData]);
     const batchTotal = batchData?.data?.total ?? batchData?.total ?? batchData?.data?.totalElements ?? batchData?.totalElements ?? 0;
 
     // ── المنطق المالي وتغطية الخدمات (مطبق في الأعلى) ───────────────────────────
@@ -487,6 +585,7 @@ export default function ClaimBatchEntry() {
             service: svc,
             serviceName: svc.serviceName || (typeof val === 'string' ? val : ''),
             serviceCode: svc.serviceCode || '',
+            serviceFilterKey: svc.filterCategoryKey || '',
             unitPrice: price,
             contractPrice: price,
             ...cov
@@ -551,6 +650,10 @@ export default function ClaimBatchEntry() {
     const [isSavingNewReason, setIsSavingNewReason] = useState(false);
 
     const openRejectDialog = (type, idx = null) => {
+        if (isReadOnlyClaim) {
+            enqueueSnackbar('المطالبة في وضع العرض فقط', { variant: 'info' });
+            return;
+        }
         setRejectType(type);
         setRejectIdx(idx);
         setRejectionInput(type === 'line' ? (lines[idx].rejectionReason || '') : (rejectionInput || ''));
@@ -574,6 +677,10 @@ export default function ClaimBatchEntry() {
     };
 
     const confirmRejection = () => {
+        if (isReadOnlyClaim) {
+            enqueueSnackbar('المطالبة في وضع العرض فقط', { variant: 'info' });
+            return;
+        }
         if (rejectType === 'claim') {
             if (!rejectionInput?.trim()) {
                 enqueueSnackbar('يجب إدخال سبب الرفض', { variant: 'warning' });
@@ -586,12 +693,21 @@ export default function ClaimBatchEntry() {
                 enqueueSnackbar('يجب إدخال سبب رفض البند', { variant: 'warning' });
                 return;
             }
-            updateLine(rejectIdx, { rejected: true, rejectionReason: rejectionInput });
+            updateLine(rejectIdx, {
+                rejected: true,
+                rejectionReason: rejectionInput,
+                partialRefusalEnabled: false,
+                approvedAmountInput: '0.00'
+            });
         }
         setRejectDialogOpen(false);
     };
 
-    const handleSave = async (resetAfter = false) => {
+    const handleSave = async ({ resetAfter = false, targetStatus = null } = {}) => {
+        if (isReadOnlyClaim) {
+            enqueueSnackbar('لا يمكن تعديل مطالبة معتمدة/مقفلة', { variant: 'warning' });
+            return;
+        }
         if (isSavingRef.current) return;
         if (!member) { enqueueSnackbar(t('claimEntry.validationMember'), { variant: 'error' }); return; }
         if (lines.some(l => !l.service && !l.serviceName)) { enqueueSnackbar(t('claimEntry.validationService'), { variant: 'error' }); return; }
@@ -603,6 +719,30 @@ export default function ClaimBatchEntry() {
         setSaving(true);
         try {
             const actualDate = serviceDate || defaultDate;
+            const activeLines = lines.filter(isPopulatedClaimLine);
+
+            if (!activeLines.length) {
+                enqueueSnackbar('أضف خدمة واحدة على الأقل قبل الحفظ', { variant: 'error' });
+                setSaving(false);
+                isSavingRef.current = false;
+                return;
+            }
+
+            const invalidQuantityLine = activeLines.find((line) => !normalizePositiveInteger(line.quantity));
+            if (invalidQuantityLine) {
+                enqueueSnackbar('الكمية يجب أن تكون عدداً صحيحاً موجباً فقط مثل 1 أو 2 أو 3', { variant: 'error' });
+                setSaving(false);
+                isSavingRef.current = false;
+                return;
+            }
+
+            const unresolvedLine = activeLines.find((line) => !line.service?.pricingItemId && !line.service?.medicalServiceId);
+            if (unresolvedLine) {
+                enqueueSnackbar('اختر الخدمة من قائمة العقد قبل الحفظ', { variant: 'error' });
+                setSaving(false);
+                isSavingRef.current = false;
+                return;
+            }
 
             // المرحلة 2.2: التحقق من انتهاء صلاحية الوثيقة
             if (policyInfo?.endDate && new Date(actualDate) > new Date(policyInfo.endDate)) {
@@ -613,12 +753,10 @@ export default function ClaimBatchEntry() {
                 return;
             }
 
-            // الحالة REJECTED إذا كان هناك أي رفض: رفض صريح للمطالبة، أو بنود مرفوضة، أو فائض سعر
-            const activeLines = lines.filter(l => l.service || l.serviceName);
+            // المطالبة تعتبر REJECTED فقط عند رفض المطالبة ككل أو رفض جميع البنود بالكامل.
             const anyLineRejected = activeLines.some(l => l.rejected);
-            const anyRefusedAmount = activeLines.some(l => parseFloat(l.refusedAmount) > 0);
-
-            const effectivelyRejected = isClaimRejected || anyLineRejected || anyRefusedAmount;
+            const allLinesRejected = activeLines.length > 0 && activeLines.every(l => l.rejected);
+            const effectivelyRejected = isClaimRejected || allLinesRejected;
 
             // إذا كانت المطالبة مرفوضة كلياً — يجب إدخال سبب رفض
             let effectiveRejectionReason = rejectionInput?.trim() || null;
@@ -628,10 +766,10 @@ export default function ClaimBatchEntry() {
                 isSavingRef.current = false;
                 return;
             }
-            // للبنود المرفوضة فقط (دون رفض كلي) — نأخذ أول سبب من البنود أو سبب السعر
+            // للبنود المرفوضة كلياً فقط دون رفض المطالبة ككل، نأخذ أول سبب متاح.
             if (effectivelyRejected && !effectiveRejectionReason) {
                 const autoReason = activeLines.find(l => l.rejectionReason)?.rejectionReason;
-                effectiveRejectionReason = autoReason || 'مبالغ مرفوضة بسبب تجاوز السعر أو السقف المتفق عليه';
+                effectiveRejectionReason = autoReason || 'تم رفض جميع بنود المطالبة';
             }
 
             const claimData = {
@@ -642,21 +780,26 @@ export default function ClaimBatchEntry() {
                 diagnosisDescription: diagnosis,
                 complaint,
                 notes,
-                status: effectivelyRejected ? 'REJECTED' : 'APPROVED',
-                rejectionReason: effectivelyRejected ? effectiveRejectionReason : null,
+                ...((effectivelyRejected || targetStatus === 'APPROVED')
+                    ? { status: effectivelyRejected ? 'REJECTED' : 'APPROVED' }
+                    : {}),
+                ...(effectivelyRejected ? { rejectionReason: effectiveRejectionReason } : {}),
                 preAuthorizationId: preAuthId ? parseInt(preAuthId) : null,
                 manualCategoryEnabled,
                 // Always send context category so backend can set appliedCategoryId on unmapped services
                 primaryCategoryCode: primaryCategoryCode,
-                lines: lines.map(l => ({
+                lines: activeLines.map(l => ({
+                    medicalServiceId: l.service?.medicalServiceId || null,
                     pricingItemId: l.service?.pricingItemId || null,
+                    serviceCategoryId: l.service?.categoryId || null,
+                    serviceCategoryName: l.service?.categoryName || null,
                     serviceName: l.serviceName || l.service?.serviceName || '',
                     serviceCode: l.serviceCode || l.service?.serviceCode || '',
-                    quantity: parseInt(l.quantity) || 1,
-                    unitPrice: parseFloat(l.unitPrice) || 0,
-                    refusedAmount: parseFloat(l.refusedAmount) || 0,
+                    quantity: normalizePositiveInteger(l.quantity) || 1,
+                    unitPrice: getCanonicalUnitPrice(l),
+                    refusedAmount: l.rejected ? null : (parseFloat(l.refusedAmount) || 0),
                     rejected: l.rejected || false,
-                    rejectionReason: l.rejectionReason || null
+                    rejectionReason: l.rejected ? (l.rejectionReason || null) : null
                 }))
             };
 
@@ -751,31 +894,6 @@ export default function ClaimBatchEntry() {
         }
     };
 
-    // ── طباعة وتصدير ─────────────────────────────────────────────────────────
-    const handlePrint = () => window.print();
-
-    const handleExport = () => {
-        if (!batchContent.length) {
-            enqueueSnackbar('لا توجد بيانات للتصدير', { variant: 'warning' });
-            return;
-        }
-        const headers = ['#', 'المؤمن عليه', 'التاريخ', 'المبلغ المطلوب', 'المبلغ المعتمد', 'الحالة'];
-        const rows = batchContent.map(c => [
-            c.id, c.memberName, c.serviceDate,
-            c.requestedAmount?.toFixed(2) ?? '0.00',
-            c.approvedAmount?.toFixed(2) ?? '0.00',
-            c.status
-        ]);
-        const csvRows = [headers, ...rows].map(r => r.map(v => `"${v ?? ''}"`).join(','));
-        const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `backlog_claims_${monthLabel}_${year}.csv`;
-        a.click();
-        URL.revokeObjectURL(url);
-    };
-
     // ── حذف مطالبة من الشريط الجانبي ─────────────────────────────────────────
     const handleSwitchClaim = useCallback((claimId) => {
         if (isDirty) {
@@ -787,6 +905,7 @@ export default function ClaimBatchEntry() {
 
     const handleDeleteClaim = async (claimId, e) => {
         e.stopPropagation();
+        setDeleteReasonInput('');
         setConfirmDeleteId(claimId);
     };
 
@@ -794,9 +913,11 @@ export default function ClaimBatchEntry() {
         const claimId = confirmDeleteId;
         if (!claimId) return;
         try {
-            await claimsService.remove(claimId);
-            enqueueSnackbar(`✅ تم إلغاء المطالبة #${claimId}`, { variant: 'success' });
+            await claimsService.remove(claimId, { reason: deleteReasonInput?.trim() || undefined });
+            enqueueSnackbar(`✅ تم نقل المطالبة #${claimId} إلى سجل المحذوفات`, { variant: 'success' });
             setConfirmDeleteId(null);
+            setDeleteReasonInput('');
+            setShowDeletedLog(true);
             invalidateBatchData();
             // ✅ FIX: Restore ceiling in current form after deletion
             // If the deleted claim used the same service, the remaining should go back up
@@ -805,6 +926,48 @@ export default function ClaimBatchEntry() {
             }
         } catch (err) {
             enqueueSnackbar(err.message || 'فشل إلغاء المطالبة', { variant: 'error' });
+        }
+    };
+
+    const handleRestoreClaim = (claimId, e) => {
+        e.stopPropagation();
+        setConfirmRestoreId(claimId);
+    };
+
+    const confirmRestoreClaim = async () => {
+        const claimId = confirmRestoreId;
+        if (!claimId) return;
+        try {
+            await claimsService.restore(claimId);
+            enqueueSnackbar(`✅ تم استرجاع المطالبة #${claimId}`, { variant: 'success' });
+            setConfirmRestoreId(null);
+            invalidateBatchData();
+            if (member?.id && policyId) {
+                setTimeout(() => refetchCoverageOnEditRef.current(primaryCategoryCode), 200);
+            }
+        } catch (err) {
+            enqueueSnackbar(err.message || 'فشل استرجاع المطالبة', { variant: 'error' });
+        }
+    };
+
+    const handleHardDeleteClaim = (claimId, e) => {
+        e.stopPropagation();
+        setConfirmHardDeleteId(claimId);
+    };
+
+    const confirmHardDeleteClaim = async () => {
+        const claimId = confirmHardDeleteId;
+        if (!claimId) return;
+        try {
+            await claimsService.hardDelete(claimId);
+            enqueueSnackbar(`✅ تم حذف المطالبة #${claimId} نهائياً`, { variant: 'success' });
+            setConfirmHardDeleteId(null);
+            invalidateBatchData();
+            if (member?.id && policyId) {
+                setTimeout(() => refetchCoverageOnEditRef.current(primaryCategoryCode), 200);
+            }
+        } catch (err) {
+            enqueueSnackbar(err.message || 'فشل الحذف النهائي', { variant: 'error' });
         }
     };
 
@@ -822,24 +985,6 @@ export default function ClaimBatchEntry() {
                     icon={<ReceiptIcon />}
                     actions={
                         <Stack direction="row" spacing={1} alignItems="center">
-                             <Button variant="outlined" size="small" startIcon={<FileDownloadIcon />}
-                                onClick={handleExport} disabled={!batchContent.length}
-                                 sx={{ color: '#1b5e20', borderColor: '#1b5e20', '&:hover': { bgcolor: '#1b5e2012' } }}>
-                                {/* FIX: Correct label — exports CSV not Excel */}
-                                تصدير CSV
-                            </Button>
-                            <Button variant="outlined" size="small" color="info" startIcon={<PrintIcon />}
-                                onClick={handlePrint}
-                                 sx={{}}>
-                                {t('claimEntry.printTable')}
-                            </Button>
-                            <Divider orientation="vertical" flexItem />
-                            {/* FIX: Finish batch goes to claim-batches management page (different from detail) */}
-                            <Button variant="contained" size="small" color="success" startIcon={<DoneIcon />}
-                                onClick={() => navigate(`/claims/batches`)} disabled={!batchContent.length}
-                                 sx={{}}>
-                                {t('claimEntry.finishBatch')}
-                            </Button>
                             {/* FIX: Back goes to detail page (same month view) */}
                             <Button variant="outlined" size="small" color="secondary"
                                 startIcon={<BackIcon sx={{ ml: 1, mr: 0 }} />}
@@ -861,27 +1006,6 @@ export default function ClaimBatchEntry() {
 
             {/* ═══ المحتوى ═══ */}
             <Box sx={{ flex: 1, display: 'flex', minHeight: 0, gap: '1.0rem', px: '1.0rem', pb: '0.4rem' }}>
-                
-                {/* ── الشريط الجانبي — يسار (سجل الدفعة) ── */}
-                <BatchHistorySidebar
-                    loadingBatch={loadingBatch}
-                    batchContent={batchContent}
-                    editingClaimId={editingClaimId}
-                    onSwitchClaim={handleSwitchClaim}
-                    handleDeleteClaim={handleDeleteClaim}
-                    batchData={batchData}
-                    page={page}
-                    setPage={setPage}
-                    monthLabel={monthLabel}
-                    year={year}
-                    theme={theme}
-                    navigate={navigate}
-                    detailUrl={detailUrl}
-                    currentBatch={currentBatch}
-                    isBatchOpen={!isExpiredBatch && (!currentBatch || currentBatch.status === 'OPEN')}
-                    t={t}
-                />
-
                 {/* ── النموذج الرئيسي (يمين الشاشة) ── */}
                 <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
                     <Paper variant="outlined" sx={{
@@ -900,17 +1024,23 @@ export default function ClaimBatchEntry() {
                                 <InfoIcon sx={{ color: 'info.main', fontSize: '1.25rem' }} />
                                 <Box sx={{ flex: 1 }}>
                                     <Typography variant="subtitle2" fontWeight={600} color="info.dark">
-                                        أنت الآن في وضع التعديل (مطالبة #{editingClaimId})
+                                        {isReadOnlyClaim
+                                            ? `أنت الآن في وضع العرض فقط (مطالبة #${editingClaimId})`
+                                            : `أنت الآن في وضع التعديل (مطالبة #${editingClaimId})`}
                                     </Typography>
                                     <Typography variant="caption" color="info.main" fontWeight={400}>
-                                        جاري تعديل بيانات المطالبة المختارة من الشريط الجانبي.
+                                        {isReadOnlyClaim
+                                            ? 'المطالبة معتمدة/مقفلة؛ تم تعطيل جميع إجراءات التعديل.'
+                                            : 'جاري تعديل بيانات المطالبة المختارة من الشريط الجانبي.'}
                                     </Typography>
                                 </Box>
-                                <Button size="small" color="info" variant="outlined"
-                                    onClick={() => { resetForm(); setEditingClaimId(null); }}
-                                    sx={{}}>
-                                    إلغاء وتعديل جديد
-                                </Button>
+                                {!isReadOnlyClaim && (
+                                    <Button size="small" color="info" variant="outlined"
+                                        onClick={() => { resetForm(); setEditingClaimId(null); }}
+                                        sx={{}}>
+                                        إلغاء وتعديل جديد
+                                    </Button>
+                                )}
                             </Box>
                         )}
 
@@ -947,33 +1077,47 @@ export default function ClaimBatchEntry() {
                                         sx={{ fontWeight: 500, fontSize: '0.75rem' }}
                                     />
                                 )}
+                                <Button
+                                    variant="outlined"
+                                    size="small"
+                                    startIcon={<HistoryIcon sx={{ fontSize: '0.8125rem' }} />}
+                                    onClick={() => setBatchSidebarOpen(true)}
+                                    sx={{ fontWeight: 500, fontSize: '0.75rem', py: 0.3 }}
+                                >
+                                    سجل الدفعة {batchTotal ? `(${batchTotal})` : ''}
+                                </Button>
                             </Stack>
                             <Stack direction="row" spacing={1} alignItems="center">
-                                <Tooltip title={t('claimEntry.discardChanges')}>
-                                    <span>
-                                        <IconButton size="small" onClick={resetForm} disabled={!isDirty} color="error">
-                                            <DiscardIcon sx={{ fontSize: '0.9375rem' }} />
-                                        </IconButton>
-                                    </span>
-                                </Tooltip>
-                                
-                                {/* Save & Stay */}
-                                <Button variant="outlined" size="small" color="primary"
-                                    startIcon={saving ? <CircularProgress size={11} color="inherit" /> : <SaveIcon sx={{ fontSize: '0.8125rem' }} />}
-                                    onClick={() => handleSave(false)} 
-                                    disabled={saving || !isDirty || isExpiredBatch || (currentBatch && currentBatch.status !== 'OPEN' && !editingClaimId)}
-                                    sx={{ fontWeight: 500, fontSize: '0.75rem', py: 0.4 }}>
-                                    {saving ? t('claimEntry.saving') : "حفظ"}
-                                </Button>
-
-                                {/* Save & New (The main button) */}
-                                <Button variant="contained" size="small" color="success"
-                                    startIcon={saving ? <CircularProgress size={11} color="inherit" /> : <AddIcon sx={{ fontSize: '0.8125rem' }} />}
-                                    onClick={() => handleSave(true)} 
-                                    disabled={saving || !isDirty || isExpiredBatch || (currentBatch && currentBatch.status !== 'OPEN')}
-                                    sx={{ fontWeight: 500, fontSize: '0.75rem', py: 0.4 }}>
-                                    {saving ? t('claimEntry.saving') : t('claimEntry.saveAndAdd')}
-                                </Button>
+                                <Box sx={{
+                                    px: 1.25,
+                                    py: 0.6,
+                                    minWidth: '16rem',
+                                    borderRadius: 1,
+                                    bgcolor: alpha('#00867d', 0.06),
+                                    border: '1px solid',
+                                    borderColor: alpha('#00867d', 0.2)
+                                }}>
+                                    <Typography variant="caption" sx={{ color: '#004d40', fontWeight: 600, display: 'block', mb: 0.3, fontSize: '0.72rem' }}>
+                                        التغطية السنوية المتبقية
+                                    </Typography>
+                                    {loadingSummary ? (
+                                        <Typography variant="caption" color="text.secondary">جاري التحميل...</Typography>
+                                    ) : memberFinancialSummary ? (
+                                        <Stack direction="row" spacing={0.75} alignItems="center" justifyContent="space-between">
+                                            <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#00695c', fontSize: '0.95rem' }}>
+                                                {memberFinancialSummary.remainingCoverage?.toFixed(2) || '0.00'} د.ل
+                                            </Typography>
+                                            <Chip
+                                                size="small"
+                                                label={`${memberFinancialSummary.utilizationPercent?.toFixed(1) || '0.0'}% مستهلك`}
+                                                color={memberFinancialSummary.utilizationPercent > 80 ? 'error' : 'success'}
+                                                sx={{ height: '1.2rem', fontSize: '0.68rem', fontWeight: 600 }}
+                                            />
+                                        </Stack>
+                                    ) : (
+                                        <Typography variant="caption" color="text.secondary">— اختر مستفيداً —</Typography>
+                                    )}
+                                </Box>
                             </Stack>
                         </Box>
 
@@ -1004,6 +1148,8 @@ export default function ClaimBatchEntry() {
                                 setIsDirty={setIsDirty}
                                 financialSummary={memberFinancialSummary}
                                 loadingSummary={loadingSummary}
+                                showFinancialSummary={false}
+                                readOnly={isReadOnlyClaim}
                                 t={t}
                             />
                         </Box>
@@ -1015,9 +1161,12 @@ export default function ClaimBatchEntry() {
                             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                             borderBottom: `1px solid ${theme.palette.divider}`
                         }}>
-                            <Typography variant="subtitle2" fontWeight={600} color="#0D4731" sx={{ fontSize: '0.85rem' }}>
-                                {t('claimEntry.serviceLines')}
-                            </Typography>
+                            <Stack direction="row" spacing={1} alignItems="center">
+                                <Typography variant="subtitle2" fontWeight={600} color="#0D4731" sx={{ fontSize: '0.85rem' }}>
+                                    {t('claimEntry.serviceLines')}
+                                </Typography>
+                                <Chip size="small" variant="outlined" label={`${serviceOptions.length} خدمة من العقد`} sx={{ fontWeight: 400, fontSize: '0.75rem' }} />
+                            </Stack>
                             <Chip size="small" variant="outlined" label={`${lines.length} بند`} sx={{ fontWeight: 400, fontSize: '0.75rem' }} />
                         </Box>
 
@@ -1032,7 +1181,7 @@ export default function ClaimBatchEntry() {
                                         <TH align="center" w={60}>التحمل %</TH>
                                         <TH align="center" w={110}>سقف المنفعة</TH>
                                         <TH align="center" w={110}> المتبقي من السقف </TH>
-                                        <TH align="center" w={75}>المرفوض</TH>
+                                        <TH align="center" w={95}>الموافق عليه</TH>
                                         <TH align="center" w={100}>شركة / مشترك</TH>
                                         <TH align="center" w={80}>الإجمالي</TH>
                                         <TH align="left" w={40}></TH>
@@ -1046,19 +1195,23 @@ export default function ClaimBatchEntry() {
                                             idx={idx}
                                             theme={theme}
                                             serviceOptions={serviceOptions}
+                                            serviceCategoryOptions={serviceCategoryOptions}
                                             loadingServices={loadingServices}
                                             updateLine={updateLine}
                                             handleServiceChange={handleServiceChange}
                                             removeLine={removeLine}
                                             openRejectDialog={openRejectDialog}
                                             policyInfo={policyInfo}
+                                            readOnly={isReadOnlyClaim}
                                         />
                                     ))}
                                     <TableRow>
                                         <TableCell colSpan={11} sx={{ py: 1, textAlign: 'center' }}>
-                                            <Button size="small" startIcon={<AddIcon />} onClick={addLine} sx={{ fontWeight: 500 }}>
-                                                {t('claimEntry.addLine')}
-                                            </Button>
+                                            {!isReadOnlyClaim && (
+                                                <Button size="small" startIcon={<AddIcon />} onClick={addLine} sx={{ fontWeight: 500 }}>
+                                                    {t('claimEntry.addLine')}
+                                                </Button>
+                                            )}
                                         </TableCell>
                                     </TableRow>
                                 </TableBody>
@@ -1078,11 +1231,58 @@ export default function ClaimBatchEntry() {
                             totals={totals}
                             theme={theme}
                             lines={lines}
+                            readOnly={isReadOnlyClaim}
                             t={t}
                         />
                     </Paper>
                 </Box>
             </Box>
+
+            <Drawer
+                anchor="left"
+                open={batchSidebarOpen}
+                onClose={() => setBatchSidebarOpen(false)}
+                PaperProps={{
+                    sx: {
+                        width: { xs: '100vw', sm: '24rem' },
+                        maxWidth: '100%'
+                    }
+                }}
+            >
+                <BatchHistorySidebar
+                    loadingBatch={loadingBatch}
+                    batchContent={batchContent}
+                    loadingDeleted={loadingDeletedBatch}
+                    deletedContent={deletedBatchContent}
+                    editingClaimId={editingClaimId}
+                    onSwitchClaim={(claimId) => {
+                        handleSwitchClaim(claimId);
+                        setBatchSidebarOpen(false);
+                    }}
+                    handleDeleteClaim={handleDeleteClaim}
+                    onRestoreClaim={handleRestoreClaim}
+                    onHardDeleteClaim={handleHardDeleteClaim}
+                    batchData={batchData}
+                    deletedData={deletedBatchData}
+                    page={page}
+                    setPage={setPage}
+                    deletedPage={deletedPage}
+                    setDeletedPage={setDeletedPage}
+                    monthLabel={monthLabel}
+                    year={year}
+                    theme={theme}
+                    navigate={navigate}
+                    detailUrl={detailUrl}
+                    currentBatch={currentBatch}
+                    isBatchOpen={!isExpiredBatch && (!currentBatch || currentBatch.status === 'OPEN')}
+                    showDeletedLog={showDeletedLog}
+                    setShowDeletedLog={setShowDeletedLog}
+                    readOnly={isReadOnlyClaim}
+                    t={t}
+                    onClose={() => setBatchSidebarOpen(false)}
+                    containerSx={{ width: '100%', height: '100%' }}
+                />
+            </Drawer>
 
             <Dialog open={rejectDialogOpen} onClose={() => setRejectDialogOpen(false)} maxWidth="sm" fullWidth
                 PaperProps={{ sx: { borderRadius: '0.375rem' } }}>
@@ -1139,13 +1339,47 @@ export default function ClaimBatchEntry() {
             </Dialog>
 
             <Dialog open={!!confirmDeleteId} onClose={() => setConfirmDeleteId(null)}>
-                <DialogTitle sx={{ fontWeight: 600 }}>تأكيد إلغاء المطالبة</DialogTitle>
+                <DialogTitle sx={{ fontWeight: 600 }}>تأكيد حذف المطالبة (حذف ناعم)</DialogTitle>
                 <DialogContent>
-                    هل أنت متأكد من رغبتك في إلغاء المطالبة رقم #{confirmDeleteId}؟ هذا الإجراء لا يمكن التراجع عنه.
+                    <Typography variant="body2" sx={{ mb: 1.25 }}>
+                        سيتم نقل المطالبة رقم #{confirmDeleteId} إلى سجل المحذوفات ويمكن استرجاعها لاحقاً.
+                    </Typography>
+                    <TextField
+                        fullWidth
+                        size="small"
+                        label="سبب الحذف"
+                        placeholder="اكتب سبب الحذف (اختياري)"
+                        value={deleteReasonInput}
+                        onChange={(e) => setDeleteReasonInput(e.target.value)}
+                    />
                 </DialogContent>
                 <DialogActions sx={{ p: '1.0rem' }}>
                     <Button onClick={() => setConfirmDeleteId(null)} color="inherit">تراجع</Button>
-                    <Button onClick={confirmDeleteClaim} variant="contained" color="error">تأكيد الإلغاء</Button>
+                    <Button onClick={confirmDeleteClaim} variant="contained" color="error">نقل إلى المحذوفات</Button>
+                </DialogActions>
+            </Dialog>
+
+            <Dialog open={!!confirmRestoreId} onClose={() => setConfirmRestoreId(null)}>
+                <DialogTitle sx={{ fontWeight: 600 }}>تأكيد استرجاع المطالبة</DialogTitle>
+                <DialogContent>
+                    هل تريد استرجاع المطالبة رقم #{confirmRestoreId} من سجل المحذوفات؟
+                </DialogContent>
+                <DialogActions sx={{ p: '1.0rem' }}>
+                    <Button onClick={() => setConfirmRestoreId(null)} color="inherit">إلغاء</Button>
+                    <Button onClick={confirmRestoreClaim} variant="contained" color="success">استرجاع</Button>
+                </DialogActions>
+            </Dialog>
+
+            <Dialog open={!!confirmHardDeleteId} onClose={() => setConfirmHardDeleteId(null)}>
+                <DialogTitle sx={{ fontWeight: 600, color: 'error.main' }}>تأكيد الحذف النهائي</DialogTitle>
+                <DialogContent>
+                    <Typography variant="body2">
+                        سيتم حذف المطالبة رقم #{confirmHardDeleteId} نهائياً من قاعدة البيانات، ولا يمكن التراجع عن هذا الإجراء.
+                    </Typography>
+                </DialogContent>
+                <DialogActions sx={{ p: '1.0rem' }}>
+                    <Button onClick={() => setConfirmHardDeleteId(null)} color="inherit">إلغاء</Button>
+                    <Button onClick={confirmHardDeleteClaim} variant="contained" color="error">حذف نهائي</Button>
                 </DialogActions>
             </Dialog>
         </Box>

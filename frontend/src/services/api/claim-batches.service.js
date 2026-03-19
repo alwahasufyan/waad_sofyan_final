@@ -12,7 +12,7 @@ const claimBatchesService = {
             const response = await axiosClient.get(`${BASE}/current`, {
                 params: { providerId, employerId, year, month }
             });
-            return response.data;
+            return response.data || null;
         } catch (err) {
             // 404 = no batch exists yet (normal state before first claim)
             if (err?.response?.status === 404) return null;

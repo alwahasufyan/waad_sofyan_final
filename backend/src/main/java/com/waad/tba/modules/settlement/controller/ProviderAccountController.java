@@ -26,6 +26,7 @@ import com.waad.tba.modules.settlement.dto.ProviderAccountListDTO;
 import com.waad.tba.modules.settlement.entity.AccountTransaction;
 import com.waad.tba.modules.settlement.entity.ProviderAccount;
 import com.waad.tba.modules.settlement.service.ProviderAccountService;
+import com.waad.tba.modules.rbac.entity.User;
 import com.waad.tba.security.AuthorizationService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -249,6 +250,28 @@ public class ProviderAccountController {
 
         return ResponseEntity.ok(ApiResponse.success(summary));
     }
+
+        @PostMapping("/repair-missing-approval-credits")
+        @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ACCOUNTANT')")
+        @Operation(summary = "Repair missing approval credits", description = "Replays provider ledger credits for approved claims that have no CLAIM_APPROVAL transaction")
+        public ResponseEntity<ApiResponse<Map<String, Object>>> repairMissingApprovalCredits(
+                        @Parameter(description = "Optional provider ID filter") @RequestParam(name = "providerId", required = false) Long providerId,
+                        @Parameter(description = "Optional claim ID filter") @RequestParam(name = "claimId", required = false) Long claimId) {
+
+                User currentUser = authorizationService.getCurrentUser();
+                Long userId = currentUser != null ? currentUser.getId() : null;
+
+                ProviderAccountService.ProviderLedgerRepairResult result = providerAccountService
+                                .repairMissingApprovalCredits(providerId, claimId, userId);
+
+                Map<String, Object> payload = Map.of(
+                                "scanned", result.scanned(),
+                                "repaired", result.repaired(),
+                                "repairedClaimIds", result.repairedClaimIds(),
+                                "skippedReasons", result.skippedReasons());
+
+                return ResponseEntity.ok(ApiResponse.success("Provider ledger repair completed", payload));
+        }
 
     // ═══════════════════════════════════════════════════════════════════════════
     // BALANCE VERIFICATION (AUDIT)

@@ -3,7 +3,9 @@ package com.waad.tba.modules.pdf.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 
@@ -36,8 +38,8 @@ public class PdfCompanySettings {
     @Column(name = "logo_url", length = 512)
     private String logoUrl;
     
-    @Lob
-    @Column(name = "logo_data")
+    @JdbcTypeCode(SqlTypes.VARBINARY)
+    @Column(name = "logo_data", columnDefinition = "bytea")
     private byte[] logoData;
     
     // ========== Contact Information ==========

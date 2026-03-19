@@ -110,6 +110,23 @@ public interface ProviderContractPricingItemRepository extends JpaRepository<Pro
                      @Param("serviceName") String serviceName);
 
        /**
+        * Find active imported pricing item by its import identity.
+        */
+       @Query("SELECT p FROM ProviderContractPricingItem p " +
+                     "WHERE p.contract.id = :contractId " +
+                     "AND p.active = true " +
+                     "AND ((:serviceCode IS NULL AND p.serviceCode IS NULL) OR p.serviceCode = :serviceCode) " +
+                     "AND LOWER(p.serviceName) = LOWER(:serviceName) " +
+                     "AND ((:categoryName IS NULL AND p.categoryName IS NULL) OR LOWER(p.categoryName) = LOWER(:categoryName)) " +
+                     "AND ((:subCategoryName IS NULL AND p.subCategoryName IS NULL) OR LOWER(p.subCategoryName) = LOWER(:subCategoryName))")
+       Optional<ProviderContractPricingItem> findByContractIdAndImportIdentityActiveTrue(
+                     @Param("contractId") Long contractId,
+                     @Param("serviceCode") String serviceCode,
+                     @Param("serviceName") String serviceName,
+                     @Param("categoryName") String categoryName,
+                     @Param("subCategoryName") String subCategoryName);
+
+       /**
         * Check if pricing exists for service in contract
         */
        boolean existsByContractIdAndMedicalServiceIdAndActiveTrue(Long contractId, Long medicalServiceId);
@@ -202,7 +219,9 @@ public interface ProviderContractPricingItemRepository extends JpaRepository<Pro
                      "     OR LOWER(ms.nameEn) LIKE LOWER(CONCAT('%', :q, '%')) " +
                      "     OR LOWER(p.serviceCode) LIKE LOWER(CONCAT('%', :q, '%')) " +
                      "     OR LOWER(p.serviceName) LIKE LOWER(CONCAT('%', :q, '%')) " +
-                     "     OR LOWER(p.categoryName) LIKE LOWER(CONCAT('%', :q, '%'))) " +
+                     "     OR LOWER(p.categoryName) LIKE LOWER(CONCAT('%', :q, '%')) " +
+                     "     OR LOWER(p.subCategoryName) LIKE LOWER(CONCAT('%', :q, '%')) " +
+                     "     OR LOWER(p.specialty) LIKE LOWER(CONCAT('%', :q, '%'))) " +
                      "AND (:categoryId IS NULL OR mc.id = :categoryId OR ms.categoryId = :categoryId)")
        Page<ProviderContractPricingItem> searchByServiceCodeOrNameAndCategory(
                      @Param("contractId") Long contractId,

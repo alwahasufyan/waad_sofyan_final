@@ -33,6 +33,8 @@ export const ClaimHeaderFields = ({
     setIsDirty,
     financialSummary,
     loadingSummary,
+    showFinancialSummary = true,
+    readOnly = false,
     t
 }) => {
     return (
@@ -53,6 +55,7 @@ export const ClaimHeaderFields = ({
                             fullWidth 
                             options={memberOptions} 
                             loading={searchingMember}
+                            disabled={readOnly}
                             value={member}
                             onChange={(_, v) => { 
                                 setMember(v); 
@@ -81,6 +84,7 @@ export const ClaimHeaderFields = ({
                             fullWidth
                             options={preAuthResults?.items || []}
                             loading={searchingPreAuth}
+                            disabled={readOnly}
                             value={preAuthResults?.items?.find(pa => pa.id === parseInt(preAuthId)) || null}
                             onInputChange={(_, v) => setPreAuthSearch(v)}
                             onChange={(_, v) => {
@@ -107,6 +111,7 @@ export const ClaimHeaderFields = ({
                         </Typography>
                         <TextField fullWidth size="small" variant="standard" value={diagnosis}
                             placeholder="التشخيص الطبي..."
+                            disabled={readOnly}
                             onChange={e => { setDiagnosis(e.target.value); setIsDirty(true); }} 
                             sx={inlineSx} 
                         />
@@ -117,6 +122,7 @@ export const ClaimHeaderFields = ({
                         </Typography>
                         <TextField fullWidth size="small" variant="standard" value={complaint}
                             placeholder="الشكوى أو الملاحظات..."
+                            disabled={readOnly}
                             onChange={e => { setComplaint(e.target.value); setIsDirty(true); }} 
                             sx={inlineSx} 
                         />
@@ -127,13 +133,14 @@ export const ClaimHeaderFields = ({
             <Stack spacing={1.5}>
                     <Box>
                         <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500, display: 'block', mb: 0.5, fontSize: '0.75rem' }}>
-                            سياق التغطية (Context)
+                            سياق التغطية الافتراضي
                         </Typography>
                         <Stack direction="row" spacing={1} alignItems="center">
                             <FormControlLabel
                                 control={
                                     <Checkbox
                                         size="small"
+                                        disabled={readOnly}
                                         checked={primaryCategoryCode === 'CAT-OUTPAT'}
                                         onChange={(e) => {
                                             const checked = e.target.checked;
@@ -145,13 +152,14 @@ export const ClaimHeaderFields = ({
                                         }}
                                     />
                                 }
-                                label={<Typography sx={{ fontSize: '0.75rem', fontWeight: 500 }}>عيادات خارجية</Typography>}
+                                label={<Typography sx={{ fontSize: '0.75rem', fontWeight: 500 }}>افتراضي: عيادات خارجية</Typography>}
                             />
                             {primaryCategoryCode !== 'CAT-OUTPAT' && (
                                 <Autocomplete
                                     size="small"
                                     sx={{ flexGrow: 1 }}
                                     options={rootCategories?.filter(c => c.code !== 'CAT-OUTPAT') || []}
+                                    disabled={readOnly}
                                     getOptionLabel={(o) => o.name || o.nameAr || ''}
                                     value={rootCategories?.find(c => c.code === primaryCategoryCode) || null}
                                     onChange={(_, v) => {
@@ -168,40 +176,45 @@ export const ClaimHeaderFields = ({
                                 />
                             )}
                         </Stack>
+                        <Typography variant="caption" sx={{ display: 'block', mt: 0.5, color: 'text.secondary', fontSize: '0.7rem' }}>
+                            يُستخدم فقط عندما تكون الخدمة غير مصنفة بوضوح أو عندما تختلف منافع الإيواء عن العيادات الخارجية.
+                        </Typography>
                     </Box>
 
-                    <Box sx={{ 
-                        p: 1.5, 
-                        borderRadius: 1, 
-                        bgcolor: alpha('#00867d', 0.05),
-                        border: '1px solid',
-                        borderColor: alpha('#00867d', 0.1),
-                        minHeight: '65px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'center'
-                    }}>
-                        <Typography variant="caption" sx={{ color: '#004d40', fontWeight: 500, display: 'block', mb: 0.5, fontSize: '0.75rem' }}>
-                            التغطية السنوية المتبقية
-                        </Typography>
-                        {loadingSummary ? (
-                            <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 400, color: 'text.disabled' }}>جاري التحميل...</Typography>
-                        ) : financialSummary ? (
-                            <Stack direction="row" justifyContent="space-between" alignItems="center">
-                                <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#00695c', fontSize: '1.05rem' }}>
-                                    {financialSummary.remainingCoverage?.toFixed(2) || '0.00'} د.ل
-                                </Typography>
-                                <Chip 
-                                    size="small" 
-                                    label={`${financialSummary.utilizationPercent?.toFixed(1) || '0.0'}% مستهلك`}
-                                    color={financialSummary.utilizationPercent > 80 ? 'error' : 'success'}
-                                    sx={{ height: '1.2rem', fontSize: '0.75rem', fontWeight: 500 }}
-                                />
-                            </Stack>
-                        ) : (
-                            <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 400, color: 'text.disabled' }}>— اختر مستفيداً —</Typography>
-                        )}
-                    </Box>
+                    {showFinancialSummary && (
+                        <Box sx={{ 
+                            p: 1.5, 
+                            borderRadius: 1, 
+                            bgcolor: alpha('#00867d', 0.05),
+                            border: '1px solid',
+                            borderColor: alpha('#00867d', 0.1),
+                            minHeight: '65px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'center'
+                        }}>
+                            <Typography variant="caption" sx={{ color: '#004d40', fontWeight: 500, display: 'block', mb: 0.5, fontSize: '0.75rem' }}>
+                                التغطية السنوية المتبقية
+                            </Typography>
+                            {loadingSummary ? (
+                                <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 400, color: 'text.disabled' }}>جاري التحميل...</Typography>
+                            ) : financialSummary ? (
+                                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#00695c', fontSize: '1.05rem' }}>
+                                        {financialSummary.remainingCoverage?.toFixed(2) || '0.00'} د.ل
+                                    </Typography>
+                                    <Chip 
+                                        size="small" 
+                                        label={`${financialSummary.utilizationPercent?.toFixed(1) || '0.0'}% مستهلك`}
+                                        color={financialSummary.utilizationPercent > 80 ? 'error' : 'success'}
+                                        sx={{ height: '1.2rem', fontSize: '0.75rem', fontWeight: 500 }}
+                                    />
+                                </Stack>
+                            ) : (
+                                <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 400, color: 'text.disabled' }}>— اختر مستفيداً —</Typography>
+                            )}
+                        </Box>
+                    )}
             </Stack>
         </Box>
     );

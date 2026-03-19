@@ -14,6 +14,7 @@ export const ClaimTotalsFooter = ({
     totals,
     theme,
     lines,
+    readOnly = false,
     t
 }) => {
     // اكتشاف أن جميع البنود مرفوضة
@@ -22,6 +23,15 @@ export const ClaimTotalsFooter = ({
     const showRejected = isClaimRejected || allLinesRejected;
     const netApproved = totals.total - totals.refused;
 
+    const handleAcceptClaim = () => {
+        if (isClaimRejected && typeof setIsClaimRejected === 'function') {
+            setIsClaimRejected(false);
+            setIsDirty?.(true);
+            if (typeof setRejectionInput === 'function') setRejectionInput('');
+        }
+        handleSave({ resetAfter: true, targetStatus: 'APPROVED' });
+    };
+
     return (
         <Box sx={{
             flexShrink: 0, px: '1.25rem', py: '0.75rem',
@@ -29,21 +39,31 @@ export const ClaimTotalsFooter = ({
             display: 'flex', gap: '1.0rem', alignItems: 'center',
             bgcolor: showRejected ? alpha(theme.palette.error.main, 0.04) : alpha(theme.palette.primary.main, 0.02)
         }}>
-            <Button variant="contained" color={showRejected ? "error" : "primary"}
-                onClick={handleSave} disabled={saving || !isDirty} sx={{ px: '2.0rem', fontWeight: 600 }}>
-                {saving ? t('claimEntry.saving') : (showRejected ? "حفظ (مرفوضة)" : t('claimEntry.saveAndAdd'))}
-            </Button>
+            {!readOnly && (
+                <>
+                    <Button variant="outlined" color="primary"
+                        onClick={() => handleSave({ resetAfter: true })} disabled={saving || !isDirty} sx={{ px: '1.4rem', fontWeight: 600 }}>
+                        {saving ? t('claimEntry.saving') : 'حفظ مسودة'}
+                    </Button>
 
-            {!isClaimRejected && !allLinesRejected ? (
-                <Button variant="outlined" color="error" startIcon={<RejectIcon />}
-                    onClick={() => openRejectDialog('claim')} sx={{ fontWeight: 500 }}>
-                    رفض المطالبة
-                </Button>
-            ) : isClaimRejected ? (
-                <Button variant="text" onClick={() => { setIsClaimRejected(false); setIsDirty?.(true); if (typeof setRejectionInput === 'function') setRejectionInput(''); }} sx={{ fontWeight: 500 }}>
-                    تغيير للقبول
-                </Button>
-            ) : null}
+                    <Button variant="contained" color="success"
+                        onClick={handleAcceptClaim}
+                        disabled={saving} sx={{ px: '1.6rem', fontWeight: 700 }}>
+                        {saving ? t('claimEntry.saving') : 'قبول المطالبة'}
+                    </Button>
+
+                    <Button variant="outlined" color="error" startIcon={<RejectIcon />}
+                        onClick={() => openRejectDialog('claim')} sx={{ fontWeight: 500 }}>
+                        رفض المطالبة
+                    </Button>
+                </>
+            )}
+
+            {readOnly && (
+                <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 600 }}>
+                    وضع عرض فقط: مطالبة معتمدة/مقفلة
+                </Typography>
+            )}
 
             {/* تحذير عند رفض جميع البنود تلقائياً */}
             {allLinesRejected && !isClaimRejected && (

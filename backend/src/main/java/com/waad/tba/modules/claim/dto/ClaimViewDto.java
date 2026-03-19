@@ -228,6 +228,9 @@ public class ClaimViewDto {
 
     // Audit fields
     private Boolean active;
+    private LocalDateTime deletedAt;
+    private String deletedBy;
+    private String deletionReason;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private String createdBy;

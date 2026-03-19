@@ -58,6 +58,12 @@ public class MedicalService {
     @Column(nullable = false, unique = true, length = 50)
     private String code;
 
+    /**
+     * Legacy code column kept for backward compatibility with older schema paths.
+     */
+    @Column(name = "service_code", nullable = false, length = 50)
+    private String serviceCode;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     @Builder.Default
@@ -68,6 +74,15 @@ public class MedicalService {
      */
     @Column(name = "name", nullable = false, length = 200)
     private String name;
+
+    /**
+     * Legacy name column kept for backward compatibility with older schema paths.
+     */
+    @Column(name = "service_name", nullable = false, length = 255)
+    private String serviceName;
+
+    @Column(name = "service_name_ar", length = 255)
+    private String serviceNameAr;
 
     /**
      * Reference to medical category
@@ -196,6 +211,7 @@ public class MedicalService {
 
     @PrePersist
     void onCreate() {
+        syncLegacyColumns();
         validateArchitecturalRules();
         createdAt = LocalDateTime.now();
         updatedAt = createdAt;
@@ -203,8 +219,21 @@ public class MedicalService {
 
     @PreUpdate
     void onUpdate() {
+        syncLegacyColumns();
         validateArchitecturalRules();
         updatedAt = LocalDateTime.now();
+    }
+
+    private void syncLegacyColumns() {
+        if (serviceCode == null || serviceCode.isBlank()) {
+            serviceCode = code;
+        }
+        if (serviceName == null || serviceName.isBlank()) {
+            serviceName = name;
+        }
+        if ((serviceNameAr == null || serviceNameAr.isBlank()) && nameAr != null && !nameAr.isBlank()) {
+            serviceNameAr = nameAr;
+        }
     }
 
     /**

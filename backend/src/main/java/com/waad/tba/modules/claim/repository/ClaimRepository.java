@@ -20,6 +20,7 @@ import com.waad.tba.modules.claim.projection.RecentClaimProjection;
 import com.waad.tba.modules.claim.projection.FinancialSummaryByProviderProjection;
 import com.waad.tba.modules.claim.projection.FinancialSummaryByStatusProjection;
 import com.waad.tba.modules.claim.projection.FinancialSummaryByEmployerProjection;
+import com.waad.tba.modules.claim.entity.ClaimStatus;
 
 @Repository
 public interface ClaimRepository extends JpaRepository<Claim, Long> {
@@ -112,6 +113,64 @@ public interface ClaimRepository extends JpaRepository<Claim, Long> {
                         @Param("keyword") String keyword,
                         @Param("employerId") Long employerId,
                         @Param("providerId") Long providerId,
+                        @Param("status") com.waad.tba.modules.claim.entity.ClaimStatus status,
+                        @Param("dateFrom") java.time.LocalDate dateFrom,
+                        @Param("dateTo") java.time.LocalDate dateTo,
+                        @Param("createdAtFrom") java.time.LocalDateTime createdAtFrom,
+                        @Param("createdAtTo") java.time.LocalDateTime createdAtTo,
+                        Pageable pageable);
+
+        /**
+         * Search deleted claims with pagination and standard filters.
+         */
+        @EntityGraph(attributePaths = { "member", "member.benefitPolicy", "member.employer", "preAuthorization",
+                        "visit" })
+        @Query(value = "SELECT c FROM Claim c " +
+                        "WHERE c.active = false " +
+                        "AND (:employerId IS NULL OR c.member.employer.id = :employerId) " +
+                        "AND (:providerId IS NULL OR c.providerId = :providerId) " +
+                        "AND (:status IS NULL OR c.status = :status) " +
+                        "AND (CAST(:dateFrom AS date) IS NULL OR c.serviceDate >= :dateFrom) " +
+                        "AND (CAST(:dateTo AS date) IS NULL OR c.serviceDate <= :dateTo) " +
+                        "AND (CAST(:createdAtFrom AS timestamp) IS NULL OR c.createdAt >= :createdAtFrom) " +
+                        "AND (CAST(:createdAtTo AS timestamp) IS NULL OR c.createdAt < :createdAtTo) " +
+                        "AND (LOWER(c.providerName) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%')) " +
+                        "OR LOWER(c.diagnosisDescription) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%')) " +
+                        "OR LOWER(c.member.fullName) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%')) " +
+                        "OR LOWER(c.member.civilId) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%')))", countQuery = "SELECT COUNT(c) FROM Claim c WHERE c.active = false AND (:employerId IS NULL OR c.member.employer.id = :employerId) AND (:providerId IS NULL OR c.providerId = :providerId) AND (:status IS NULL OR c.status = :status) AND (CAST(:dateFrom AS date) IS NULL OR c.serviceDate >= :dateFrom) AND (CAST(:dateTo AS date) IS NULL OR c.serviceDate <= :dateTo) AND (CAST(:createdAtFrom AS timestamp) IS NULL OR c.createdAt >= :createdAtFrom) AND (CAST(:createdAtTo AS timestamp) IS NULL OR c.createdAt < :createdAtTo) AND (LOWER(c.providerName) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%')) OR LOWER(c.diagnosisDescription) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%')) OR LOWER(c.member.fullName) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%')) OR LOWER(c.member.civilId) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%')))" )
+        Page<Claim> searchPagedDeletedWithFilters(
+                        @Param("keyword") String keyword,
+                        @Param("employerId") Long employerId,
+                        @Param("providerId") Long providerId,
+                        @Param("status") com.waad.tba.modules.claim.entity.ClaimStatus status,
+                        @Param("dateFrom") java.time.LocalDate dateFrom,
+                        @Param("dateTo") java.time.LocalDate dateTo,
+                        @Param("createdAtFrom") java.time.LocalDateTime createdAtFrom,
+                        @Param("createdAtTo") java.time.LocalDateTime createdAtTo,
+                        Pageable pageable);
+
+        /**
+         * Search deleted claims with reviewer provider isolation.
+         */
+        @EntityGraph(attributePaths = { "member", "member.benefitPolicy", "member.employer", "preAuthorization",
+                        "visit" })
+        @Query(value = "SELECT c FROM Claim c " +
+                        "WHERE c.active = false " +
+                        "AND c.providerId IN :providerIds " +
+                        "AND (:employerId IS NULL OR c.member.employer.id = :employerId) " +
+                        "AND (:status IS NULL OR c.status = :status) " +
+                        "AND (CAST(:dateFrom AS date) IS NULL OR c.serviceDate >= :dateFrom) " +
+                        "AND (CAST(:dateTo AS date) IS NULL OR c.serviceDate <= :dateTo) " +
+                        "AND (CAST(:createdAtFrom AS timestamp) IS NULL OR c.createdAt >= :createdAtFrom) " +
+                        "AND (CAST(:createdAtTo AS timestamp) IS NULL OR c.createdAt < :createdAtTo) " +
+                        "AND (LOWER(c.providerName) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%')) " +
+                        "OR LOWER(c.diagnosisDescription) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%')) " +
+                        "OR LOWER(c.member.fullName) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%')) " +
+                        "OR LOWER(c.member.civilId) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%')))", countQuery = "SELECT COUNT(c) FROM Claim c WHERE c.active = false AND c.providerId IN :providerIds AND (:employerId IS NULL OR c.member.employer.id = :employerId) AND (:status IS NULL OR c.status = :status) AND (CAST(:dateFrom AS date) IS NULL OR c.serviceDate >= :dateFrom) AND (CAST(:dateTo AS date) IS NULL OR c.serviceDate <= :dateTo) AND (CAST(:createdAtFrom AS timestamp) IS NULL OR c.createdAt >= :createdAtFrom) AND (CAST(:createdAtTo AS timestamp) IS NULL OR c.createdAt < :createdAtTo) AND (LOWER(c.providerName) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%')) OR LOWER(c.diagnosisDescription) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%')) OR LOWER(c.member.fullName) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%')) OR LOWER(c.member.civilId) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%')))" )
+        Page<Claim> searchPagedDeletedWithFiltersAndReviewerProviders(
+                        @Param("keyword") String keyword,
+                        @Param("providerIds") java.util.List<Long> providerIds,
+                        @Param("employerId") Long employerId,
                         @Param("status") com.waad.tba.modules.claim.entity.ClaimStatus status,
                         @Param("dateFrom") java.time.LocalDate dateFrom,
                         @Param("dateTo") java.time.LocalDate dateTo,
@@ -226,6 +285,24 @@ public interface ClaimRepository extends JpaRepository<Claim, Long> {
          */
         @Query("SELECT COUNT(c) FROM Claim c WHERE c.active = true AND c.status = :status")
         long countByStatus(@Param("status") com.waad.tba.modules.claim.entity.ClaimStatus status);
+
+        @Query("SELECT c FROM Claim c " +
+                        "WHERE c.active = true " +
+                        "AND c.status = :status " +
+                        "AND c.providerId IS NOT NULL " +
+                        "AND c.netProviderAmount IS NOT NULL " +
+                        "AND c.netProviderAmount > 0 " +
+                        "AND (:providerId IS NULL OR c.providerId = :providerId) " +
+                        "AND (:claimId IS NULL OR c.id = :claimId) " +
+                        "AND NOT EXISTS (" +
+                        "  SELECT 1 FROM AccountTransaction at " +
+                        "  WHERE at.referenceType = 'CLAIM_APPROVAL' AND at.referenceId = c.id" +
+                        ") " +
+                        "ORDER BY c.id ASC")
+        List<Claim> findApprovedClaimsMissingProviderCredit(
+                        @Param("status") ClaimStatus status,
+                        @Param("providerId") Long providerId,
+                        @Param("claimId") Long claimId);
 
         /**
          * Count claims by status list.

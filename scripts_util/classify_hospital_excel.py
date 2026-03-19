@@ -48,42 +48,41 @@ if not os.path.exists(source_file):
 
 CLASSIFICATION = [
     # كلمات مفتاحية                          تصنيف فرعي       تصنيف رئيسي
-    (['علاج طبيعي', 'جلسة علاج', 'تأهيل'],  'SUB-PHYSIO',    'ROOT-PHYSIO'),
+    (['تمريض منزلي', 'رعاية منزلية'],        'SUB-INPAT-HOME-NURSING', 'CAT-INPAT'),
+    (['مضاعفات حمل', 'نزف حمل', 'تسمم حمل'], 'SUB-INPAT-PREG-COMP',    'CAT-INPAT'),
+    (['ولادة', 'قيصرية', 'توليد', 'نفاس'],   'SUB-INPAT-DELIVERY',     'CAT-INPAT'),
+    (['إصابة عمل', 'إصابات عمل', 'حادث عمل'],'SUB-INPAT-WORK-INJ',    'CAT-INPAT'),
+    (['نفسي', 'طب نفسي', 'جلسة نفسية'],      'SUB-INPAT-PSYCH',        'CAT-INPAT'),
+    (['رنين', 'mri', 'ct', 'مقطعية'],        'SUB-OUTPAT-MRI',         'CAT-OUTPAT'),
+    (['علاج طبيعي', 'جلسة علاج', 'تأهيل'],   'SUB-OUTPAT-PHYSIO',      'CAT-OUTPAT'),
     (['تحاليل', 'تحليل', 'مختبر', 'بول',
       'دم', 'فيروس', 'هرمون', 'بكتيري',
-      'أنزيم', 'كريات', 'مزرعة', 'مسحة'],   'SUB-LAB',       'ROOT-OP'),
+      'أنزيم', 'كريات', 'مزرعة', 'مسحة'],    'SUB-OUTPAT-GENERAL',     'CAT-OUTPAT'),
     (['اشعة', 'أشعة', 'رنين', 'مقطعية',
       'إيكو', 'سونار', 'صوتية', 'تلفزيون',
-      'صورة', 'سينا'],                        'SUB-RAD',       'ROOT-OP'),
+      'صورة', 'سينا'],                        'SUB-OUTPAT-RAD',         'CAT-OUTPAT'),
     (['عيون', 'نظار', 'رمد', 'بصريات',
-      'قرنية', 'شبكية', 'عدسة'],              'SUB-VISION',    'ROOT-VIS'),
+      'قرنية', 'شبكية', 'عدسة'],              'SUB-OUTPAT-GLASSES',     'CAT-OUTPAT'),
     (['أسنان وقائي', 'خلع', 'حشو', 'تنظيف',
-      'لثة', 'جذر'],                          'SUB-DENT-REG',  'ROOT-DENT'),
+      'لثة', 'جذر'],                          'SUB-OUTPAT-DENTAL-ROUTINE', 'CAT-OUTPAT'),
     (['تركيبات', 'أسنان تجميلي', 'تقويم',
-      'زراعة', 'جسر', 'طاج', 'تبييض'],       'SUB-DENT-COS',  'ROOT-DENT'),
-    (['ولادة', 'قيصرية', 'حمل', 'توليد',
-      'الأم', 'نفاس'],                        'SUB-MATERNITY', 'ROOT-MAT'),
-    (['إنعاش', 'طوارئ', 'حالة حرجة'],        'SUB-EMERGENCY', 'ROOT-EMER'),
-    (['إسعاف'],                               'SUB-AMBULANCE', 'ROOT-EMER'),
+      'زراعة', 'جسر', 'طاج', 'تبييض'],       'SUB-OUTPAT-DENTAL-COSMETIC', 'CAT-OUTPAT'),
     (['عملية', 'جراحة', 'تخدير', 'استئصال',
-      'قطب', 'ربط', 'فتح', 'بتر'],           'SUB-SURGERY',   'ROOT-IP'),
+      'قطب', 'ربط', 'فتح', 'بتر'],           'SUB-INPAT-GENERAL',      'CAT-INPAT'),
     (['عناية مركزة', 'ICU', 'CCU',
-      'العناية الفائقة'],                      'SUB-ICU',       'ROOT-IP'),
+      'العناية الفائقة'],                      'SUB-INPAT-GENERAL',      'CAT-INPAT'),
     (['إقامة', 'إيواء', 'غرفة', 'سرير',
-      'رعاية', 'تمريض', 'مبيت'],             'SUB-STAY',      'ROOT-IP'),
+      'رعاية', 'تمريض', 'مبيت'],             'SUB-INPAT-GENERAL',      'CAT-INPAT'),
     (['دواء', 'حبة', 'شراب', 'علبة',
-      'أمبول', 'كبسول', 'محلول وريدي'],      'SUB-PHARMA',    'ROOT-OP'),
-    (['كلى', 'غسيل'],                         'SUB-DIALYSIS',  'ROOT-CHR'),
-    (['أورام', 'كيماوي', 'إشعاعي'],          'SUB-ONCOLOGY',  'ROOT-CHR'),
-    (['نفسي', 'طب نفسي', 'جلسة نفسية'],      'SUB-PSYCH',     'ROOT-OP'),
+      'أمبول', 'كبسول', 'محلول وريدي'],      'SUB-OUTPAT-DRUGS',       'CAT-OUTPAT'),
     (['كشف', 'استشارة', 'مراجعة',
-      'عيادة', 'زيارة'],                      'SUB-CONSULT',   'ROOT-OP'),
+      'عيادة', 'زيارة'],                      'SUB-OUTPAT-GENERAL',     'CAT-OUTPAT'),
     (['جبيرة', 'قسطرة', 'أنبوب', 'رباط',
-      'ضمادة', 'مستلزمات', 'جهاز'],          'SUB-SUPPLIES',  'ROOT-OTH'),
+      'ضمادة', 'مستلزمات', 'جهاز'],          'SUB-OUTPAT-DEVICES',     'CAT-OUTPAT'),
 ]
 
-DEFAULT_SUB  = 'SUB-SUPPLIES'
-DEFAULT_ROOT = 'ROOT-OTH'
+DEFAULT_SUB  = 'SUB-OUTPAT-GENERAL'
+DEFAULT_ROOT = 'CAT-OUTPAT'
 
 # ─────────────────────────────────────────────────────────────
 # 3. دالة التصنيف
