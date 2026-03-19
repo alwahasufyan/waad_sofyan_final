@@ -106,12 +106,23 @@ public class MemberExcelTemplateService {
                         .nameAr("القرابة")
                         .type(ColumnType.TEXT)
                         .required(false)
-                        .example("SON")
+                    .example("SO أو SON")
                         .description(
-                                "Dependent relationship (WIFE, HUSBAND, SON, DAUGHTER, FATHER, MOTHER, BROTHER, SISTER)")
-                        .descriptionAr("قرابة التابع (WIFE, HUSBAND, SON, DAUGHTER, FATHER, MOTHER, BROTHER, SISTER)")
+                        "Dependent relationship code. Supports full names (WIFE, SON, ...) and short codes (WF, SO, DA, FA, MO, HU, BR, SI)")
+                    .descriptionAr("كود قرابة التابع. يدعم الاسم الكامل (WIFE/SON/...) والاختصارات (WF, SO, DA, FA, MO, HU, BR, SI)")
                         .width(22)
                         .build(),
+
+                ExcelTemplateColumn.builder()
+                    .name("dep_seq")
+                    .nameAr("تسلسل التابع")
+                    .type(ColumnType.TEXT)
+                    .required(false)
+                    .example("01")
+                    .description("Optional dependent sequence. If provided, card number will be generated as {principal_card}-{relation}-{dep_seq}")
+                    .descriptionAr("رقم تسلسل التابع (اختياري). إذا تم إدخاله يُولد رقم البطاقة بصيغة {رقم الرئيسي}-{كود القرابة}-{التسلسل}")
+                    .width(18)
+                    .build(),
 
                 ExcelTemplateColumn.builder()
                         .name("card_number")
@@ -145,13 +156,13 @@ public class MemberExcelTemplateService {
                 .build();
 
         List<List<String>> relationshipData = Arrays.stream(Member.Relationship.values())
-                .map(r -> Arrays.asList(r.name(), relationshipAr(r)))
+            .map(r -> Arrays.asList(r.name(), relationshipAr(r), getShortRelationshipCode(r)))
                 .collect(Collectors.toList());
 
         ExcelLookupData relationshipsLookup = ExcelLookupData.builder()
                 .sheetName("Relationships")
                 .sheetNameAr("القرابة")
-                .headers(Arrays.asList("Code", "Arabic"))
+                .headers(Arrays.asList("Code", "Arabic", "ShortCode"))
                 .data(relationshipData)
                 .description("Valid dependent relationship values")
                 .descriptionAr("قيم القرابة المسموح بها للتابعين")
@@ -327,6 +338,9 @@ public class MemberExcelTemplateService {
                 "principal_card_number", "رقم بطاقة الرئيسي", "principal card", "parent card"));
         indices.put("relationship", parserService.findColumnIndex(headerRow,
                 "relationship", "القرابة", "rel type", "صلة القرابة"));
+        indices.put("dep_seq", parserService.findColumnIndex(headerRow,
+            "dep_seq", "dependent_sequence", "dependent seq", "seq",
+            "تسلسل التابع", "تسلسل", "رقم التابع"));
         indices.put("card_number", parserService.findColumnIndex(headerRow,
                 "card_number", "رقم البطاقة", "member card", "معرّف البطاقة"));
 
@@ -459,6 +473,7 @@ public class MemberExcelTemplateService {
         String employerName = getCellValue(row, columnIndices.get("employer"));
         String principalCardNumber = normalizeCardNumber(getCellValue(row, columnIndices.get("principal_card_number")));
         String relationshipValue = normalizeText(getCellValue(row, columnIndices.get("relationship")));
+        String dependentSequence = getCellValue(row, columnIndices.get("dep_seq"));
         String excelCardNumber = normalizeCardNumber(getCellValue(row, columnIndices.get("card_number")));
 
         boolean hasPrincipalCard = principalCardNumber != null && !principalCardNumber.isBlank();
@@ -583,12 +598,20 @@ public class MemberExcelTemplateService {
         Member member;
 
         if (dependentRow) {
+            String generatedDependentCard = null;
+            if (principal != null && relationship != null) {
+            generatedDependentCard = generateDependentCardNumber(
+                principal.getCardNumber(),
+                relationship,
+                dependentSequence);
+            }
+
             member = Member.builder()
                     .fullName(fullName.trim())
                     .employer(employer)
                     .parent(principal)
                     .relationship(relationship)
-                    .cardNumber(excelCardNumber)
+                .cardNumber(excelCardNumber != null && !excelCardNumber.isBlank() ? excelCardNumber : generatedDependentCard)
                     .status(MemberStatus.ACTIVE)
                     .build();
         } else {
@@ -609,6 +632,20 @@ public class MemberExcelTemplateService {
         }
 
         String normalized = value.trim().toUpperCase(Locale.ROOT);
+
+        // Support short relationship codes in Excel
+        switch (normalized) {
+            case "WF": return Member.Relationship.WIFE;
+            case "HU": return Member.Relationship.HUSBAND;
+            case "SO": return Member.Relationship.SON;
+            case "DA": return Member.Relationship.DAUGHTER;
+            case "FA": return Member.Relationship.FATHER;
+            case "MO": return Member.Relationship.MOTHER;
+            case "BR": return Member.Relationship.BROTHER;
+            case "SI": return Member.Relationship.SISTER;
+            default: break;
+        }
+
         try {
             return Member.Relationship.valueOf(normalized);
         } catch (IllegalArgumentException ignored) {
@@ -639,6 +676,53 @@ public class MemberExcelTemplateService {
             case BROTHER -> "أخ";
             case SISTER -> "أخت";
         };
+    }
+
+    private String getShortRelationshipCode(Member.Relationship relationship) {
+        return switch (relationship) {
+            case WIFE -> "WF";
+            case HUSBAND -> "HU";
+            case SON -> "SO";
+            case DAUGHTER -> "DA";
+            case FATHER -> "FA";
+            case MOTHER -> "MO";
+            case BROTHER -> "BR";
+            case SISTER -> "SI";
+        };
+    }
+
+    private String generateDependentCardNumber(String principalCardNumber, Member.Relationship relationship, String dependentSequenceRaw) {
+        if (principalCardNumber == null || principalCardNumber.isBlank() || relationship == null) {
+            return null;
+        }
+
+        String relationCode = getShortRelationshipCode(relationship);
+        String depSequence = normalizeDependentSequence(dependentSequenceRaw);
+
+        if (depSequence != null) {
+            return principalCardNumber + "-" + relationCode + "-" + depSequence;
+        }
+
+        // Backward-compatible fallback if dep_seq not provided
+        return principalCardNumber + "-" + relationCode + "-01";
+    }
+
+    private String normalizeDependentSequence(String rawValue) {
+        if (rawValue == null || rawValue.isBlank()) {
+            return null;
+        }
+
+        String cleaned = rawValue.trim();
+        if (!cleaned.matches("\\d+")) {
+            return null;
+        }
+
+        int seq = Integer.parseInt(cleaned);
+        if (seq <= 0) {
+            return null;
+        }
+
+        return String.format("%02d", seq);
     }
 
     private String normalizeMemberName(String fullName) {
