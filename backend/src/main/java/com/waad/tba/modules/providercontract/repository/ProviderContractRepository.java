@@ -5,6 +5,7 @@ import com.waad.tba.modules.providercontract.entity.ProviderContract.ContractSta
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -60,6 +61,14 @@ public interface ProviderContractRepository extends JpaRepository<ProviderContra
         * Find all contracts for a provider (paginated)
         */
        Page<ProviderContract> findByProviderIdAndActiveTrue(Long providerId, Pageable pageable);
+
+       long countByProviderIdAndActiveTrue(Long providerId);
+
+       List<ProviderContract> findByProviderId(Long providerId);
+
+       @Modifying
+       @Query("DELETE FROM ModernProviderContract c WHERE c.provider.id = :providerId")
+       int deleteByProviderId(@Param("providerId") Long providerId);
 
        /**
         * Find active contract for a provider (only one should exist)

@@ -336,6 +336,16 @@ public class ClaimService {
         }
 
         Claim claim = claimMapper.toEntity(dto, visit, provider, preAuth, claimBatch, medicalServiceMap);
+        LocalDate claimServiceDate = claim.getServiceDate();
+        LocalDate maxServiceDate = LocalDate.now();
+        LocalDate minServiceDate = maxServiceDate.minusYears(10);
+        if (claimServiceDate == null) {
+            throw new BusinessRuleException("تاريخ الخدمة مطلوب ولا يمكن أن يكون فارغاً");
+        }
+        if (claimServiceDate.isAfter(maxServiceDate) || claimServiceDate.isBefore(minServiceDate)) {
+            throw new BusinessRuleException("تاريخ الخدمة خارج النطاق المسموح (آخر 10 سنوات وحتى تاريخ اليوم)");
+        }
+
         ClaimStatus initialStatus = dto.getStatus() != null ? dto.getStatus() : ClaimStatus.DRAFT;
         claim.setStatus(initialStatus);
         Claim savedClaim = claimRepository.save(claim);

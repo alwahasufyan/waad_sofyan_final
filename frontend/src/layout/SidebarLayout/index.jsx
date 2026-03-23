@@ -496,7 +496,7 @@ export default function SidebarLayout() {
             {/* Scrollable Content Container */}
             <Box sx={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
               <Box sx={{ width: '100%', maxWidth: '100rem', mx: 'auto', px: { xs: 2, sm: 3 }, py: { xs: 1, sm: '0.75rem' }, flex: 1, display: 'flex', flexDirection: 'column' }}>
-                <PageErrorBoundary pageName="Dashboard Content">
+                <PageErrorBoundary pageName="محتوى لوحة المعلومات">
                   <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                     <Outlet />
                   </Box>
@@ -518,7 +518,7 @@ export default function SidebarLayout() {
                 width: '100%'
               }}
             >
-              Designed & Developed by TBA WAAD Team - 2026
+              تم التصميم والتطوير بواسطة فريق TBA WAAD - 2026
             </Box>
           </Box>
         </MainContent>

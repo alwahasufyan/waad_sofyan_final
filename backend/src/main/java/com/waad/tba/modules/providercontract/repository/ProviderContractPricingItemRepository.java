@@ -4,6 +4,7 @@ import com.waad.tba.modules.providercontract.entity.ProviderContractPricingItem;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -28,6 +29,10 @@ import java.util.Optional;
 @Repository
 public interface ProviderContractPricingItemRepository extends JpaRepository<ProviderContractPricingItem, Long> {
 
+       @Modifying
+       @Query("DELETE FROM ProviderContractPricingItem p WHERE p.contract.provider.id = :providerId")
+       int deleteAllByProviderId(@Param("providerId") Long providerId);
+
        // ═══════════════════════════════════════════════════════════════════════════
        // FIND BY CONTRACT
        // ═══════════════════════════════════════════════════════════════════════════
@@ -46,6 +51,11 @@ public interface ProviderContractPricingItemRepository extends JpaRepository<Pro
         * Count pricing items for a contract
         */
        long countByContractIdAndActiveTrue(Long contractId);
+
+       /**
+        * Count all pricing items for a contract (active and inactive)
+        */
+       long countByContractId(Long contractId);
 
        // ═══════════════════════════════════════════════════════════════════════════
        // FIND BY SERVICE

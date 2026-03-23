@@ -517,6 +517,42 @@ export const getFinancialSummary = async (memberId) => {
   }
 };
 
+/**
+ * Get paginated beneficiaries financial register.
+ * Expected row fields: fullName, cardNumber, annualLimit, usedAmount, remainingAmount.
+ *
+ * @param {Object} params - Query params
+ * @returns {Promise<Object>} Paginated register response
+ */
+export const getFinancialRegister = async (params = {}) => {
+  try {
+    const response = await api.get(`${UNIFIED_MEMBERS_BASE_URL}/financial-register`, { params });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching financial register:', error);
+    throw error;
+  }
+};
+
+/**
+ * Export beneficiaries financial register as Excel.
+ *
+ * @param {Object} params - Query params
+ * @returns {Promise<Blob>} Excel file blob
+ */
+export const exportFinancialRegisterExcel = async (params = {}) => {
+  try {
+    const response = await api.get(`${UNIFIED_MEMBERS_BASE_URL}/financial-register/export/excel`, {
+      params,
+      responseType: 'blob'
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error exporting financial register:', error);
+    throw error;
+  }
+};
+
 export default {
   createPrincipalMember,
   addDependent,
@@ -539,6 +575,8 @@ export default {
   uploadPhoto,
   deletePhoto,
   getFinancialSummary,
+  getFinancialRegister,
+  exportFinancialRegisterExcel,
   RELATIONSHIPS,
   GENDERS,
   MEMBER_STATUSES,

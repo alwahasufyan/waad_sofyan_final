@@ -1,5 +1,6 @@
 package com.waad.tba.modules.claim.mapper;
 
+import com.waad.tba.common.exception.BusinessRuleException;
 import com.waad.tba.modules.claim.dto.*;
 import com.waad.tba.modules.claim.entity.*;
 import com.waad.tba.modules.provider.entity.Provider;
@@ -67,12 +68,16 @@ public class ClaimMapper {
      */
     public Claim toEntity(ClaimCreateDto dto, Visit visit, Provider provider, PreAuthorization preAuth,
             ClaimBatch claimBatch, Map<Long, MedicalService> medicalServiceMap) {
+        LocalDate effectiveServiceDate = dto.getServiceDate() != null
+            ? dto.getServiceDate()
+            : (visit.getVisitDate() != null ? visit.getVisitDate() : LocalDate.now());
+
         Claim claim = Claim.builder()
                 .visit(visit)
                 .member(visit.getMember())
                 .providerId(provider.getId())
                 .providerName(provider.getName())
-                .serviceDate(dto.getServiceDate())
+            .serviceDate(effectiveServiceDate)
                 .diagnosisCode(dto.getDiagnosisCode())
                 .diagnosisDescription(dto.getDiagnosisDescription())
                 .doctorName(dto.getDoctorName())
@@ -147,7 +152,7 @@ public class ClaimMapper {
 
             if (codeToLookup != null) {
                 EffectivePriceResponseDto priceResponse = providerContractService.getEffectivePrice(
-                        provider.getId(), codeToLookup, dto.getServiceDate());
+                        provider.getId(), codeToLookup, effectiveServiceDate);
 
                 if (priceResponse.isHasContract() && priceResponse.getContractPrice() != null) {
                     resolvedUnitPrice = priceResponse.getContractPrice();
@@ -187,6 +192,16 @@ public class ClaimMapper {
                 log.info("⚠️ [MAPPER] No contract price found for '{}', using entered price: {}",
                         codeToLookup, enteredUnitPrice);
             }
+
+                if (resolvedUnitPrice == null || resolvedUnitPrice.compareTo(BigDecimal.ZERO) <= 0) {
+                String serviceRef = serviceCode != null ? serviceCode
+                    : (lineDto.getMedicalServiceId() != null
+                        ? String.valueOf(lineDto.getMedicalServiceId())
+                        : String.valueOf(lineDto.getPricingItemId()));
+                throw new BusinessRuleException(
+                    "لا يمكن إنشاء المطالبة: لا يوجد سعر تعاقدي صالح للخدمة " + serviceRef
+                        + ". يرجى التأكد من تفعيل تسعير العقد لهذه الخدمة.");
+                }
 
             // Resolve coverage snapshot
             Integer coveragePercentSnapshot = lineDto.getCoveragePercent();
@@ -309,6 +324,8 @@ public class ClaimMapper {
                     .totalPrice(lineApprovedBase.multiply(quantityBd))
                     .rejected(isRejected)
                     .rejectionReason(lineDto.getRejectionReason())
+                    .rejectionReasonCode(lineDto.getRejectionReasonCode())
+                    .reviewerNotes(lineDto.getReviewerNotes())
                     .refusedAmount(lineRefused)
                     .requestedUnitPrice(enteredUnitPrice)
                     .requestedQuantity(quantity)

@@ -6,6 +6,7 @@ import com.waad.tba.modules.benefitpolicy.entity.BenefitPolicy.BenefitPolicyStat
 import com.waad.tba.modules.benefitpolicy.entity.BenefitPolicyRule;
 import com.waad.tba.modules.benefitpolicy.repository.BenefitPolicyRepository;
 import com.waad.tba.modules.benefitpolicy.repository.BenefitPolicyRuleRepository;
+import com.waad.tba.modules.claim.entity.ClaimLine;
 import com.waad.tba.modules.claim.repository.ClaimRepository;
 import com.waad.tba.modules.member.entity.Member;
 import com.waad.tba.modules.member.repository.MemberRepository;
@@ -24,6 +25,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -150,6 +152,88 @@ class BenefitPolicyCoverageServiceTest {
         // Act & Assert
         assertThrows(BusinessRuleException.class, () -> 
             coverageService.validateAmountLimits(testMember, testPolicy, new BigDecimal("600.00"), LocalDate.now()));
+    }
+
+    @Test
+    @DisplayName("Should allow request exactly equal to remaining annual limit")
+    void validateAmountLimits_ExactRemaining_ShouldPass() {
+        // Arrange: annual limit 10,000 and used 9,500 => remaining 500
+        when(claimRepository.sumApprovedAmountByMemberAndYear(anyLong(), anyInt(), anyList()))
+                .thenReturn(new BigDecimal("9500.00"));
+
+        // Act & Assert
+        assertDoesNotThrow(() ->
+                coverageService.validateAmountLimits(testMember, testPolicy, new BigDecimal("500.00"), LocalDate.now()));
+    }
+
+    @Test
+    @DisplayName("Should throw when request exceeds remaining annual limit by small margin")
+    void validateAmountLimits_ExceededBySmallMargin_ShouldThrow() {
+        // Arrange: annual limit 10,000 and used 9,500 => remaining 500
+        when(claimRepository.sumApprovedAmountByMemberAndYear(anyLong(), anyInt(), anyList()))
+                .thenReturn(new BigDecimal("9500.00"));
+
+        // Act & Assert
+        assertThrows(BusinessRuleException.class, () ->
+                coverageService.validateAmountLimits(testMember, testPolicy, new BigDecimal("500.01"), LocalDate.now()));
+    }
+
+    @Test
+    @DisplayName("Should pass frequency validation when projected usage is within times limit")
+    void validateServiceFrequencyLimits_WithinLimit() {
+        // Arrange
+        BenefitPolicyRule serviceRule = BenefitPolicyRule.builder()
+                .id(11L)
+                .timesLimit(3)
+                .active(true)
+                .build();
+
+        ClaimLine line = ClaimLine.builder()
+                .medicalService(testService)
+                .serviceName(testService.getName())
+                .rejected(false)
+                .build();
+
+        when(ruleRepository.findBestRuleForService(eq(1L), eq(101L), any(), any(), any()))
+                .thenReturn(Optional.of(serviceRule));
+        when(claimRepository.countServiceUsageByMemberAndYear(eq(1L), eq(101L), anyInt(), anyList()))
+                .thenReturn(2L);
+
+        // Act & Assert
+        assertDoesNotThrow(() -> coverageService.validateServiceFrequencyLimits(
+                testMember,
+                testPolicy,
+                List.of(line),
+                LocalDate.now()));
+    }
+
+    @Test
+    @DisplayName("Should throw when projected usage exceeds times limit")
+    void validateServiceFrequencyLimits_Exceeded() {
+        // Arrange
+        BenefitPolicyRule serviceRule = BenefitPolicyRule.builder()
+                .id(12L)
+                .timesLimit(3)
+                .active(true)
+                .build();
+
+        ClaimLine line = ClaimLine.builder()
+                .medicalService(testService)
+                .serviceName(testService.getName())
+                .rejected(false)
+                .build();
+
+        when(ruleRepository.findBestRuleForService(eq(1L), eq(101L), any(), any(), any()))
+                .thenReturn(Optional.of(serviceRule));
+        when(claimRepository.countServiceUsageByMemberAndYear(eq(1L), eq(101L), anyInt(), anyList()))
+                .thenReturn(3L);
+
+        // Act & Assert
+        assertThrows(BusinessRuleException.class, () -> coverageService.validateServiceFrequencyLimits(
+                testMember,
+                testPolicy,
+                List.of(line),
+                LocalDate.now()));
     }
 
     @Test

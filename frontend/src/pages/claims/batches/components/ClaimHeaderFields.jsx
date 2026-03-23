@@ -28,11 +28,11 @@ export const ClaimHeaderFields = ({
     preAuthId,
     setPreAuthId,
     setPreAuthSearch,
-    complaint,
-    setComplaint,
     setIsDirty,
     financialSummary,
     loadingSummary,
+    showPreAuthSelector = true,
+    showCoverageContext = true,
     showFinancialSummary = true,
     readOnly = false,
     t
@@ -75,35 +75,37 @@ export const ClaimHeaderFields = ({
                             )}
                         />
                     </Box>
-                    <Box>
-                        <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500, display: 'block', mb: 0.5, fontSize: '0.75rem' }}>
-                            رقم الموافقة المسبقة (PA Selection)
-                        </Typography>
-                        <Autocomplete
-                            size="small"
-                            fullWidth
-                            options={preAuthResults?.items || []}
-                            loading={searchingPreAuth}
-                            disabled={readOnly}
-                            value={preAuthResults?.items?.find(pa => pa.id === parseInt(preAuthId)) || null}
-                            onInputChange={(_, v) => setPreAuthSearch(v)}
-                            onChange={(_, v) => {
-                                setPreAuthId(v?.id || '');
-                                setIsDirty(true);
-                            }}
-                            getOptionLabel={o => `[${o.preAuthNumber || o.id}] ${o.medicalServiceName || ''}`}
-                            renderInput={params => (
-                                <TextField {...params} variant="standard"
-                                    placeholder="ابحث برقم الموافقة..."
-                                    sx={inlineSx}
-                                />
-                            )}
-                            noOptionsText="لا توجد موافقات مسبقة"
-                        />
-                    </Box>
+                    {showPreAuthSelector && (
+                        <Box>
+                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500, display: 'block', mb: 0.5, fontSize: '0.75rem' }}>
+                                رقم الموافقة المسبقة (PA Selection)
+                            </Typography>
+                            <Autocomplete
+                                size="small"
+                                fullWidth
+                                options={preAuthResults?.items || []}
+                                loading={searchingPreAuth}
+                                disabled={readOnly}
+                                value={preAuthResults?.items?.find(pa => pa.id === parseInt(preAuthId)) || null}
+                                onInputChange={(_, v) => setPreAuthSearch(v)}
+                                onChange={(_, v) => {
+                                    setPreAuthId(v?.id || '');
+                                    setIsDirty(true);
+                                }}
+                                getOptionLabel={o => `[${o.preAuthNumber || o.id}] ${o.medicalServiceName || ''}`}
+                                renderInput={params => (
+                                    <TextField {...params} variant="standard"
+                                        placeholder="ابحث برقم الموافقة..."
+                                        sx={inlineSx}
+                                    />
+                                )}
+                                noOptionsText="لا توجد موافقات مسبقة"
+                            />
+                        </Box>
+                    )}
             </Stack>
 
-            {/* Column 2: Diagnosis & Complaint */}
+            {/* Column 2: Diagnosis */}
             <Stack spacing={2}>
                     <Box>
                         <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500, display: 'block', mb: 0.5, fontSize: '0.75rem' }}>
@@ -116,70 +118,62 @@ export const ClaimHeaderFields = ({
                             sx={inlineSx} 
                         />
                     </Box>
-                    <Box>
-                        <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500, display: 'block', mb: 0.5, fontSize: '0.75rem' }}>
-                            {t('claimEntry.complaint')}
-                        </Typography>
-                        <TextField fullWidth size="small" variant="standard" value={complaint}
-                            placeholder="الشكوى أو الملاحظات..."
-                            disabled={readOnly}
-                            onChange={e => { setComplaint(e.target.value); setIsDirty(true); }} 
-                            sx={inlineSx} 
-                        />
-                    </Box>
             </Stack>
 
             {/* Column 3: Coverage Context & Annual Summary */}
-            <Stack spacing={1.5}>
-                    <Box>
-                        <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500, display: 'block', mb: 0.5, fontSize: '0.75rem' }}>
-                            سياق التغطية الافتراضي
-                        </Typography>
-                        <Stack direction="row" spacing={1} alignItems="center">
-                            <FormControlLabel
-                                control={
-                                    <Checkbox
+            {(showCoverageContext || showFinancialSummary) && (
+                <Stack spacing={1.5}>
+                    {showCoverageContext && (
+                        <Box>
+                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500, display: 'block', mb: 0.5, fontSize: '0.75rem' }}>
+                                سياق التغطية الافتراضي
+                            </Typography>
+                            <Stack direction="row" spacing={1} alignItems="center">
+                                <FormControlLabel
+                                    control={
+                                        <Checkbox
+                                            size="small"
+                                            disabled={readOnly}
+                                            checked={primaryCategoryCode === 'CAT-OUTPAT'}
+                                            onChange={(e) => {
+                                                const checked = e.target.checked;
+                                                const newCode = checked ? 'CAT-OUTPAT' : '';
+                                                setPrimaryCategoryCode(newCode);
+                                                setManualCategoryEnabled(true);
+                                                setIsDirty(true);
+                                                refetchAllLinesCoverage(newCode, linesRef.current);
+                                            }}
+                                        />
+                                    }
+                                    label={<Typography sx={{ fontSize: '0.75rem', fontWeight: 500 }}>افتراضي: عيادات خارجية</Typography>}
+                                />
+                                {primaryCategoryCode !== 'CAT-OUTPAT' && (
+                                    <Autocomplete
                                         size="small"
+                                        sx={{ flexGrow: 1 }}
+                                        options={rootCategories?.filter(c => c.code !== 'CAT-OUTPAT') || []}
                                         disabled={readOnly}
-                                        checked={primaryCategoryCode === 'CAT-OUTPAT'}
-                                        onChange={(e) => {
-                                            const checked = e.target.checked;
-                                            const newCode = checked ? 'CAT-OUTPAT' : '';
+                                        getOptionLabel={(o) => o.name || o.nameAr || ''}
+                                        value={rootCategories?.find(c => c.code === primaryCategoryCode) || null}
+                                        onChange={(_, v) => {
+                                            const newCode = v?.code || '';
                                             setPrimaryCategoryCode(newCode);
-                                            setManualCategoryEnabled(true);
+                                            setManualCategoryEnabled(!!v);
                                             setIsDirty(true);
                                             refetchAllLinesCoverage(newCode, linesRef.current);
                                         }}
+                                        renderInput={(params) => (
+                                            <TextField {...params} variant="standard" placeholder="اختر التصنيف..."
+                                                sx={inlineSx} />
+                                        )}
                                     />
-                                }
-                                label={<Typography sx={{ fontSize: '0.75rem', fontWeight: 500 }}>افتراضي: عيادات خارجية</Typography>}
-                            />
-                            {primaryCategoryCode !== 'CAT-OUTPAT' && (
-                                <Autocomplete
-                                    size="small"
-                                    sx={{ flexGrow: 1 }}
-                                    options={rootCategories?.filter(c => c.code !== 'CAT-OUTPAT') || []}
-                                    disabled={readOnly}
-                                    getOptionLabel={(o) => o.name || o.nameAr || ''}
-                                    value={rootCategories?.find(c => c.code === primaryCategoryCode) || null}
-                                    onChange={(_, v) => {
-                                        const newCode = v?.code || '';
-                                        setPrimaryCategoryCode(newCode);
-                                        setManualCategoryEnabled(!!v);
-                                        setIsDirty(true);
-                                        refetchAllLinesCoverage(newCode, linesRef.current);
-                                    }}
-                                    renderInput={(params) => (
-                                        <TextField {...params} variant="standard" placeholder="اختر التصنيف..."
-                                            sx={inlineSx} />
-                                    )}
-                                />
-                            )}
-                        </Stack>
-                        <Typography variant="caption" sx={{ display: 'block', mt: 0.5, color: 'text.secondary', fontSize: '0.7rem' }}>
-                            يُستخدم فقط عندما تكون الخدمة غير مصنفة بوضوح أو عندما تختلف منافع الإيواء عن العيادات الخارجية.
-                        </Typography>
-                    </Box>
+                                )}
+                            </Stack>
+                            <Typography variant="caption" sx={{ display: 'block', mt: 0.5, color: 'text.secondary', fontSize: '0.7rem' }}>
+                                يُستخدم فقط عندما تكون الخدمة غير مصنفة بوضوح أو عندما تختلف منافع الإيواء عن العيادات الخارجية.
+                            </Typography>
+                        </Box>
+                    )}
 
                     {showFinancialSummary && (
                         <Box sx={{ 
@@ -215,7 +209,8 @@ export const ClaimHeaderFields = ({
                             )}
                         </Box>
                     )}
-            </Stack>
+                </Stack>
+            )}
         </Box>
     );
 };

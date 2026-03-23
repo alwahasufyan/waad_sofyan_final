@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -41,6 +42,8 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class MemberExcelTemplateService {
+
+    private static final String DEFAULT_NATIONALITY_AR = "ليبية";
 
     private final ExcelTemplateService templateService;
     private final ExcelParserService parserService;
@@ -80,6 +83,17 @@ public class MemberExcelTemplateService {
                         .build(),
 
                 ExcelTemplateColumn.builder()
+                        .name("member_type")
+                        .nameAr("نوع العضو")
+                        .type(ColumnType.TEXT)
+                        .required(false)
+                        .example("PRINCIPAL")
+                        .description("Member type: PRINCIPAL or DEPENDENT")
+                        .descriptionAr("نوع العضو: PRINCIPAL أو DEPENDENT")
+                        .width(18)
+                        .build(),
+
+                    ExcelTemplateColumn.builder()
                         .name("employer")
                         .nameAr("جهة العمل")
                         .type(ColumnType.TEXT)
@@ -99,6 +113,17 @@ public class MemberExcelTemplateService {
                         .description("If provided with relationship, row is imported as a dependent")
                         .descriptionAr("عند إدخاله مع القرابة يتم استيراد الصف كتابع")
                         .width(20)
+                        .build(),
+
+                    ExcelTemplateColumn.builder()
+                        .name("principal_barcode")
+                        .nameAr("باركود الرئيسي")
+                        .type(ColumnType.TEXT)
+                        .required(false)
+                        .example("WAHA-2026-000911")
+                        .description("Optional fallback: parent principal barcode")
+                        .descriptionAr("مرجع بديل: باركود العضو الرئيسي")
+                        .width(22)
                         .build(),
 
                 ExcelTemplateColumn.builder()
@@ -133,6 +158,116 @@ public class MemberExcelTemplateService {
                         .description("Member card number (optional, system will generate if empty)")
                         .descriptionAr("رقم بطاقة العضو (اختياري، سيقوم النظام بالتوليد إذا كان فارغاً)")
                         .width(20)
+                        .build(),
+
+                    ExcelTemplateColumn.builder()
+                        .name("barcode")
+                        .nameAr("الباركود")
+                        .type(ColumnType.TEXT)
+                        .required(false)
+                        .example("WAHA-2026-000911")
+                        .description("Current member barcode (optional for import)")
+                        .descriptionAr("باركود العضو الحالي (اختياري في الاستيراد)")
+                        .width(20)
+                        .build(),
+
+                    ExcelTemplateColumn.builder()
+                        .name("national_number")
+                        .nameAr("الرقم الوطني")
+                        .type(ColumnType.TEXT)
+                        .required(false)
+                        .example("119900112233")
+                        .description("National number / civil ID")
+                        .descriptionAr("الرقم الوطني / المدني")
+                        .width(20)
+                        .build(),
+
+                    ExcelTemplateColumn.builder()
+                        .name("employee_number")
+                        .nameAr("رقم الموظف")
+                        .type(ColumnType.TEXT)
+                        .required(false)
+                        .example("20364648")
+                        .description("Employee number")
+                        .descriptionAr("رقم الموظف")
+                        .width(20)
+                        .build(),
+
+                    ExcelTemplateColumn.builder()
+                        .name("birth_date")
+                        .nameAr("تاريخ الميلاد")
+                        .type(ColumnType.TEXT)
+                        .required(false)
+                        .example("1990-12-31")
+                        .description("Birth date in yyyy-MM-dd")
+                        .descriptionAr("تاريخ الميلاد بصيغة yyyy-MM-dd")
+                        .width(16)
+                        .build(),
+
+                    ExcelTemplateColumn.builder()
+                        .name("gender")
+                        .nameAr("الجنس")
+                        .type(ColumnType.TEXT)
+                        .required(false)
+                        .example("MALE")
+                        .description("Gender: MALE or FEMALE")
+                        .descriptionAr("الجنس: MALE أو FEMALE")
+                        .width(14)
+                        .build(),
+
+                    ExcelTemplateColumn.builder()
+                        .name("phone")
+                        .nameAr("الهاتف")
+                        .type(ColumnType.TEXT)
+                        .required(false)
+                        .example("0912345678")
+                        .description("Phone number")
+                        .descriptionAr("رقم الهاتف")
+                        .width(16)
+                        .build(),
+
+                    ExcelTemplateColumn.builder()
+                        .name("email")
+                        .nameAr("البريد")
+                        .type(ColumnType.TEXT)
+                        .required(false)
+                        .example("member@example.com")
+                        .description("Email address")
+                        .descriptionAr("البريد الإلكتروني")
+                        .width(24)
+                        .build(),
+
+                    ExcelTemplateColumn.builder()
+                        .name("status")
+                        .nameAr("الحالة")
+                        .type(ColumnType.TEXT)
+                        .required(false)
+                        .example("ACTIVE")
+                        .description("Status, default ACTIVE")
+                        .descriptionAr("الحالة، الافتراضي ACTIVE")
+                        .width(14)
+                        .build(),
+
+                    ExcelTemplateColumn.builder()
+                        .name("nationality")
+                        .nameAr("الجنسية")
+                        .type(ColumnType.TEXT)
+                        .required(false)
+                        .example("ليبية")
+                        .description("Nationality, default Libyan when empty")
+                        .descriptionAr("الجنسية، الافتراضي ليبية عند الفراغ")
+                        .width(16)
+                        .build(),
+
+                    ExcelTemplateColumn.builder()
+                        .name("deleted")
+                        .nameAr("محذوف")
+                        .type(ColumnType.TEXT)
+                        .required(false)
+                        .example("Active")
+                        .description("Ignore for import; used for exported data compatibility")
+                        .descriptionAr("يتجاهل في الاستيراد؛ موجود للتوافق مع ملف التصدير")
+                        .width(14)
                         .build());
     }
 
@@ -227,10 +362,52 @@ public class MemberExcelTemplateService {
                 }
 
                 try {
+                    String sourceCardNumber = normalizeCardNumber(getCellValue(row, columnIndices.get("card_number")));
+
                     Member member = parseAndCreateMember(row, rowNum, columnIndices, employerLookup,
                             importedPrincipalsCache, errors);
 
                     if (member != null) {
+                        Optional<Member> existingByCard = Optional.empty();
+                        if (sourceCardNumber != null && !sourceCardNumber.isBlank()) {
+                            existingByCard = memberRepository.findByCardNumber(sourceCardNumber);
+                        }
+
+                        // UPDATE FLOW: when row refers to an existing member card, update that member
+                        if (existingByCard.isPresent()) {
+                            Member existing = existingByCard.get();
+
+                            // Guard against card-number collision when card changes on conversion
+                            if (member.getCardNumber() != null && !member.getCardNumber().isBlank()
+                                    && !member.getCardNumber().equalsIgnoreCase(existing.getCardNumber())
+                                    && memberRepository.existsByCardNumberAndIdNot(member.getCardNumber(), existing.getId())) {
+                                summary.setFailed(summary.getFailed() + 1);
+                                errors.add(ImportError.builder()
+                                        .rowNumber(rowNum - 1)
+                                        .errorType(ErrorType.DUPLICATE)
+                                        .columnName("card_number")
+                                        .messageAr("رقم البطاقة مكرر: " + member.getCardNumber())
+                                        .messageEn("Duplicate card number: " + member.getCardNumber())
+                                        .build());
+                                continue;
+                            }
+
+                            applyImportedMember(existing, member);
+                            memberBatch.add(existing);
+                            summary.setUpdated(summary.getUpdated() + 1);
+
+                            if (existing.isPrincipal() && existing.getCardNumber() != null) {
+                                importedPrincipalsCache.put(existing.getCardNumber(), existing);
+                            }
+
+                            if (memberBatch.size() >= BATCH_SIZE) {
+                                memberRepository.saveAll(memberBatch);
+                                memberBatch.clear();
+                                log.info("[MemberImport] Batch saved {} members", BATCH_SIZE);
+                            }
+                            continue;
+                        }
+
                         String fullNameLower = member.getFullName().trim().toLowerCase();
                         Long employerId = member.getEmployer().getId();
                         String duplicateKey = fullNameLower + "::" + employerId;
@@ -303,17 +480,17 @@ public class MemberExcelTemplateService {
                 log.info("[MemberImport] Final batch saved {} members", memberBatch.size());
             }
 
-            String messageAr = String.format("تم إنشاء %d عضو، تم تخطي %d، فشل %d",
-                    summary.getCreated(), summary.getSkipped(), summary.getRejected() + summary.getFailed());
-            String messageEn = String.format("Created %d members, skipped %d, failed %d",
-                    summary.getCreated(), summary.getSkipped(), summary.getRejected() + summary.getFailed());
+                String messageAr = String.format("تم إنشاء %d عضو، تحديث %d، تم تخطي %d، فشل %d",
+                    summary.getCreated(), summary.getUpdated(), summary.getSkipped(), summary.getRejected() + summary.getFailed());
+                String messageEn = String.format("Created %d members, updated %d, skipped %d, failed %d",
+                    summary.getCreated(), summary.getUpdated(), summary.getSkipped(), summary.getRejected() + summary.getFailed());
 
             log.info("[MemberImport] Import completed: {}", messageEn);
 
             return ExcelImportResult.builder()
                     .summary(summary)
                     .errors(errors)
-                    .success(summary.getCreated() > 0)
+                    .success(summary.getCreated() > 0 || summary.getUpdated() > 0)
                     .messageAr(messageAr)
                     .messageEn(messageEn)
                     .build();
@@ -336,11 +513,29 @@ public class MemberExcelTemplateService {
                 "employer", "جهة العمل", "emp name", "company"));
         indices.put("principal_card_number", parserService.findColumnIndex(headerRow,
                 "principal_card_number", "رقم بطاقة الرئيسي", "principal card", "parent card"));
+        indices.put("principal_barcode", parserService.findColumnIndex(headerRow,
+            "principal_barcode", "باركود الرئيسي", "principal barcode", "parent barcode"));
         indices.put("relationship", parserService.findColumnIndex(headerRow,
                 "relationship", "القرابة", "rel type", "صلة القرابة"));
+        indices.put("member_type", parserService.findColumnIndex(headerRow,
+            "member_type", "نوع العضو", "type", "member type"));
         indices.put("dep_seq", parserService.findColumnIndex(headerRow,
             "dep_seq", "dependent_sequence", "dependent seq", "seq",
             "تسلسل التابع", "تسلسل", "رقم التابع"));
+        indices.put("nationality", parserService.findColumnIndex(headerRow,
+            "nationality", "الجنسية"));
+        indices.put("national_number", parserService.findColumnIndex(headerRow,
+            "national_number", "national id", "civil id", "الرقم الوطني"));
+        indices.put("employee_number", parserService.findColumnIndex(headerRow,
+            "employee_number", "employee no", "رقم الموظف"));
+        indices.put("birth_date", parserService.findColumnIndex(headerRow,
+            "birth_date", "تاريخ الميلاد"));
+        indices.put("gender", parserService.findColumnIndex(headerRow,
+            "gender", "الجنس"));
+        indices.put("phone", parserService.findColumnIndex(headerRow,
+            "phone", "الهاتف"));
+        indices.put("email", parserService.findColumnIndex(headerRow,
+            "email", "البريد"));
         indices.put("card_number", parserService.findColumnIndex(headerRow,
                 "card_number", "رقم البطاقة", "member card", "معرّف البطاقة"));
 
@@ -472,11 +667,21 @@ public class MemberExcelTemplateService {
         String fullName = normalizeMemberName(getCellValue(row, columnIndices.get("full_name")));
         String employerName = getCellValue(row, columnIndices.get("employer"));
         String principalCardNumber = normalizeCardNumber(getCellValue(row, columnIndices.get("principal_card_number")));
+        String principalBarcode = normalizeCardNumber(getCellValue(row, columnIndices.get("principal_barcode")));
+        String memberTypeValue = normalizeText(getCellValue(row, columnIndices.get("member_type")));
         String relationshipValue = normalizeText(getCellValue(row, columnIndices.get("relationship")));
         String dependentSequence = getCellValue(row, columnIndices.get("dep_seq"));
         String excelCardNumber = normalizeCardNumber(getCellValue(row, columnIndices.get("card_number")));
+        String nationality = getCellValue(row, columnIndices.get("nationality"));
+        String nationalNumber = getCellValue(row, columnIndices.get("national_number"));
+        String employeeNumber = getCellValue(row, columnIndices.get("employee_number"));
+        String birthDateStr = getCellValue(row, columnIndices.get("birth_date"));
+        String genderStr = getCellValue(row, columnIndices.get("gender"));
+        String phone = getCellValue(row, columnIndices.get("phone"));
+        String email = getCellValue(row, columnIndices.get("email"));
 
         boolean hasPrincipalCard = principalCardNumber != null && !principalCardNumber.isBlank();
+        boolean hasPrincipalBarcode = principalBarcode != null && !principalBarcode.isBlank();
         boolean hasRelationship = relationshipValue != null && !relationshipValue.isBlank();
         boolean hasEmployerName = employerName != null && !employerName.isBlank();
 
@@ -490,7 +695,11 @@ public class MemberExcelTemplateService {
         // 3. OR it lacks an employer name (Principals in this system MUST belong to an
         // employer)
 
-        boolean dependentRow = hasRelationship || hasPrincipalCard || !hasEmployerName;
+        boolean explicitDependentType = isDependentType(memberTypeValue);
+        boolean explicitPrincipalType = isPrincipalType(memberTypeValue);
+
+        boolean dependentRow = explicitDependentType
+            || (!explicitPrincipalType && (hasRelationship || hasPrincipalCard || hasPrincipalBarcode || !hasEmployerName));
 
         // If it's a dependent but lacks a relationship, default to a placeholder or
         // fail
@@ -517,9 +726,9 @@ public class MemberExcelTemplateService {
         Member.Relationship relationship = null; // Moved this declaration here to be in scope for dependentRow logic
 
         if (dependentRow) {
-            if (!hasPrincipalCard) {
+            if (!hasPrincipalCard && !hasPrincipalBarcode) {
                 errors.add(createError(rowNum, ErrorType.MISSING_REQUIRED, "principal_card_number",
-                        "رقم بطاقة الرئيسي مطلوب لإضافة تابع", "Principal card number is required for dependent rows",
+                        "رقم بطاقة أو باركود الرئيسي مطلوب لإضافة تابع", "Principal card number or barcode is required for dependent rows",
                         principalCardNumber, fullName));
                 hasErrors = true;
             }
@@ -545,21 +754,30 @@ public class MemberExcelTemplateService {
         Member principal = null;
 
         if (dependentRow) {
-            if (hasPrincipalCard) {
-                // Try session cache first
-                principal = sessionPrincipals.get(principalCardNumber);
+            if (hasPrincipalCard || hasPrincipalBarcode) {
+                if (hasPrincipalCard) {
+                    // Try session cache first
+                    principal = sessionPrincipals.get(principalCardNumber);
 
-                // Then try DB
-                if (principal == null) {
-                    principal = memberRepository.findByCardNumber(principalCardNumber)
+                    // Then try DB by card
+                    if (principal == null) {
+                        principal = memberRepository.findByCardNumber(principalCardNumber)
+                                .orElse(null);
+                    }
+                }
+
+                // Fallback lookup by barcode
+                if (principal == null && hasPrincipalBarcode) {
+                    principal = memberRepository.findByBarcode(principalBarcode)
                             .orElse(null);
                 }
 
                 if (principal == null || !principal.isPrincipal() || !Boolean.TRUE.equals(principal.getActive())) {
+                    String principalRef = hasPrincipalCard ? principalCardNumber : principalBarcode;
                     errors.add(createError(rowNum, ErrorType.LOOKUP_FAILED, "principal_card_number",
-                            "لم يتم العثور على عضو رئيسي صالح برقم البطاقة: " + principalCardNumber,
-                            "Valid principal not found by card number: " + principalCardNumber,
-                            principalCardNumber, fullName));
+                            "لم يتم العثور على عضو رئيسي صالح بالمرجع: " + principalRef,
+                            "Valid principal not found by reference: " + principalRef,
+                            principalRef, fullName));
                     hasErrors = true;
                 }
             }
@@ -611,7 +829,7 @@ public class MemberExcelTemplateService {
                     .employer(employer)
                     .parent(principal)
                     .relationship(relationship)
-                .cardNumber(excelCardNumber != null && !excelCardNumber.isBlank() ? excelCardNumber : generatedDependentCard)
+                    .cardNumber(generatedDependentCard != null && !generatedDependentCard.isBlank() ? generatedDependentCard : excelCardNumber)
                     .status(MemberStatus.ACTIVE)
                     .build();
         } else {
@@ -623,7 +841,97 @@ public class MemberExcelTemplateService {
                     .build();
         }
 
+        // Common optional data mappings from export/import unified template
+        String normalizedNationality = (nationality == null || nationality.isBlank()) ? DEFAULT_NATIONALITY_AR : nationality.trim();
+        member.setNationality(normalizedNationality);
+
+        if (nationalNumber != null && !nationalNumber.isBlank()) {
+            member.setNationalNumber(nationalNumber.trim());
+        }
+        if (employeeNumber != null && !employeeNumber.isBlank()) {
+            member.setEmployeeNumber(employeeNumber.trim());
+        }
+        if (birthDateStr != null && !birthDateStr.isBlank()) {
+            LocalDate birthDate = parseDate(birthDateStr);
+            if (birthDate != null) {
+                member.setBirthDate(birthDate);
+            }
+        }
+        if (genderStr != null && !genderStr.isBlank()) {
+            Member.Gender gender = parseGender(genderStr);
+            if (gender != null) {
+                member.setGender(gender);
+            }
+        }
+        if (phone != null && !phone.isBlank()) {
+            member.setPhone(phone.trim());
+        }
+        if (email != null && !email.isBlank()) {
+            member.setEmail(email.trim());
+        }
+
         return member;
+    }
+
+    private boolean isDependentType(String typeValue) {
+        if (typeValue == null || typeValue.isBlank()) {
+            return false;
+        }
+        String normalized = typeValue.trim().toLowerCase(Locale.ROOT);
+        return normalized.contains("dependent") || normalized.contains("تابع");
+    }
+
+    private boolean isPrincipalType(String typeValue) {
+        if (typeValue == null || typeValue.isBlank()) {
+            return false;
+        }
+        String normalized = typeValue.trim().toLowerCase(Locale.ROOT);
+        return normalized.contains("principal") || normalized.contains("رئيسي");
+    }
+
+    private Member.Gender parseGender(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+
+        String normalized = value.trim().toLowerCase(Locale.ROOT);
+        if (normalized.contains("male") || normalized.contains("ذكر") || normalized.equals("m")) {
+            return Member.Gender.MALE;
+        }
+        if (normalized.contains("female") || normalized.contains("انثى") || normalized.contains("أنثى") || normalized.equals("f")) {
+            return Member.Gender.FEMALE;
+        }
+        return null;
+    }
+
+    private LocalDate parseDate(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+
+        String trimmed = value.trim();
+        try {
+            return LocalDate.parse(trimmed);
+        } catch (Exception ignored) {
+            // Fallback for common day/month/year formats from Excel exports.
+        }
+
+        try {
+            String[] parts = trimmed.split("[/\\-]");
+            if (parts.length == 3) {
+                int day = Integer.parseInt(parts[0]);
+                int month = Integer.parseInt(parts[1]);
+                int year = Integer.parseInt(parts[2]);
+                if (year < 100) {
+                    year += 2000;
+                }
+                return LocalDate.of(year, month, day);
+            }
+        } catch (Exception ignored) {
+            // Keep null when value cannot be parsed.
+        }
+
+        return null;
     }
 
     private Member.Relationship parseRelationship(String value) {
@@ -676,6 +984,32 @@ public class MemberExcelTemplateService {
             case BROTHER -> "أخ";
             case SISTER -> "أخت";
         };
+    }
+
+    private void applyImportedMember(Member target, Member source) {
+        target.setFullName(source.getFullName());
+        target.setEmployer(source.getEmployer());
+        target.setParent(source.getParent());
+        target.setRelationship(source.getRelationship());
+        target.setCardNumber(source.getCardNumber());
+        target.setNationalNumber(source.getNationalNumber());
+        target.setEmployeeNumber(source.getEmployeeNumber());
+        target.setBirthDate(source.getBirthDate());
+        target.setGender(source.getGender());
+        target.setPhone(source.getPhone());
+        target.setEmail(source.getEmail());
+        target.setNationality(source.getNationality());
+        target.setStatus(source.getStatus());
+        target.setCardStatus(source.getCardStatus());
+        target.setActive(source.getActive());
+
+        if (source.isDependent()) {
+            // Dependents must not keep barcode
+            target.setBarcode(null);
+        } else if (target.getBarcode() == null || target.getBarcode().isBlank()) {
+            // Principal requires barcode
+            target.setBarcode(barcodeGeneratorService.generateUniqueBarcodeForPrincipal());
+        }
     }
 
     private String getShortRelationshipCode(Member.Relationship relationship) {

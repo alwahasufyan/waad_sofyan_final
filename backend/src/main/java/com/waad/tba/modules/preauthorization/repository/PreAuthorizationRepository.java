@@ -81,6 +81,17 @@ public interface PreAuthorizationRepository extends JpaRepository<PreAuthorizati
        List<PreAuthorization> findByProviderIdAndActiveTrue(Long providerId);
 
        /**
+        * Count pre-authorizations by provider (active records)
+        */
+       long countByProviderIdAndActiveTrue(Long providerId);
+
+       /**
+        * Count pre-authorizations by provider (all records)
+        */
+       @Query("SELECT COUNT(pa) FROM PreAuthorization pa WHERE pa.providerId = :providerId")
+       long countAllByProviderId(@Param("providerId") Long providerId);
+
+       /**
         * Find pre-authorizations by provider and status
         */
        @EntityGraph(attributePaths = { "visit", "medicalService" })

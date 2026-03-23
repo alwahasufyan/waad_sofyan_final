@@ -108,8 +108,22 @@ const UsersList = () => {
   const roleFilter = searchParams.get('role');
 
   useEffect(() => {
+    if (roleFilter === 'PROVIDER_STAFF') {
+      navigate('/providers', { replace: true });
+      openSnackbar({
+        open: true,
+        message: 'تم إخفاء واجهة إدارة حسابات مقدمي الخدمة. استخدم صفحة مقدمي الخدمات.',
+        variant: 'alert',
+        alert: { color: 'info' }
+      });
+      return;
+    }
     fetchUsers();
   }, [page, rowsPerPage, roleFilter]);
+
+  if (roleFilter === 'PROVIDER_STAFF') {
+    return null;
+  }
 
   const fetchUsers = async () => {
     setLoading(true);

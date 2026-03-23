@@ -242,6 +242,8 @@ public class ClaimReviewService {
             if (member.getBenefitPolicy() != null) {
                 benefitPolicyCoverageService.validateAmountLimits(member, member.getBenefitPolicy(), approvedAmount,
                         serviceDate);
+                benefitPolicyCoverageService.validateServiceFrequencyLimits(member, member.getBenefitPolicy(),
+                    claim.getLines(), serviceDate);
             }
 
             claim.setApprovedAmount(approvedAmount);

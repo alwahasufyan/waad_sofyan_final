@@ -7,18 +7,26 @@
 
 import { useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Box, Chip, IconButton, Stack, Tooltip, Typography } from '@mui/material';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import EditIcon from '@mui/icons-material/Edit';
 import DescriptionIcon from '@mui/icons-material/Description';
+import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 
 import MainCard from 'components/MainCard';
 import UnifiedPageHeader from 'components/UnifiedPageHeader';
 import { UnifiedMedicalTable } from 'components/common';
 import TableErrorBoundary from 'components/TableErrorBoundary';
 import useTableState from 'hooks/useTableState';
-import { getProviderContracts, CONTRACT_STATUS_CONFIG, PRICING_MODEL_CONFIG } from 'services/api/provider-contracts.service';
+import {
+  getProviderContracts,
+  CONTRACT_STATUS_CONFIG,
+  PRICING_MODEL_CONFIG,
+  getContractPricingStats,
+  hardDeleteProviderContract
+} from 'services/api/provider-contracts.service';
+import { openSnackbar } from 'api/snackbar';
 
 const QUERY_KEY = 'provider-contracts';
 const MODULE_NAME = 'provider-contracts';
@@ -38,6 +46,7 @@ const formatDate = (dateStr) => {
 
 const ProviderContractsList = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const tableState = useTableState({
     initialPageSize: 20,
@@ -68,6 +77,58 @@ const ProviderContractsList = () => {
       navigate(`/provider-contracts/${id}`);
     },
     [navigate]
+  );
+
+  const handleHardDelete = useCallback(
+    async (contract) => {
+      const contractId = contract?.id;
+      if (!contractId) return;
+
+      if (contract?.status === 'ACTIVE') {
+        openSnackbar({
+          open: true,
+          message: 'لا يمكن الحذف النهائي لعقد نشط. قم بإيقافه أو إنهائه أولاً.',
+          variant: 'alert',
+          alert: { color: 'warning' }
+        });
+        return;
+      }
+
+      try {
+        const stats = await getContractPricingStats(contractId);
+        const totalItems = Number(stats?.totalItems ?? 0);
+
+        if (totalItems > 0) {
+          openSnackbar({
+            open: true,
+            message: 'لا يمكن الحذف النهائي: العقد يحتوي على قائمة أسعار.',
+            variant: 'alert',
+            alert: { color: 'error' }
+          });
+          return;
+        }
+
+        const confirmed = window.confirm(`تأكيد الحذف النهائي للعقد ${contract.contractCode || contractId}؟`);
+        if (!confirmed) return;
+
+        await hardDeleteProviderContract(contractId);
+        openSnackbar({
+          open: true,
+          message: 'تم حذف العقد نهائياً بنجاح',
+          variant: 'alert',
+          alert: { color: 'success' }
+        });
+        queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
+      } catch (error) {
+        openSnackbar({
+          open: true,
+          message: error?.response?.data?.message || 'تعذر الحذف النهائي للعقد',
+          variant: 'alert',
+          alert: { color: 'error' }
+        });
+      }
+    },
+    [queryClient]
   );
 
   const { data, isLoading } = useQuery({
@@ -217,6 +278,19 @@ const ProviderContractsList = () => {
                     <EditIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
+
+                <Tooltip title="حذف نهائي (إذا لا توجد قائمة أسعار)">
+                  <span>
+                    <IconButton
+                      size="small"
+                      color="error"
+                      onClick={() => handleHardDelete(contract)}
+                      disabled={contract.status === 'ACTIVE'}
+                    >
+                      <DeleteForeverIcon fontSize="small" />
+                    </IconButton>
+                  </span>
+                </Tooltip>
                 
             </Stack>
           );
@@ -225,7 +299,7 @@ const ProviderContractsList = () => {
           return null;
       }
     },
-    [handleNavigateView, handleNavigateEdit]
+    [handleNavigateView, handleNavigateEdit, handleHardDelete]
   );
 
   return (

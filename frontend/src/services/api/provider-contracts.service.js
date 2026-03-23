@@ -247,6 +247,17 @@ export const deleteProviderContract = async (id) => {
   return unwrap(response);
 };
 
+/**
+ * Hard delete provider contract (only when no pricing items exist)
+ * Endpoint: DELETE /api/provider-contracts/{id}/hard
+ * @param {number} id - Contract ID
+ * @returns {Promise<void>}
+ */
+export const hardDeleteProviderContract = async (id) => {
+  const response = await axiosClient.delete(`${BASE_URL}/${id}/hard`);
+  return unwrap(response);
+};
+
 // ═══════════════════════════════════════════════════════════════════════════
 // LIFECYCLE OPERATIONS
 // ═══════════════════════════════════════════════════════════════════════════
@@ -553,6 +564,7 @@ const providerContractsService = {
   createProviderContract,
   updateProviderContract,
   deleteProviderContract,
+  hardDeleteProviderContract,
   activateContract,
   suspendContract,
   terminateContract,

@@ -6,6 +6,7 @@ import com.waad.tba.modules.member.dto.DependentMemberDto;
 import com.waad.tba.modules.member.dto.FamilyEligibilityResponseDto;
 import com.waad.tba.modules.member.dto.MemberCreateDto;
 import com.waad.tba.modules.member.dto.MemberFinancialSummaryDto;
+import com.waad.tba.modules.member.dto.MemberFinancialRegisterRowDto;
 import com.waad.tba.modules.member.dto.MemberUpdateDto;
 import com.waad.tba.modules.member.dto.MemberViewDto;
 import com.waad.tba.modules.member.service.MemberFinancialSummaryService;
@@ -29,6 +30,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -432,7 +434,9 @@ public class UnifiedMemberController {
             @RequestParam(name = "direction", defaultValue = "DESC") String direction,
             @RequestParam(name = "employerId", required = false) Long employerId,
             @RequestParam(name = "status", required = false) String status,
-            @RequestParam(name = "type", required = false) String type) {
+            @RequestParam(name = "type", required = false) String type,
+            @RequestParam(name = "startDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(name = "endDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
 
         log.info("Retrieving all Members: page={}, size={}, employerId={}, status={}, type={}",
                 page, size, employerId, status, type);
@@ -441,7 +445,7 @@ public class UnifiedMemberController {
         Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sort));
 
         Page<MemberViewDto> members = unifiedMemberService.getAllMembers(
-                pageable, employerId, status, type);
+                pageable, employerId, status, type, startDate, endDate);
 
         log.info("Members retrieved: totalElements={}, totalPages={}",
                 members.getTotalElements(), members.getTotalPages());
@@ -512,6 +516,8 @@ public class UnifiedMemberController {
             @RequestParam(name = "benefitPolicyId", required = false) Long benefitPolicyId,
             @RequestParam(name = "status", required = false) String status,
             @RequestParam(name = "type", required = false) String type,
+            @RequestParam(name = "startDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(name = "endDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam(name = "deleted", required = false, defaultValue = "false") boolean deleted,
             @RequestParam(name = "page", defaultValue = "0") int page,
             @RequestParam(name = "size", defaultValue = "20") int size) {
@@ -527,7 +533,7 @@ public class UnifiedMemberController {
 
         Page<MemberViewDto> results = unifiedMemberService.searchMembers(
                 searchNameAr, searchNameEn, civilId, barcode, cardNumber,
-                employerId, benefitPolicyId, status, type, deleted, pageable);
+                employerId, benefitPolicyId, status, type, startDate, endDate, deleted, pageable);
 
         log.info("Search completed: found {} results", results.getTotalElements());
 
@@ -630,8 +636,8 @@ public class UnifiedMemberController {
      * @deprecated PDF export disabled. Excel is the official reporting format.
      *             Use /excel/report endpoint instead.
      */
-    // @GetMapping("/pdf/report") // DISABLED - Use Excel export instead
-    // @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'EMPLOYER_ADMIN')")
+        @GetMapping("/pdf/report")
+        @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'EMPLOYER_ADMIN')")
     @Deprecated(since = "2026-01", forRemoval = false)
     @Operation(summary = "[DISABLED] Download Beneficiaries PDF Report", description = "PDF export disabled. Use Excel export instead. Excel is the official reporting format.")
     public ResponseEntity<byte[]> downloadBeneficiariesPdf(
@@ -640,12 +646,16 @@ public class UnifiedMemberController {
             @RequestParam(name = "civilId", required = false) String civilId,
             @RequestParam(name = "barcode", required = false) String barcode,
             @RequestParam(name = "cardNumber", required = false) String cardNumber,
-            @RequestParam(name = "organizationId", required = false) Long organizationId,
+                        @RequestParam(name = "organizationId", required = false) Long organizationId,
+                        @RequestParam(name = "employerId", required = false) Long employerId,
             @RequestParam(name = "benefitPolicyId", required = false) Long benefitPolicyId,
             @RequestParam(name = "status", required = false) String status,
-            @RequestParam(name = "type", required = false) String type) throws IOException {
+                        @RequestParam(name = "type", required = false) String type,
+                        @RequestParam(name = "startDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+                        @RequestParam(name = "endDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) throws IOException {
 
-        log.info("Generating PDF report for members: orgId={}, status={}, type={}", organizationId, status, type);
+                Long effectiveEmployerId = employerId != null ? employerId : organizationId;
+                log.info("Generating PDF report for members: employerId={}, status={}, type={}", effectiveEmployerId, status, type);
 
         // 1. Fetch Data (Reuse search logic but get larger page or all)
         // Note: For reporting, we might want a limit, e.g., 1000 records
@@ -653,7 +663,7 @@ public class UnifiedMemberController {
 
         Page<MemberViewDto> membersPage = unifiedMemberService.searchMembers(
                 nameAr, nameEn, civilId, barcode, cardNumber,
-                organizationId, benefitPolicyId, status, type, false, pageable);
+                effectiveEmployerId, benefitPolicyId, status, type, startDate, endDate, false, pageable);
 
         List<MemberViewDto> members = membersPage.getContent();
 
@@ -710,9 +720,8 @@ public class UnifiedMemberController {
      * 
      * @deprecated PDF export disabled. Excel is the official reporting format.
      */
-    // @GetMapping("/{id}/pdf") // DISABLED - PDF export not active
-    // @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'EMPLOYER_ADMIN',
-    // 'PROVIDER_STAFF')")
+        @GetMapping("/{id}/pdf")
+        @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'EMPLOYER_ADMIN', 'PROVIDER_STAFF')")
     @Deprecated(since = "2026-01", forRemoval = false)
     public ResponseEntity<byte[]> downloadMemberPdf(@PathVariable("id") Long id) throws IOException {
         // Logic to print single member details... reusing beneficiaries report for now
@@ -746,6 +755,63 @@ public class UnifiedMemberController {
         headers.setContentLength(pdfBytes.length);
 
         return ResponseEntity.ok().headers(headers).body(pdfBytes);
+    }
+
+    // ==================== FINANCIAL REGISTER REPORT ====================
+
+    @GetMapping("/financial-register")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ACCOUNTANT', 'FINANCE_VIEWER', 'EMPLOYER_ADMIN')")
+    @Operation(summary = "سجل الملخص المالي للمنتفعين", description = "يعرض الحد السنوي والمستخدم والمتبقي لكل منتفع مع فلترة الجهة والتاريخ")
+    public ResponseEntity<Page<MemberFinancialRegisterRowDto>> getFinancialRegister(
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "20") int size,
+            @RequestParam(name = "sort", defaultValue = "fullName") String sort,
+            @RequestParam(name = "direction", defaultValue = "ASC") String direction,
+            @RequestParam(name = "employerId", required = false) Long employerId,
+            @RequestParam(name = "fromDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(name = "toDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            @RequestParam(name = "search", required = false) String search) {
+
+        Sort.Direction sortDirection = Sort.Direction.fromString(direction != null ? direction : "ASC");
+        Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sort));
+
+        Page<MemberFinancialRegisterRowDto> result = financialSummaryService.getFinancialRegister(
+                employerId,
+                fromDate,
+                toDate,
+                search,
+                pageable);
+
+        return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/financial-register/export/excel")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ACCOUNTANT', 'FINANCE_VIEWER', 'EMPLOYER_ADMIN')")
+    @Operation(summary = "تصدير سجل الملخص المالي لإكسيل")
+    public ResponseEntity<byte[]> exportFinancialRegisterExcel(
+            @RequestParam(name = "employerId", required = false) Long employerId,
+            @RequestParam(name = "fromDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(name = "toDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            @RequestParam(name = "search", required = false) String search) {
+
+        byte[] excelData = financialSummaryService.exportFinancialRegisterToExcel(
+                employerId,
+                fromDate,
+                toDate,
+                search);
+
+        String filename = "Member_Financial_Register_" +
+                LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")) +
+                ".xlsx";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+        headers.setContentDispositionFormData("attachment", filename);
+        headers.setContentLength(excelData.length);
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(excelData);
     }
 
     // ==================== UPDATE OPERATIONS ====================

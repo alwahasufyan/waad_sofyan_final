@@ -622,10 +622,12 @@ public class UnifiedMemberService {
             Pageable pageable,
             Long employerId,
             String status,
-            String type) {
+            String type,
+            LocalDate startDate,
+            LocalDate endDate) {
 
-        log.info("Fetching all members: page={}, size={}, employerId={}, status={}, type={}",
-                pageable.getPageNumber(), pageable.getPageSize(), employerId, status, type);
+        log.info("Fetching all members: page={}, size={}, employerId={}, status={}, type={}, startDate={}, endDate={}",
+            pageable.getPageNumber(), pageable.getPageSize(), employerId, status, type, startDate, endDate);
 
         // ═══════════════════════════════════════════════════════════════════════════
         // EMPLOYER_ADMIN SECURITY FILTER (2026-01-16)
@@ -681,6 +683,14 @@ public class UnifiedMemberService {
                         // Invalid relationship type, ignore or fallback
                     }
                 }
+            }
+
+            if (startDate != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("joinDate"), startDate));
+            }
+
+            if (endDate != null) {
+                predicates.add(cb.lessThanOrEqualTo(root.get("joinDate"), endDate));
             }
 
             return cb.and(predicates.toArray(new Predicate[0]));
@@ -827,6 +837,8 @@ public class UnifiedMemberService {
             Long benefitPolicyId,
             String status,
             String type,
+            LocalDate startDate,
+            LocalDate endDate,
             boolean deleted,
             Pageable pageable) {
 
@@ -930,6 +942,14 @@ public class UnifiedMemberService {
                         // Ignore
                     }
                 }
+            }
+
+            if (startDate != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("joinDate"), startDate));
+            }
+
+            if (endDate != null) {
+                predicates.add(cb.lessThanOrEqualTo(root.get("joinDate"), endDate));
             }
 
             // active / soft-delete filter

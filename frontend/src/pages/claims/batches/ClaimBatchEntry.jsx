@@ -67,6 +67,7 @@ const newLine = () => ({
     refusalTypes: '', total: 0, coveragePercent: null,
     partialRefusalEnabled: false,
     approvedAmountInput: '', manualRefusedAmount: '', limitRefusedAmount: 0, refusedAmount: 0,
+    notes: '',
     requiresPreApproval: false, notCovered: false,
     rejected: false, rejectionReason: ''
 });
@@ -135,7 +136,6 @@ export default function ClaimBatchEntry() {
         return () => clearTimeout(t);
     }, [memberInput]);
     const [diagnosis, setDiagnosis] = useState('');
-    const [complaint, setComplaint] = useState('');
     const [applyBenefits, setApplyBenefits] = useState(true);
     const [notes, setNotes] = useState('');
     const [lines, setLines] = useState([newLine()]);
@@ -168,12 +168,9 @@ export default function ClaimBatchEntry() {
     const [manualCategoryEnabled, setManualCategoryEnabled] = useState(true);
     const [primaryCategoryCode, setPrimaryCategoryCode] = useState('CAT-OUTPAT');
 
-    const defaultDate = useMemo(
-        () => (month && year) ? `${year}-${String(month).padStart(2, '0')}-01` : new Date().toISOString().split('T')[0],
-        [month, year]
-    );
+    const todayIso = useMemo(() => new Date().toISOString().split('T')[0], []);
 
-    const [serviceDate, setServiceDate] = useState(defaultDate);
+    const [serviceDate, setServiceDate] = useState('');
 
     const memberRef = useRef(null);
     const linesRef = useRef(lines);
@@ -197,7 +194,7 @@ export default function ClaimBatchEntry() {
     const { fetchCoverage, refetchAllLinesCoverage } = useCoverageLogic({
         policyId, policyInfo, member, applyBenefits, rootCategories, primaryCategoryCode,
         setLines, recompute,
-        serviceYear: serviceDate ? new Date(serviceDate).getFullYear() : (year || new Date().getFullYear()),
+        serviceYear: serviceDate ? new Date(serviceDate).getFullYear() : new Date().getFullYear(),
         currentClaimId: editingClaimId
     });
 
@@ -409,7 +406,6 @@ export default function ClaimBatchEntry() {
         if (editingClaim) {
             setMember({ id: editingClaim.memberId, fullName: editingClaim.memberName, cardNumber: editingClaim.memberNationalNumber });
             setDiagnosis(editingClaim.diagnosisCode || '');
-            setComplaint(editingClaim.diagnosisDescription || '');
             setIsClaimRejected(editingClaim.status === 'REJECTED');
             setRejectionInput(editingClaim.reviewerComment || '');
 
@@ -451,12 +447,13 @@ export default function ClaimBatchEntry() {
                         ? '0.00'
                         : Math.max(0, ((enteredPrice * (l.quantity || 1)) - (parseFloat(l.refusedAmount) || 0))).toFixed(2),
                     manualRefusedAmount: l.rejected ? '' : (l.refusedAmount != null ? String(l.refusedAmount) : ''),
+                    notes: l.notes || l.reviewerNotes || '',
                     rejected: l.rejected,
                     rejectionReason: l.rejectionReason
                 };
                 return recompute(line);
             }));
-            setServiceDate(editingClaim.serviceDate || defaultDate);
+            setServiceDate(editingClaim.serviceDate || '');
             setPreAuthId(editingClaim.preAuthorizationId || '');
             setManualCategoryEnabled(editingClaim.manualCategoryEnabled ?? true);
             setPrimaryCategoryCode(editingClaim.primaryCategoryCode || 'CAT-OUTPAT');
@@ -470,7 +467,7 @@ export default function ClaimBatchEntry() {
                 }, 300);
             }
         }
-    }, [editingClaim, defaultDate, contractedRaw]);
+    }, [editingClaim, contractedRaw]);
 
     const memberOptions = useMemo(() => {
         const c = memberResults?.data?.content ?? memberResults?.content;
@@ -493,7 +490,7 @@ export default function ClaimBatchEntry() {
             return {
                 ...s,
                 label: `${code ? '[' + code + '] ' : ''}${name}`,
-                medicalServiceId: s.medicalServiceId ?? s.id ?? null,
+                medicalServiceId: s.medicalServiceId ?? null,
                 serviceName: name,
                 serviceCode: code,
                 categoryId: s.categoryId ?? s.medicalCategoryId ?? null,
@@ -630,16 +627,16 @@ export default function ClaimBatchEntry() {
 
     const resetForm = useCallback(() => {
         setMember(null); setMemberInput(''); setDiagnosis('');
-        setComplaint(''); setNotes(''); setLines([newLine()]);
+        setNotes(''); setLines([newLine()]);
         setApplyBenefits(true); setIsDirty(false);
-        setServiceDate(defaultDate); setPreAuthId('');
+        setServiceDate(''); setPreAuthId('');
         setManualCategoryEnabled(true); setPrimaryCategoryCode('CAT-OUTPAT');
         setIsClaimRejected(false); setRejectionInput('');
         setAttachments([]);
         // FIX: resetForm must also clear the editing state
         setEditingClaimId(null);
         setTimeout(() => memberRef.current?.focus(), 120);
-    }, [defaultDate]);
+    }, []);
 
     // ── أسباب الرفض من قاعدة البيانات ─────────────────────────────────────
     const { data: rejectionReasons = [], refetch: refetchReasons } = useQuery({
@@ -718,7 +715,7 @@ export default function ClaimBatchEntry() {
         isSavingRef.current = true;
         setSaving(true);
         try {
-            const actualDate = serviceDate || defaultDate;
+            const actualDate = serviceDate || todayIso;
             const activeLines = lines.filter(isPopulatedClaimLine);
 
             if (!activeLines.length) {
@@ -778,7 +775,6 @@ export default function ClaimBatchEntry() {
                 claimBatchId: currentBatch?.id, // Phase 11 Link
                 serviceDate: actualDate,
                 diagnosisDescription: diagnosis,
-                complaint,
                 notes,
                 ...((effectivelyRejected || targetStatus === 'APPROVED')
                     ? { status: effectivelyRejected ? 'REJECTED' : 'APPROVED' }
@@ -795,6 +791,7 @@ export default function ClaimBatchEntry() {
                     serviceCategoryName: l.service?.categoryName || null,
                     serviceName: l.serviceName || l.service?.serviceName || '',
                     serviceCode: l.serviceCode || l.service?.serviceCode || '',
+                    notes: l.notes?.trim() || null,
                     quantity: normalizePositiveInteger(l.quantity) || 1,
                     unitPrice: getCanonicalUnitPrice(l),
                     refusedAmount: l.rejected ? null : (parseFloat(l.refusedAmount) || 0),
@@ -1088,6 +1085,87 @@ export default function ClaimBatchEntry() {
                                 </Button>
                             </Stack>
                             <Stack direction="row" spacing={1} alignItems="center">
+                                <Box sx={{ minWidth: '16rem', maxWidth: '20rem' }}>
+                                    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, display: 'block', mb: 0.25, fontSize: '0.72rem' }}>
+                                        رقم الموافقة
+                                    </Typography>
+                                    <Autocomplete
+                                        size="small"
+                                        fullWidth
+                                        options={preAuthResults?.items || []}
+                                        loading={searchingPreAuth}
+                                        disabled={isReadOnlyClaim}
+                                        value={preAuthResults?.items?.find(pa => pa.id === parseInt(preAuthId, 10)) || null}
+                                        onInputChange={(_, v) => setPreAuthSearch(v)}
+                                        onChange={(_, v) => {
+                                            setPreAuthId(v?.id || '');
+                                            setIsDirty(true);
+                                        }}
+                                        getOptionLabel={o => `[${o.preAuthNumber || o.id}] ${o.medicalServiceName || ''}`}
+                                        renderInput={(params) => (
+                                            <TextField
+                                                {...params}
+                                                variant="standard"
+                                                placeholder="ابحث برقم الموافقة..."
+                                                inputProps={{ ...params.inputProps, style: { textAlign: 'right' } }}
+                                            />
+                                        )}
+                                        noOptionsText="لا توجد موافقات مسبقة"
+                                    />
+                                </Box>
+
+                                <Box sx={{ minWidth: '15rem', maxWidth: '18rem' }}>
+                                    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, display: 'block', mb: 0.25, fontSize: '0.72rem' }}>
+                                        سياق التغطية
+                                    </Typography>
+                                    <Autocomplete
+                                        size="small"
+                                        options={rootCategories || []}
+                                        value={rootCategories?.find(c => c.code === primaryCategoryCode) || null}
+                                        disabled={isReadOnlyClaim}
+                                        getOptionLabel={(o) => o.name || o.nameAr || o.code || ''}
+                                        isOptionEqualToValue={(opt, val) => opt?.code === val?.code}
+                                        onChange={(_, v) => {
+                                            const newCode = v?.code || 'CAT-OUTPAT';
+                                            setPrimaryCategoryCode(newCode);
+                                            setManualCategoryEnabled(Boolean(v));
+                                            setIsDirty(true);
+                                            refetchAllLinesCoverage(newCode, linesRef.current);
+                                        }}
+                                        renderInput={(params) => (
+                                            <TextField
+                                                {...params}
+                                                variant="standard"
+                                                placeholder="اختر سياق التغطية"
+                                                inputProps={{ ...params.inputProps, style: { textAlign: 'right' } }}
+                                            />
+                                        )}
+                                        noOptionsText="لا توجد تصنيفات"
+                                    />
+                                </Box>
+
+                                <Box sx={{ minWidth: '10.5rem', maxWidth: '12rem' }}>
+                                    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, display: 'block', mb: 0.25, fontSize: '0.72rem' }}>
+                                        تاريخ الخدمة
+                                    </Typography>
+                                    <TextField
+                                        size="small"
+                                        type="date"
+                                        variant="standard"
+                                        value={serviceDate || ''}
+                                        disabled={isReadOnlyClaim}
+                                        onChange={(e) => {
+                                            setServiceDate(e.target.value || '');
+                                            setIsDirty(true);
+                                        }}
+                                        fullWidth
+                                        InputLabelProps={{ shrink: true }}
+                                    />
+                                    <Typography variant="caption" sx={{ display: 'block', mt: 0.25, fontSize: '0.65rem', color: 'text.secondary' }}>
+                                        يترك فارغاً لاستخدام تاريخ الجهاز
+                                    </Typography>
+                                </Box>
+
                                 <Box sx={{
                                     px: 1.25,
                                     py: 0.6,
@@ -1143,11 +1221,11 @@ export default function ClaimBatchEntry() {
                                 preAuthId={preAuthId}
                                 setPreAuthId={setPreAuthId}
                                 setPreAuthSearch={setPreAuthSearch}
-                                complaint={complaint}
-                                setComplaint={setComplaint}
                                 setIsDirty={setIsDirty}
                                 financialSummary={memberFinancialSummary}
                                 loadingSummary={loadingSummary}
+                                showPreAuthSelector={false}
+                                showCoverageContext={false}
                                 showFinancialSummary={false}
                                 readOnly={isReadOnlyClaim}
                                 t={t}
@@ -1184,6 +1262,7 @@ export default function ClaimBatchEntry() {
                                         <TH align="center" w={95}>الموافق عليه</TH>
                                         <TH align="center" w={100}>شركة / مشترك</TH>
                                         <TH align="center" w={80}>الإجمالي</TH>
+                                        <TH align="center" w={180}>ملاحظات الخدمة</TH>
                                         <TH align="left" w={40}></TH>
                                     </TableRow>
                                 </TableHead>
@@ -1206,7 +1285,7 @@ export default function ClaimBatchEntry() {
                                         />
                                     ))}
                                     <TableRow>
-                                        <TableCell colSpan={11} sx={{ py: 1, textAlign: 'center' }}>
+                                        <TableCell colSpan={12} sx={{ py: 1, textAlign: 'center' }}>
                                             {!isReadOnlyClaim && (
                                                 <Button size="small" startIcon={<AddIcon />} onClick={addLine} sx={{ fontWeight: 500 }}>
                                                     {t('claimEntry.addLine')}

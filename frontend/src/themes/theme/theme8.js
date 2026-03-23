@@ -1,7 +1,7 @@
 //project-import
 import { ThemeMode } from 'config';
 
-// ==============================|| PRESET THEME - PURPLE THEME8 ||============================== //
+// ==============================|| PRESET THEME - WAAD TEAL THEME8 ||============================== //
 
 export default function Theme8(colors, mode) {
   const { grey } = colors;
@@ -26,14 +26,16 @@ export default function Theme8(colors, mode) {
   };
   const contrastText = '#fff';
 
-  let primaryColors = ['#c1d6d066', '#81c9b9', '#5bbda9', '#38b09c', '#1aa391', '#009688', '#007069', '#004a47', '#002424', '#000000'];
+  let primaryColors = ['#E0F2F1', '#B2DFDB', '#80CBC4', '#4DB6AC', '#26A69A', '#006064', '#005259', '#00444C', '#00353B', '#00282E'];
+  let secondaryColors = ['#FFF8E1', '#FFECB3', '#FFE082', '#FFD54F', '#FFCA28', '#FFD54F', '#FFC107', '#FFB300', '#FFA000', '#FF8F00'];
   let errorColors = ['#FDE8E7', '#F25E52', '#F04134', '#EE3B2F', '#E92A21'];
   let warningColors = ['#FFF7E0', '#FFC926', '#FFBF00', '#FFB900', '#FFA900'];
   let infoColors = ['#E0F4F5', '#26B0BA', '#00A2AE', '#009AA7', '#008694'];
   let successColors = ['#E0F5EA', '#26B56E', '#00A854', '#00A04D', '#008D3A'];
 
   if (mode === ThemeMode.DARK) {
-    primaryColors = ['#1a2524', '#173331', '#15423e', '#11544e', '#0b6c63', '#058478', '#1a9686', '#37a996', '#59b8a5', '#7fc6b6'];
+    primaryColors = ['#0f1f22', '#123136', '#144147', '#165057', '#17636b', '#1B7B85', '#2A929D', '#42A7AF', '#6CBEC4', '#94D2D6'];
+    secondaryColors = ['#2F2610', '#4A3B14', '#665118', '#80661D', '#9C7B22', '#B48D26', '#CAA131', '#E0B84B', '#ECCB78', '#F7DEA5'];
     errorColors = ['#321d1d', '#7d2e28', '#d13c31', '#e66859', '#f8baaf'];
     warningColors = ['#342c1a', '#836611', '#dda705', '#e9bf28', '#f8e577'];
     infoColors = ['#1a2628', '#11595f', '#058e98', '#1ea6aa', '#64cfcb'];
@@ -55,20 +57,20 @@ export default function Theme8(colors, mode) {
       contrastText
     },
     secondary: {
-      lighter: greyColors[100],
-      100: greyColors[100],
-      200: greyColors[200],
-      light: greyColors[300],
-      400: greyColors[400],
-      main: greyColors[500],
-      600: greyColors[600],
-      dark: greyColors[700],
-      800: greyColors[800],
-      darker: greyColors[900],
-      A100: greyColors[0],
-      A200: greyColors.A400,
-      A300: greyColors.A700,
-      contrastText: greyColors[0]
+      lighter: secondaryColors[0],
+      100: secondaryColors[1],
+      200: secondaryColors[2],
+      light: secondaryColors[3],
+      400: secondaryColors[4],
+      main: secondaryColors[5],
+      600: secondaryColors[6],
+      dark: secondaryColors[7],
+      800: secondaryColors[8],
+      darker: secondaryColors[9],
+      A100: secondaryColors[0],
+      A200: secondaryColors[4],
+      A300: secondaryColors[7],
+      contrastText: '#2e2300'
     },
     error: {
       lighter: errorColors[0],

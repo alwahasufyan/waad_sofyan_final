@@ -327,6 +327,17 @@ export const ClaimLineRow = ({
                         {line.total?.toFixed(2)}
                     </Typography>
                 </TableCell>
+                <TableCell align="center" sx={{ minWidth: '11.25rem' }}>
+                    <TextField
+                        variant="standard"
+                        value={line.notes || ''}
+                        disabled={readOnly}
+                        onChange={(e) => updateLine(idx, { notes: e.target.value })}
+                        placeholder="ملاحظة للبند..."
+                        fullWidth
+                        inputProps={{ style: { textAlign: 'right', fontSize: '0.8rem' } }}
+                    />
+                </TableCell>
                 <TableCell align="left">
                     <Stack direction="row" spacing={0} justifyContent="flex-start" sx={{ '& .MuiIconButton-root': { p: 0.5 } }}>
                         <IconButton size="small" color={line.rejected ? "error" : "default"}
@@ -344,7 +355,7 @@ export const ClaimLineRow = ({
             </TableRow>
             {line.rejected && (
                 <TableRow sx={{ bgcolor: alpha(theme.palette.error.main, 0.02) }}>
-                    <TableCell colSpan={11} sx={{ py: 0.5 }}>
+                    <TableCell colSpan={12} sx={{ py: 0.5 }}>
                         <Typography variant="caption" color="error" fontWeight={500} sx={{ fontSize: '0.75rem', px: '1.0rem' }}>
                             سبب الرفض: {line.rejectionReason}
                         </Typography>
@@ -353,7 +364,7 @@ export const ClaimLineRow = ({
             )}
             {line.usageExceeded && !line.rejected && (
                 <TableRow sx={{ bgcolor: alpha(theme.palette.warning.main, 0.05) }}>
-                    <TableCell colSpan={11} sx={{ py: 0.5 }}>
+                    <TableCell colSpan={12} sx={{ py: 0.5 }}>
                         <Typography variant="caption" color={line.usageExhausted ? "error.main" : "warning.dark"} fontWeight={600} sx={{ fontSize: '0.75rem', px: '1.0rem', display: 'flex', alignItems: 'center', gap: 1 }}>
                             {line.usageExhausted ? <RejectIcon sx={{ fontSize: '0.875rem' }} /> : <WarningIcon sx={{ fontSize: '0.875rem' }} />}
                             {line.usageExhausted ? "⚠️ رصيد المنفعة استنفذ بالكامل: " : "⚠️ تجاوز سقف المنفعة المحدد: "}

@@ -39,10 +39,28 @@ public class MedicalCategory {
     private String code;
 
     /**
+     * Legacy category code column kept for runtime compatibility.
+     */
+    @Column(name = "category_code", nullable = false, length = 50)
+    private String categoryCode;
+
+    /**
      * Category name (unified - Arabic-only system)
      */
     @Column(name = "name", nullable = false, length = 200)
     private String name;
+
+    /**
+     * Legacy category name column kept for runtime compatibility.
+     */
+    @Column(name = "category_name", nullable = false, length = 200)
+    private String categoryName;
+
+    /**
+     * Legacy Arabic category name column kept for runtime compatibility.
+     */
+    @Column(name = "category_name_ar", length = 200)
+    private String categoryNameAr;
 
     /**
      * Parent category for hierarchy support (Legacy support)
@@ -125,12 +143,37 @@ public class MedicalCategory {
 
     @PrePersist
     void onCreate() {
+        syncLegacyColumns();
         createdAt = LocalDateTime.now();
         updatedAt = createdAt;
     }
 
     @PreUpdate
     void onUpdate() {
+        syncLegacyColumns();
         updatedAt = LocalDateTime.now();
+    }
+
+    private void syncLegacyColumns() {
+        if ((code == null || code.isBlank()) && categoryCode != null && !categoryCode.isBlank()) {
+            code = categoryCode;
+        }
+        if ((categoryCode == null || categoryCode.isBlank()) && code != null && !code.isBlank()) {
+            categoryCode = code;
+        }
+
+        if ((name == null || name.isBlank()) && categoryName != null && !categoryName.isBlank()) {
+            name = categoryName;
+        }
+        if ((categoryName == null || categoryName.isBlank()) && name != null && !name.isBlank()) {
+            categoryName = name;
+        }
+
+        if ((nameAr == null || nameAr.isBlank()) && categoryNameAr != null && !categoryNameAr.isBlank()) {
+            nameAr = categoryNameAr;
+        }
+        if ((categoryNameAr == null || categoryNameAr.isBlank()) && nameAr != null && !nameAr.isBlank()) {
+            categoryNameAr = nameAr;
+        }
     }
 }

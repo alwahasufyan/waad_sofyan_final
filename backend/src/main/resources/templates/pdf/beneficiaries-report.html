@@ -6,14 +6,8 @@
     
     <style>
         @page {
-            size: A4 landscape; /* Landscape for better table fit */
+            size: A4 landscape;
             margin: 15mm;
-            @top-right {
-                content: element(header);
-            }
-            @bottom-center {
-                content: element(footer);
-            }
         }
         
         * {
@@ -27,22 +21,19 @@
         }
 
         .header {
-            position: running(header);
             border-bottom: 2px solid #1976d2;
             padding-bottom: 10px;
             margin-bottom: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            text-align: right;
         }
 
         .footer {
-            position: running(footer);
             border-top: 1px solid #ccc;
             padding-top: 5px;
             text-align: center;
             font-size: 8pt;
             color: #777;
+            margin-top: 15px;
         }
 
         h1 {
@@ -94,17 +85,17 @@
         .status-SUSPENDED { background-color: #fff3e0; color: #ef6c00; }
         
         .summary-box {
-            display: flex;
-            gap: 20px;
+            display: table;
+            width: 100%;
             margin-bottom: 20px;
         }
         
         .summary-item {
+            display: table-cell;
             border: 1px solid #eee;
             padding: 10px;
-            border-radius: 4px;
-            flex: 1;
             text-align: center;
+            width: 33.33%;
         }
         
         .summary-value {
@@ -127,7 +118,7 @@
             <h1 th:text="${companyName != null ? companyName : 'شركة الوعد للتأمين الطبي'}">Waad Insurance</h1>
             <div th:text="|تاريخ التقرير: ${reportDate}|">Date</div>
         </div>
-        <div th:if="${logoBase64 != null}">
+        <div th:if="${logoBase64 != null}" style="text-align: left; margin-top: 8px;">
             <img th:src="${logoBase64}" style="height: 50px;" alt="Logo"/>
         </div>
     </div>

@@ -21,30 +21,30 @@
 // MEDICAL COLOR PALETTE
 // ══════════════════════════════════════════════════════════════════════════════
 export const MEDICAL_COLORS = {
-  // Primary - Medical Blue (Professional Healthcare)
+  // Primary - WAAD Teal
   primary: {
-    main: '#0D47A1',
-    light: '#5472D3',
-    dark: '#002171',
-    lighter: '#E3F2FD',
+    main: '#006064',
+    light: '#26A69A',
+    dark: '#00444C',
+    lighter: '#E0F2F1',
     contrastText: '#FFFFFF'
   },
 
-  // Secondary - Medical Green (Success, Approved)
+  // Secondary - WAAD Accent
   secondary: {
-    main: '#2E7D32',
-    light: '#60AD5E',
-    dark: '#005005',
-    lighter: '#E8F5E9',
-    contrastText: '#FFFFFF'
+    main: '#FFD54F',
+    light: '#FFE082',
+    dark: '#FFB300',
+    lighter: '#FFF8E1',
+    contrastText: '#2E2300'
   },
 
   // Info - Information
   info: {
-    main: '#0288D1',
-    light: '#5EB8FF',
-    dark: '#005B9F',
-    lighter: '#E1F5FE',
+    main: '#00A2AE',
+    light: '#26B0BA',
+    dark: '#008694',
+    lighter: '#E0F4F5',
     contrastText: '#FFFFFF'
   },
 
@@ -143,18 +143,18 @@ export const DARK_THEME = {
   mode: 'dark',
 
   // Main Colors (Lighter for visibility on dark)
-  primary: '#90CAF9',
-  primaryLight: '#BBDEFB',
-  primaryDark: '#42A5F5',
-  primaryLighter: 'rgba(144, 202, 249, 0.12)',
+  primary: '#1B7B85',
+  primaryLight: '#42A7AF',
+  primaryDark: '#17636B',
+  primaryLighter: 'rgba(27, 123, 133, 0.18)',
 
-  secondary: '#81C784',
-  secondaryLight: '#A5D6A7',
-  secondaryLighter: 'rgba(129, 199, 132, 0.12)',
+  secondary: '#B48D26',
+  secondaryLight: '#CAA131',
+  secondaryLighter: 'rgba(180, 141, 38, 0.2)',
 
-  info: '#4FC3F7',
-  infoLight: '#81D4FA',
-  infoLighter: 'rgba(79, 195, 247, 0.12)',
+  info: '#1EA6AA',
+  infoLight: '#64CFCB',
+  infoLighter: 'rgba(30, 166, 170, 0.18)',
 
   warning: '#FFD54F',
   warningLight: '#FFE082',
@@ -179,7 +179,7 @@ export const DARK_THEME = {
   divider: '#374151',
 
   // Table
-  tableHeader: '#1E3A5F',
+  tableHeader: '#144147',
   tableHeaderText: '#E5E7EB',
   tableRowHover: '#2D3748',
   tableRowAlt: '#1A202C',

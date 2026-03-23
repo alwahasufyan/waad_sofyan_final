@@ -93,7 +93,7 @@ public class MemberExcelExportService {
             }
 
             // Auto-size columns
-            for (int i = 0; i < 15; i++) {
+            for (int i = 0; i < 19; i++) {
                 sheet.autoSizeColumn(i);
             }
 
@@ -165,6 +165,10 @@ public class MemberExcelExportService {
                 "الحالة / Status",
                 "الجنسية / Nationality",
                 "نوع العضو / Type",
+            "رقم بطاقة الرئيسي / Principal Card",
+            "باركود الرئيسي / Principal Barcode",
+            "القرابة / Relationship",
+            "تسلسل التابع / Dep Seq",
                 "محذوف / Deleted"
         };
 
@@ -233,8 +237,14 @@ public class MemberExcelExportService {
         createCell(row, colNum++, member.getNationality(), normalStyle);
 
         // Member Type
-        String memberType = member.getParent() == null ? "رئيسي / Principal" : "تابع / Dependent";
+        String memberType = member.getParent() == null ? "PRINCIPAL / رئيسي" : "DEPENDENT / تابع";
         createCell(row, colNum++, memberType, normalStyle);
+
+        // Principal linkage fields for easy round-trip import
+        createCell(row, colNum++, member.getParent() != null ? member.getParent().getCardNumber() : "", normalStyle);
+        createCell(row, colNum++, member.getParent() != null ? member.getParent().getBarcode() : "", normalStyle);
+        createCell(row, colNum++, member.getRelationship() != null ? member.getRelationship().name() : "", normalStyle);
+        createCell(row, colNum++, "", normalStyle);
 
         // Active/Deleted
         createCell(row, colNum++, member.getActive() != null && member.getActive() ? "نشط / Active" : "محذوف / Deleted",

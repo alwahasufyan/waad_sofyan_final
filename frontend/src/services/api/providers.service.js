@@ -150,6 +150,32 @@ export const providersService = {
   },
 
   /**
+   * Hard delete provider
+   * @param {number} id - Provider ID
+   * @returns {Promise<void>}
+   */
+  hardRemove: async (id) => {
+    if (!id) throw new Error('معرف المزود مطلوب');
+    const response = await axiosClient.delete(`${BASE_URL}/${id}/hard`);
+    return unwrap(response);
+  },
+
+  /**
+   * Toggle provider active/inactive status
+   * @param {number} id - Provider ID
+   * @returns {Promise<Object>} Updated provider
+   */
+  toggleStatus: async (id) => {
+    try {
+      if (!id) throw new Error('معرف المزود مطلوب');
+      const response = await axiosClient.post(`${BASE_URL}/${id}/toggle-status`);
+      return unwrap(response);
+    } catch (error) {
+      throw handleProviderErrors(error);
+    }
+  },
+
+  /**
    * Search providers
    * @param {string} query - Search query
    * @returns {Promise<Array>} Matching providers

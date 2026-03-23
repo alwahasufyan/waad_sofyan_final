@@ -142,6 +142,26 @@ public class ProviderController {
         return ResponseEntity.ok(ApiResponse.success("Provider deactivated successfully", null));
     }
 
+    /**
+     * Hard delete provider (only if not linked to historical operations/claims)
+     */
+    @DeleteMapping("/{id:\\d+}/hard")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> hardDeleteProvider(@PathVariable("id") Long id) {
+        providerService.hardDeleteProvider(id);
+        return ResponseEntity.ok(ApiResponse.success("Provider permanently deleted", null));
+    }
+
+    /**
+     * Toggle provider active status
+     */
+    @PostMapping("/{id:\\d+}/toggle-status")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<ProviderViewDto>> toggleProviderStatus(@PathVariable("id") Long id) {
+        ProviderViewDto provider = providerService.toggleProviderStatus(id);
+        return ResponseEntity.ok(ApiResponse.success("Provider status updated", provider));
+    }
+
     @GetMapping("/active")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<List<ProviderViewDto>>> getAllActiveProviders() {

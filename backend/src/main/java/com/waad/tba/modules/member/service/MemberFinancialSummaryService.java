@@ -10,6 +10,7 @@ import com.waad.tba.modules.claim.entity.ClaimLine;
 import com.waad.tba.modules.claim.entity.ClaimStatus;
 import com.waad.tba.modules.claim.repository.ClaimRepository;
 import com.waad.tba.modules.member.dto.MemberFinancialSummaryDto;
+import com.waad.tba.modules.member.dto.MemberFinancialRegisterRowDto;
 import com.waad.tba.modules.member.dto.CoverageLimitsDto;
 import com.waad.tba.modules.member.entity.Member;
 import com.waad.tba.modules.member.repository.MemberRepository;
@@ -19,7 +20,16 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import jakarta.persistence.criteria.Predicate;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
+import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -283,6 +293,154 @@ public class MemberFinancialSummaryService {
                 .timesLimitExceeded(timesLimitExceeded)
                 .warningMessage(warningMessage)
                 .build();
+    }
+
+    /**
+     * Paginated financial register report for members.
+     */
+    public Page<MemberFinancialRegisterRowDto> getFinancialRegister(
+            Long employerId,
+            LocalDate fromDate,
+            LocalDate toDate,
+            String search,
+            Pageable pageable) {
+
+        Specification<Member> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new java.util.ArrayList<>();
+
+            if (employerId != null) {
+                predicates.add(cb.equal(root.get("employer").get("id"), employerId));
+            }
+
+            if (search != null && !search.trim().isEmpty()) {
+                String pattern = "%" + search.trim().toLowerCase() + "%";
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("fullName")), pattern),
+                        cb.like(cb.lower(root.get("cardNumber")), pattern),
+                        cb.like(cb.lower(root.get("civilId")), pattern),
+                        cb.like(cb.lower(root.get("nationalNumber")), pattern),
+                        cb.like(cb.lower(root.get("barcode")), pattern)));
+            }
+
+            predicates.add(cb.or(cb.isNull(root.get("active")), cb.equal(root.get("active"), true)));
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        Page<Member> membersPage = memberRepository.findAll(spec, pageable);
+        List<ClaimStatus> approvedStatuses = List.of(ClaimStatus.APPROVED, ClaimStatus.SETTLED, ClaimStatus.BATCHED);
+
+        List<MemberFinancialRegisterRowDto> rows = membersPage.getContent().stream()
+                .map(member -> buildFinancialRegisterRow(member, fromDate, toDate, approvedStatuses))
+                .toList();
+
+        return new PageImpl<>(rows, pageable, membersPage.getTotalElements());
+    }
+
+    /**
+     * Export financial register rows to Excel.
+     */
+    public byte[] exportFinancialRegisterToExcel(
+            Long employerId,
+            LocalDate fromDate,
+            LocalDate toDate,
+            String search) {
+
+        Page<MemberFinancialRegisterRowDto> allRowsPage = getFinancialRegister(
+                employerId,
+                fromDate,
+                toDate,
+                search,
+                org.springframework.data.domain.PageRequest.of(0, 10000));
+
+        try (XSSFWorkbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            Sheet sheet = workbook.createSheet("Financial Register");
+
+            String[] headers = {
+                    "الاسم",
+                    "رقم البطاقة",
+                    "جهة العمل",
+                    "الحد السنوي",
+                    "المستخدم",
+                    "المتبقي"
+            };
+
+            Row headerRow = sheet.createRow(0);
+            for (int i = 0; i < headers.length; i++) {
+                headerRow.createCell(i).setCellValue(headers[i]);
+            }
+
+            int rowIdx = 1;
+            for (MemberFinancialRegisterRowDto row : allRowsPage.getContent()) {
+                Row excelRow = sheet.createRow(rowIdx++);
+                excelRow.createCell(0).setCellValue(safeText(row.getFullName()));
+                excelRow.createCell(1).setCellValue(safeText(row.getCardNumber()));
+                excelRow.createCell(2).setCellValue(safeText(row.getEmployerName()));
+                excelRow.createCell(3).setCellValue(toDouble(row.getAnnualLimit()));
+                excelRow.createCell(4).setCellValue(toDouble(row.getUsedAmount()));
+                excelRow.createCell(5).setCellValue(toDouble(row.getRemainingAmount()));
+            }
+
+            for (int i = 0; i < headers.length; i++) {
+                sheet.autoSizeColumn(i);
+            }
+
+            workbook.write(out);
+            return out.toByteArray();
+        } catch (Exception ex) {
+            throw new BusinessRuleException("فشل إنشاء ملف إكسيل لسجل الملخص المالي: " + ex.getMessage());
+        }
+    }
+
+    private MemberFinancialRegisterRowDto buildFinancialRegisterRow(
+            Member member,
+            LocalDate fromDate,
+            LocalDate toDate,
+            List<ClaimStatus> statuses) {
+
+        BenefitPolicy policy = member.getBenefitPolicy();
+        if (policy == null && member.getEmployer() != null) {
+            policy = benefitPolicyRepository
+                    .findActiveEffectivePolicyForEmployer(member.getEmployer().getId(), LocalDate.now())
+                    .orElse(null);
+        }
+
+        BigDecimal annualLimit = policy != null && policy.getAnnualLimit() != null
+                ? policy.getAnnualLimit()
+                : BigDecimal.ZERO;
+
+        BigDecimal usedAmount = claimRepository.sumApprovedAmountByMemberAndDateRange(
+                member.getId(),
+                fromDate,
+                toDate,
+                statuses);
+
+        if (usedAmount == null) {
+            usedAmount = BigDecimal.ZERO;
+        }
+
+        BigDecimal remaining = annualLimit.subtract(usedAmount);
+        if (remaining.compareTo(BigDecimal.ZERO) < 0) {
+            remaining = BigDecimal.ZERO;
+        }
+
+        return MemberFinancialRegisterRowDto.builder()
+                .memberId(member.getId())
+                .fullName(member.getFullName())
+                .cardNumber(member.getCardNumber())
+                .employerName(member.getEmployer() != null ? member.getEmployer().getName() : null)
+                .annualLimit(annualLimit)
+                .usedAmount(usedAmount)
+                .remainingAmount(remaining)
+                .build();
+    }
+
+    private String safeText(String value) {
+        return value == null ? "" : value;
+    }
+
+    private double toDouble(BigDecimal value) {
+        return value == null ? 0.0 : value.doubleValue();
     }
 
     // ==================== PRIVATE HELPER METHODS ====================

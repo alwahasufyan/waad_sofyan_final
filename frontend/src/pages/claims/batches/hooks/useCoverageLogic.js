@@ -35,7 +35,10 @@ export function useCoverageLogic({
         if (!policyId || !applyBenefits)
             return { coveragePercent: fallbackPercent, requiresPreApproval: false, notCovered: false };
 
-        if (!sid && !categoryId && !categoryCodeOverride)
+        if (!sid)
+            return { coveragePercent: fallbackPercent, requiresPreApproval: false, notCovered: false };
+
+        if (!categoryId && !categoryCodeOverride)
             return { coveragePercent: fallbackPercent, requiresPreApproval: false, notCovered: false };
 
         try {

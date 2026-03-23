@@ -30,6 +30,8 @@ public interface ClaimBatchRepository extends JpaRepository<ClaimBatch, Long> {
         Long providerId, Long employerId, Integer batchYear, Integer batchMonth
     );
 
+        long countByProviderId(Long providerId);
+
     /**
      * Bulk-closes all OPEN batches from months prior to the current month.
      * More efficient than loading all entities into memory.

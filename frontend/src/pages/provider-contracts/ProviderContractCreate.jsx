@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
 import { format, addYears, differenceInMonths } from 'date-fns';
@@ -62,8 +62,10 @@ const PRICING_MODELS = [
  */
 const ProviderContractCreate = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { enqueueSnackbar } = useSnackbar();
   const queryClient = useQueryClient();
+  const initialProviderId = searchParams.get('providerId');
 
   // ──────────────────────────────────────────────────────────────────────
   // STATE
@@ -149,6 +151,15 @@ const ProviderContractCreate = () => {
       setAutoContractCode('AUTO-GENERATED');
     }
   }, [selectedProvider, formData.startDate]);
+
+  useEffect(() => {
+    if (!initialProviderId || providersLoading || !providers.length || selectedProvider) return;
+    const preselected = providers.find((p) => String(p.id) === String(initialProviderId));
+    if (preselected) {
+      setSelectedProvider(preselected);
+      setFormData((prev) => ({ ...prev, providerId: preselected.id }));
+    }
+  }, [initialProviderId, providersLoading, providers, selectedProvider]);
 
   // Calculate contract duration
   useEffect(() => {

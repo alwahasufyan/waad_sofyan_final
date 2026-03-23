@@ -8,6 +8,7 @@ import com.waad.tba.modules.benefitpolicy.repository.BenefitPolicyRepository;
 import com.waad.tba.modules.benefitpolicy.repository.BenefitPolicyRuleRepository;
 import com.waad.tba.modules.claim.entity.Claim;
 import com.waad.tba.modules.claim.entity.ClaimLine;
+import com.waad.tba.modules.claim.entity.ClaimStatus;
 import com.waad.tba.modules.claim.repository.ClaimRepository;
 import com.waad.tba.modules.member.entity.Member;
 import com.waad.tba.modules.member.repository.MemberRepository;
@@ -29,7 +30,9 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -530,6 +533,92 @@ public class BenefitPolicyCoverageService {
         }
 
         log.debug("✅ Amount limits validation passed for member {}", member.getId());
+    }
+
+    /**
+     * Validate per-service usage frequency (times limit) from BenefitPolicyRule.
+     *
+     * Rules are evaluated using the canonical resolver priority:
+     * SERVICE_RULE > CATEGORY_RULE > POLICY_DEFAULT.
+     *
+     * Times limit is enforced per calendar year using approved/settled/batched claim
+     * lines. Current claim lines are included in projected usage before approval.
+     */
+    public void validateServiceFrequencyLimits(
+            Member member,
+            BenefitPolicy benefitPolicy,
+            List<ClaimLine> claimLines,
+            LocalDate serviceDate) {
+
+        if (member == null || benefitPolicy == null || claimLines == null || claimLines.isEmpty()) {
+            return;
+        }
+
+        int year = (serviceDate != null ? serviceDate : LocalDate.now()).getYear();
+        List<ClaimStatus> validStatuses = List.of(ClaimStatus.APPROVED, ClaimStatus.SETTLED, ClaimStatus.BATCHED);
+
+        Map<Long, Integer> currentClaimUsagePerService = new HashMap<>();
+        Map<Long, ClaimLine> representativeLinePerService = new HashMap<>();
+
+        for (ClaimLine line : claimLines) {
+            if (line == null || Boolean.TRUE.equals(line.getRejected()) || line.getMedicalService() == null
+                    || line.getMedicalService().getId() == null) {
+                continue;
+            }
+
+            Long serviceId = line.getMedicalService().getId();
+                currentClaimUsagePerService.put(serviceId,
+                    currentClaimUsagePerService.getOrDefault(serviceId, 0) + 1);
+            representativeLinePerService.putIfAbsent(serviceId, line);
+        }
+
+        for (Map.Entry<Long, Integer> entry : currentClaimUsagePerService.entrySet()) {
+            Long serviceId = entry.getKey();
+            int currentClaimUsage = entry.getValue();
+            ClaimLine line = representativeLinePerService.get(serviceId);
+
+            Long categoryId = line.getAppliedCategoryId() != null
+                    ? line.getAppliedCategoryId()
+                    : line.getServiceCategoryId();
+
+            if (categoryId == null && line.getMedicalService() != null) {
+                categoryId = line.getMedicalService().getCategoryId();
+            }
+
+            Long parentCategoryId = null;
+            if (categoryId != null) {
+                parentCategoryId = categoryRepository.findById(categoryId)
+                        .map(MedicalCategory::getParentId)
+                        .orElse(null);
+            }
+
+            Optional<BenefitPolicyRule> ruleOpt = ruleRepository.findBestRuleForService(
+                    benefitPolicy.getId(), serviceId, categoryId, null, parentCategoryId);
+
+            if (ruleOpt.isEmpty()) {
+                continue;
+            }
+
+            Integer timesLimit = ruleOpt.get().getTimesLimit();
+            if (timesLimit == null || timesLimit <= 0) {
+                continue;
+            }
+
+            long historicalUsage = claimRepository.countServiceUsageByMemberAndYear(
+                    member.getId(), serviceId, year, validStatuses);
+            long projectedUsage = historicalUsage + currentClaimUsage;
+
+            if (projectedUsage > timesLimit) {
+                String serviceName = line.getServiceName() != null
+                        ? line.getServiceName()
+                        : (line.getMedicalService().getName() != null ? line.getMedicalService().getName()
+                                : "الخدمة");
+
+                throw new BusinessRuleException(String.format(
+                        "تم تجاوز حد عدد مرات الاستخدام للخدمة '%s'. الحد: %d سنوياً، المستخدم: %d، المطلوب الحالي: %d",
+                        serviceName, timesLimit, historicalUsage, currentClaimUsage));
+            }
+        }
     }
 
     /**

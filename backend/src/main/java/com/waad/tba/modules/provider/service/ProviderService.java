@@ -14,7 +14,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.waad.tba.common.exception.BusinessRuleException;
 import com.waad.tba.common.guard.DeletionGuard;
+import com.waad.tba.modules.claim.repository.ClaimBatchRepository;
+import com.waad.tba.modules.claim.repository.ClaimRepository;
+import com.waad.tba.modules.preauthorization.repository.PreAuthorizationRepository;
 import com.waad.tba.modules.provider.repository.ProviderContractRepository;
+import com.waad.tba.modules.rbac.repository.UserRepository;
+import com.waad.tba.modules.settlement.repository.ProviderAccountRepository;
+import com.waad.tba.modules.visit.repository.VisitRepository;
+import com.waad.tba.modules.providercontract.repository.ProviderContractPricingItemRepository;
 
 import com.waad.tba.modules.provider.dto.AllowedEmployerDto;
 import com.waad.tba.modules.provider.dto.ProviderCreateDto;
@@ -27,7 +34,9 @@ import com.waad.tba.modules.provider.repository.ProviderRepository;
 
 import com.waad.tba.modules.employer.entity.Employer;
 import com.waad.tba.modules.employer.repository.EmployerRepository;
+import com.waad.tba.modules.provider.entity.ProviderContract;
 import com.waad.tba.modules.provider.entity.ProviderAllowedEmployer;
+import com.waad.tba.modules.provider.repository.ProviderAdminDocumentRepository;
 import com.waad.tba.modules.provider.repository.ProviderAllowedEmployerRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,6 +52,15 @@ public class ProviderService {
     private final EmployerRepository employerRepository;
     private final ProviderContractRepository providerContractRepository;
     private final ProviderAllowedEmployerRepository providerAllowedEmployerRepository;
+    private final ClaimRepository claimRepository;
+    private final ClaimBatchRepository claimBatchRepository;
+    private final VisitRepository visitRepository;
+    private final PreAuthorizationRepository preAuthorizationRepository;
+    private final UserRepository userRepository;
+    private final ProviderAccountRepository providerAccountRepository;
+    private final ProviderAdminDocumentRepository providerAdminDocumentRepository;
+    private final com.waad.tba.modules.providercontract.repository.ProviderContractRepository modernProviderContractRepository;
+    private final ProviderContractPricingItemRepository modernPricingItemRepository;
 
     /**
      * Get provider selector options with pagination
@@ -140,6 +158,48 @@ public class ProviderService {
         provider.setActive(false);
         providerRepository.save(provider);
         log.info("Provider {} deactivated (soft delete)", id);
+    }
+
+    /**
+     * Hard delete provider when not linked to historical operations/claims.
+     */
+    public void hardDeleteProvider(Long id) {
+        Provider provider = providerRepository.findById(id)
+                .orElseThrow(() -> new BusinessRuleException("مقدم الخدمة غير موجود: " + id));
+
+        DeletionGuard.of("مقدم الخدمة")
+                .check("مطالبات", claimRepository.countAllByProviderId(id))
+                .check("دفعات مطالبات", claimBatchRepository.countByProviderId(id))
+                .check("زيارات", visitRepository.countByProviderId(id))
+                .check("موافقات مسبقة", preAuthorizationRepository.countAllByProviderId(id))
+                .throwIfBlocked("الحذف النهائي مسموح فقط إذا لم يكن هناك أي عمليات أو مطالبات أو ارتباطات سابقة.");
+
+        providerAdminDocumentRepository.deleteAllByProviderIdNative(id);
+
+        userRepository.findByProviderId(id).forEach(u -> u.setProviderId(null));
+
+        providerAccountRepository.findByProviderId(id).ifPresent(providerAccountRepository::delete);
+
+        List<ProviderContract> legacyContracts = providerContractRepository.findByProviderIdAndActiveOrderByServiceCode(id, true);
+        if (!legacyContracts.isEmpty()) {
+            providerContractRepository.deleteAll(legacyContracts);
+        }
+
+        // Clean modern contracts module records (pricing items first, then contracts)
+        modernPricingItemRepository.deleteAllByProviderId(id);
+        modernProviderContractRepository.deleteByProviderId(id);
+
+        providerRepository.delete(provider);
+        log.info("Provider {} hard deleted", id);
+    }
+
+    public ProviderViewDto toggleProviderStatus(Long id) {
+        Provider provider = providerRepository.findById(id)
+                .orElseThrow(() -> new BusinessRuleException("مقدم الخدمة غير موجود: " + id));
+
+        provider.setActive(!Boolean.TRUE.equals(provider.getActive()));
+        provider = providerRepository.save(provider);
+        return providerMapper.toViewDto(provider);
     }
 
     @Transactional(readOnly = true)

@@ -430,6 +430,9 @@ public interface ClaimRepository extends JpaRepository<Claim, Long> {
         @Query("SELECT COUNT(c) FROM Claim c WHERE c.active = true AND c.providerId = :providerId")
         long countByProviderId(@Param("providerId") Long providerId);
 
+        @Query("SELECT COUNT(c) FROM Claim c WHERE c.providerId = :providerId")
+        long countAllByProviderId(@Param("providerId") Long providerId);
+
         /**
          * Find claims by provider ID and status with pagination.
          * Used by PROVIDER role to filter their claims by status.
@@ -939,6 +942,23 @@ public interface ClaimRepository extends JpaRepository<Claim, Long> {
                         @Param("memberId") Long memberId,
                         @Param("yearStart") LocalDate yearStart,
                         @Param("yearEnd") LocalDate yearEnd);
+
+        /**
+         * Sum approved amount for a member in a custom date range.
+         * Uses serviceDate when available and falls back to createdAt date.
+         */
+        @Query("SELECT COALESCE(SUM(c.approvedAmount), 0) FROM Claim c " +
+                        "WHERE c.active = true " +
+                        "AND c.member.id = :memberId " +
+                        "AND c.status IN :statuses " +
+                        "AND c.approvedAmount IS NOT NULL " +
+                        "AND (CAST(:fromDate AS date) IS NULL OR COALESCE(c.serviceDate, CAST(c.createdAt AS date)) >= :fromDate) " +
+                        "AND (CAST(:toDate AS date) IS NULL OR COALESCE(c.serviceDate, CAST(c.createdAt AS date)) <= :toDate)")
+        java.math.BigDecimal sumApprovedAmountByMemberAndDateRange(
+                        @Param("memberId") Long memberId,
+                        @Param("fromDate") LocalDate fromDate,
+                        @Param("toDate") LocalDate toDate,
+                        @Param("statuses") List<com.waad.tba.modules.claim.entity.ClaimStatus> statuses);
 
         /**
          * Sum approved amounts for a specific member in a given category and year.

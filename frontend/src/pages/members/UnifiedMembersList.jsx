@@ -65,6 +65,8 @@ import {
   UploadFile as UploadFileIcon,
   Download as DownloadIcon,
   FileDownload as FileDownloadIcon,
+  Assessment as AssessmentIcon,
+  AttachMoney as AttachMoneyIcon,
   Undo as UndoIcon
 } from '@mui/icons-material';
 import { useSnackbar } from 'notistack';
@@ -555,6 +557,40 @@ const UnifiedMembersList = () => {
               }}
             >
               تصدير لإكسل
+            </Button>
+
+            <Button
+              variant="outlined"
+              onClick={() => navigate('/reports/beneficiaries')}
+              startIcon={<AssessmentIcon />}
+              sx={{
+                minWidth: '9.6875rem',
+                color: '#006064',
+                borderColor: '#006064',
+                '&:hover': {
+                  backgroundColor: '#00606410',
+                  borderColor: '#006064'
+                }
+              }}
+            >
+              تقرير المستفيدين
+            </Button>
+
+            <Button
+              variant="outlined"
+              onClick={() => navigate('/members/financial-register')}
+              startIcon={<AttachMoneyIcon />}
+              sx={{
+                minWidth: '9.6875rem',
+                color: '#006064',
+                borderColor: '#006064',
+                '&:hover': {
+                  backgroundColor: '#00606410',
+                  borderColor: '#006064'
+                }
+              }}
+            >
+              ملخص مالي للمستفيدين
             </Button>
 
             {/* Deleted Members Toggle */}

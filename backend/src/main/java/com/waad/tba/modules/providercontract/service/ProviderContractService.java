@@ -7,6 +7,7 @@ import com.waad.tba.modules.providercontract.dto.*;
 import com.waad.tba.modules.providercontract.entity.ProviderContract;
 import com.waad.tba.modules.providercontract.entity.ProviderContract.ContractStatus;
 import com.waad.tba.modules.providercontract.entity.ProviderContract.PricingModel;
+import com.waad.tba.modules.providercontract.repository.ProviderContractPricingItemRepository;
 import com.waad.tba.modules.providercontract.repository.ProviderContractRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -41,6 +42,7 @@ import java.util.stream.Collectors;
 public class ProviderContractService {
 
     private final ProviderContractRepository contractRepository;
+    private final ProviderContractPricingItemRepository pricingItemRepository;
     private final ProviderRepository providerRepository;
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -458,6 +460,25 @@ public class ProviderContractService {
         contractRepository.save(contract);
 
         log.info("Soft deleted provider contract: {}", contract.getContractCode());
+    }
+
+    /**
+     * Hard delete a contract only if it has no pricing items.
+     */
+    @Transactional
+    public void hardDeleteIfNoPricing(Long id) {
+        log.info("Hard deleting provider contract (if no pricing items): {}", id);
+
+        ProviderContract contract = contractRepository.findById(id)
+                .orElseThrow(() -> new BusinessRuleException("Provider contract not found: " + id));
+
+        long pricingItemsCount = pricingItemRepository.countByContractId(id);
+        if (pricingItemsCount > 0) {
+            throw new BusinessRuleException("Cannot hard delete contract with pricing items. Remove pricing list first.");
+        }
+
+        contractRepository.delete(contract);
+        log.info("Hard deleted provider contract: {}", contract.getContractCode());
     }
 
     // ═══════════════════════════════════════════════════════════════════════════

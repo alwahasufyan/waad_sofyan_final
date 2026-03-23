@@ -24,6 +24,7 @@ const UnifiedMemberView = Loadable(lazy(() => import('pages/members/UnifiedMembe
 const UnifiedMemberEdit = Loadable(lazy(() => import('pages/members/UnifiedMemberEdit')));
 const AddDependent = Loadable(lazy(() => import('pages/members/AddDependent')));
 const EligibilityCheck = Loadable(lazy(() => import('pages/members/EligibilityCheck')));
+const MemberFinancialRegister = Loadable(lazy(() => import('pages/members/MemberFinancialRegister')));
 const EligibilityCheckPage = Loadable(lazy(() => import('pages/eligibility/EligibilityCheckPage')));
 const FamilyEligibilityPage = Loadable(lazy(() => import('pages/eligibility/FamilyEligibilityPage')));
 
@@ -245,6 +246,14 @@ const MainRoutes = {
           element: (
             <PermissionGuard isRouteGuard>
               <FamilyEligibilityPage />
+            </PermissionGuard>
+          )
+        },
+        {
+          path: 'financial-register',
+          element: (
+            <PermissionGuard isRouteGuard>
+              <MemberFinancialRegister />
             </PermissionGuard>
           )
         }
@@ -876,6 +885,22 @@ const MainRoutes = {
           element: (
             <PermissionGuard resource="claims" action="view" isRouteGuard>
               <ClaimStatementPreview />
+            </PermissionGuard>
+          )
+        },
+        {
+          path: 'beneficiaries',
+          element: (
+            <PermissionGuard resource="report_beneficiaries" action="view" isRouteGuard>
+              <BeneficiariesReports />
+            </PermissionGuard>
+          )
+        },
+        {
+          path: 'financial',
+          element: (
+            <PermissionGuard resource="report_financial" action="view" isRouteGuard>
+              <FinancialReports />
             </PermissionGuard>
           )
         },

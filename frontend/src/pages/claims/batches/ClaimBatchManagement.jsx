@@ -23,6 +23,10 @@ import {
     FormControl,
     Collapse,
     LinearProgress,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
     alpha
 } from '@mui/material';
 
@@ -330,6 +334,7 @@ export default function ClaimBatchManagement() {
     const navigate = useNavigate();
 
     const [selectedEmployer, setSelectedEmployer] = useState(null);
+    const [employerDialogOpen, setEmployerDialogOpen] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterMonth, setFilterMonth] = useState(new Date().getMonth() + 1);
     const [filterYear, setFilterYear] = useState(new Date().getFullYear());
@@ -437,8 +442,55 @@ export default function ClaimBatchManagement() {
         navigate(`/claims/batches/detail?employerId=${selectedEmployer.id}&providerId=${provider.id}&month=${month}&year=${year}`);
     };
 
+    const handleEmployerPicked = useCallback((newValue) => {
+        setSelectedEmployer(newValue || null);
+        if (newValue) {
+            setEmployerDialogOpen(false);
+        }
+    }, []);
+
+    const handleDialogStart = useCallback(() => {
+        if (selectedEmployer) {
+            setEmployerDialogOpen(false);
+        }
+    }, [selectedEmployer]);
+
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', px: { xs: 2, sm: 3 } }}>
+            <Dialog
+                open={employerDialogOpen}
+                fullWidth
+                maxWidth="sm"
+                disableEscapeKeyDown
+            >
+                <DialogTitle sx={{ fontWeight: 700 }}>اختيار جهة العمل</DialogTitle>
+                <DialogContent>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                        اختر جهة العمل أولاً لعرض مقدمي الخدمة ودفعات المطالبات.
+                    </Typography>
+                    <Autocomplete
+                        autoHighlight
+                        options={employers || []}
+                        loading={isLoadingEmployers}
+                        value={selectedEmployer}
+                        onChange={(_, newValue) => handleEmployerPicked(newValue)}
+                        getOptionLabel={(option) => `${option.label || ''} (${option.code || option.id || ''})`}
+                        renderInput={(params) => (
+                            <TextField
+                                {...params}
+                                placeholder="اختر جهة العمل..."
+                                variant="outlined"
+                            />
+                        )}
+                    />
+                </DialogContent>
+                <DialogActions>
+                    <Button variant="contained" onClick={handleDialogStart} disabled={!selectedEmployer}>
+                        بدء العمل
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
             {/* 🔹 PAGE HEADER 🔹 */}
             <ModernPageHeader
                 title="نظام الدفعات للمطالبات"
@@ -471,7 +523,7 @@ export default function ClaimBatchManagement() {
                             options={employers || []}
                             getOptionLabel={(option) => `${option.label || ''} (${option.code || option.id || ''})`}
                             value={selectedEmployer}
-                            onChange={(_, newValue) => setSelectedEmployer(newValue)}
+                            onChange={(_, newValue) => handleEmployerPicked(newValue)}
                             loading={isLoadingEmployers}
                             renderInput={(params) => (
                                 <TextField

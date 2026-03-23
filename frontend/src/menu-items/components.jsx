@@ -374,21 +374,7 @@ const menuItem = [
               size: 'small'
             }
           },
-          {
-            id: 'provider-users',
-            title: 'إدارة حسابات المقدمين',
-            titleEn: 'Provider Account Managers',
-            type: 'item',
-            url: '/admin/users?role=PROVIDER_STAFF',
-            icon: PeopleAltIcon,
-            resource: 'users',
-            action: 'view',
-            chip: {
-              label: 'جديد',
-              color: 'info',
-              size: 'small'
-            }
-          }
+          
         ]
       }
     ]
@@ -504,6 +490,21 @@ const menuItem = [
             chip: {
               label: 'جديد',
               color: 'success',
+              size: 'small'
+            }
+          },
+          {
+            id: 'beneficiaries-financial-summary',
+            title: 'ملخص مالي للمستفيدين',
+            titleEn: 'Beneficiaries Financial Summary',
+            type: 'item',
+            url: '/members/financial-register',
+            icon: AccountBalanceWalletIcon,
+            resource: 'members',
+            action: 'view',
+            chip: {
+              label: 'تقرير',
+              color: 'info',
               size: 'small'
             }
           },

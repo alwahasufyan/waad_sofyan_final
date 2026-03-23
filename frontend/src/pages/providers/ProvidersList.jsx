@@ -35,7 +35,7 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
+import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import LocalHospitalIcon from '@mui/icons-material/LocalHospital';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import DescriptionIcon from '@mui/icons-material/Description';
@@ -46,6 +46,7 @@ import HandshakeIcon from '@mui/icons-material/Handshake';
 import SearchIcon from '@mui/icons-material/Search'; // Added SearchIcon
 import BusinessIcon from '@mui/icons-material/Business'; // Added BusinessIcon
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
+import PostAddIcon from '@mui/icons-material/PostAdd';
 
 // Project Components
 import MainCard from 'components/MainCard';
@@ -347,6 +348,13 @@ export default function ProvidersList() {
     [navigate]
   );
 
+  const handleCreateContract = useCallback(
+    (providerId) => {
+      navigate(`/provider-contracts/create?providerId=${providerId}`);
+    },
+    [navigate]
+  );
+
   const handleDelete = useCallback(
     async (id, name) => {
       const confirmMessage = `هل أنت متأكد من حذف مقدم الخدمة "${name}"؟`;
@@ -363,6 +371,48 @@ export default function ProvidersList() {
         console.error('[Providers] Delete failed:', err);
         openSnackbar({
           message: 'فشل حذف مقدم الخدمة. يرجى المحاولة لاحقاً',
+          variant: 'error'
+        });
+      }
+    },
+    [queryClient]
+  );
+
+  const handleToggleStatus = useCallback(
+    async (provider) => {
+      try {
+        await providersService.toggleStatus(provider.id);
+        openSnackbar({
+          message: `تم ${provider.active ? 'إلغاء تنشيط' : 'تنشيط'} مقدم الخدمة بنجاح`,
+          variant: 'success'
+        });
+        queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
+      } catch (err) {
+        openSnackbar({
+          message: err?.message || 'تعذر تغيير الحالة',
+          variant: 'error'
+        });
+      }
+    },
+    [queryClient]
+  );
+
+  const handleHardDelete = useCallback(
+    async (id, name) => {
+      const confirmMessage = `تأكيد الحذف النهائي لمقدم الخدمة "${name}"؟\nلا يمكن التراجع عن هذه العملية.`;
+      if (!window.confirm(confirmMessage)) return;
+
+      try {
+        await providersService.hardRemove(id);
+        openSnackbar({
+          message: 'تم الحذف النهائي لمقدم الخدمة بنجاح',
+          variant: 'success'
+        });
+        queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
+      } catch (err) {
+        console.error('[Providers] Hard delete failed:', err);
+        openSnackbar({
+          message: err?.response?.data?.message || 'تعذر الحذف النهائي: مقدم الخدمة مرتبط بعمليات/مطالبات سابقة',
           variant: 'error'
         });
       }
@@ -543,7 +593,19 @@ export default function ProvidersList() {
           );
 
         case 'status':
-          return <CardStatusBadge status={getProviderStatus(provider)} size="small" language="ar" />;
+          return (
+            <Tooltip title="اضغط لتغيير الحالة (تنشيط/إلغاء تنشيط)">
+              <Box
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleToggleStatus(provider);
+                }}
+                sx={{ cursor: 'pointer', display: 'inline-flex' }}
+              >
+                <CardStatusBadge status={getProviderStatus(provider)} size="small" language="ar" />
+              </Box>
+            </Tooltip>
+          );
 
         case 'actions':
           return (
@@ -574,17 +636,30 @@ export default function ProvidersList() {
                 </IconButton>
               </Tooltip>
 
+              <Tooltip title="إنشاء عقد">
+                <IconButton
+                  size="small"
+                  color="secondary"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCreateContract(provider.id);
+                  }}
+                >
+                  <PostAddIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+
               <PermissionGuard resource="providers" action="delete">
-                <Tooltip title="حذف">
+                <Tooltip title="حذف نهائي (إذا غير مرتبط بعمليات/مطالبات)">
                   <IconButton
                     size="small"
                     color="error"
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleDelete(provider.id, provider.name);
+                      handleHardDelete(provider.id, provider.name);
                     }}
                   >
-                    <DeleteIcon fontSize="small" />
+                    <DeleteForeverIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
               </PermissionGuard>
@@ -595,7 +670,7 @@ export default function ProvidersList() {
           return null;
       }
     },
-    [handleNavigateView, handleNavigateEdit, handleDelete]
+    [handleNavigateView, handleNavigateEdit, handleCreateContract, handleHardDelete, handleToggleStatus]
   );
 
   // ========================================
