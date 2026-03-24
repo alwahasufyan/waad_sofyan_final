@@ -34,10 +34,12 @@ export const claimsService = {
       if (params.page !== undefined) queryParams.append('page', params.page);
       if (params.size) queryParams.append('size', params.size);
       if (params.employerId) queryParams.append('employerId', params.employerId);
+      if (params.sortBy) queryParams.append('sortBy', params.sortBy);
+      if (params.sortDir) queryParams.append('sortDir', params.sortDir);
       if (params.sort) {
         const [sortBy, sortDir] = params.sort.split(',');
-        queryParams.append('sortBy', sortBy);
-        queryParams.append('sortDir', sortDir || 'desc');
+        if (!queryParams.has('sortBy')) queryParams.append('sortBy', sortBy);
+        if (!queryParams.has('sortDir')) queryParams.append('sortDir', sortDir || 'desc');
       }
       if (params.search) queryParams.append('search', params.search);
 

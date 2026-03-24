@@ -243,7 +243,6 @@ export default function Dashboard() {
   const { data: claimsData, refresh: refreshClaims } = useClaimsList({
     page: 0,
     size: 10,
-    employerId: selectedEmployerId,
     sortBy: 'createdAt',
     sortDir: 'desc'
   });
@@ -306,6 +305,7 @@ export default function Dashboard() {
   const filteredShortcutEntries = useMemo(() => {
     const config = shortcutConfig[activeShortcutKey] || shortcutConfig.overview;
     const search = shortcutSearch.trim().toLowerCase();
+    const safeLower = (value) => String(value || '').toLowerCase();
 
     const beneficiaryShortcutEntries = [
       {
@@ -338,10 +338,10 @@ export default function Dashboard() {
       if (!search) return true;
 
       return (
-        entry.title.toLowerCase().includes(search) ||
-        entry.subtitle.toLowerCase().includes(search) ||
-        entry.url.toLowerCase().includes(search) ||
-        entry.group.toLowerCase().includes(search)
+        safeLower(entry.title).includes(search) ||
+        safeLower(entry.subtitle).includes(search) ||
+        safeLower(entry.url).includes(search) ||
+        safeLower(entry.group).includes(search)
       );
     });
   }, [shortcutEntries, activeShortcutKey, shortcutSearch]);

@@ -2,27 +2,47 @@ import { useState, useEffect, useCallback } from 'react';
 import { claimsService } from 'services/api';
 
 export const useClaimsList = (initialParams = { page: 0, size: 10 }) => {
-  const [data, setData] = useState({ content: [], totalElements: 0, page: 0, size: 10 });
+  const [data, setData] = useState({ items: [], content: [], totalElements: 0, total: 0, page: 0, size: 10 });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [params, setParams] = useState(initialParams);
+
+  useEffect(() => {
+    setParams((prev) => {
+      const changed =
+        prev.page !== initialParams.page ||
+        prev.size !== initialParams.size ||
+        prev.employerId !== initialParams.employerId ||
+        prev.sortBy !== initialParams.sortBy ||
+        prev.sortDir !== initialParams.sortDir ||
+        prev.sort !== initialParams.sort ||
+        prev.search !== initialParams.search;
+
+      return changed ? { ...prev, ...initialParams } : prev;
+    });
+  }, [initialParams.page, initialParams.size, initialParams.employerId, initialParams.sortBy, initialParams.sortDir, initialParams.sort, initialParams.search]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const result = await claimsService.getAll(params);
+      const items =
+        Array.isArray(result?.items) ? result.items : Array.isArray(result?.content) ? result.content : Array.isArray(result) ? result : [];
+      const total = result?.totalElements ?? result?.total ?? items.length;
       // Defensive: ensure result has expected shape
       setData({
-        content: Array.isArray(result?.content) ? result.content : Array.isArray(result) ? result : [],
-        totalElements: result?.totalElements ?? result?.total ?? 0,
+        items,
+        content: items,
+        totalElements: total,
+        total,
         page: result?.page ?? params.page,
         size: result?.size ?? params.size
       });
     } catch (err) {
       setError(err.message || 'فشل تحميل المطالبات');
       // Set safe default on error
-      setData({ content: [], totalElements: 0, page: params.page, size: params.size });
+      setData({ items: [], content: [], totalElements: 0, total: 0, page: params.page, size: params.size });
     } finally {
       setLoading(false);
     }
