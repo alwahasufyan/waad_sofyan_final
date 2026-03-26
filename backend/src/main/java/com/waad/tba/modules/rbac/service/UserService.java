@@ -90,8 +90,13 @@ public class UserService {
         
         User savedUser = userRepository.save(user);
         
-        // Send email verification
-        securityService.sendEmailVerification(savedUser);
+        // Send email verification (non-blocking for create flow)
+        try {
+            securityService.sendEmailVerification(savedUser);
+        } catch (Exception ex) {
+            log.warn("User created but failed to trigger email verification for userId={}: {}",
+                    savedUser.getId(), ex.getMessage());
+        }
         
         // Audit log
         securityService.auditLog(savedUser.getId(), UserAuditLog.ACTION_USER_CREATED,

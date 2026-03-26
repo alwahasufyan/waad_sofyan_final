@@ -350,6 +350,14 @@ public class ClaimService {
         claim.setStatus(initialStatus);
         Claim savedClaim = claimRepository.save(claim);
 
+        // Canonical claim number format: global sequence + provider discriminator
+        // Example: CLM-00001234-P51
+        String canonicalClaimNumber = buildCanonicalClaimNumber(savedClaim);
+        if (!canonicalClaimNumber.equals(savedClaim.getClaimNumber())) {
+            savedClaim.setClaimNumber(canonicalClaimNumber);
+            savedClaim = claimRepository.save(savedClaim);
+        }
+
         // Record creation in audit trail
         if (currentUser != null) {
             claimAuditService.recordCreation(savedClaim, currentUser);
@@ -371,7 +379,7 @@ public class ClaimService {
                 try {
                     preAuthorizationService.markAsUsed(
                             linkedPreAuth.getId(),
-                            savedClaim.getId().toString(),
+                        savedClaim.getClaimNumber(),
                             createdBy);
                     log.info("✅ Pre-authorization {} auto-marked as USED (linked to claim {})",
                             linkedPreAuth.getReferenceNumber(), savedClaim.getId());
@@ -397,6 +405,14 @@ public class ClaimService {
         }
 
         return claimMapper.toViewDto(savedClaim);
+    }
+
+    private String buildCanonicalClaimNumber(Claim claim) {
+        String globalSequence = claim.getId() != null
+                ? String.format("%08d", claim.getId())
+                : "00000000";
+        String providerCode = claim.getProviderId() != null ? claim.getProviderId().toString() : "0";
+        return "CLM-" + globalSequence + "-P" + providerCode;
     }
 
     /**

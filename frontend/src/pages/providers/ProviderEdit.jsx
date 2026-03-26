@@ -102,6 +102,21 @@ const DOC_TYPE_LABELS = {
   OTHER: 'أخرى'
 };
 
+const buildProviderSystemEmail = (username, providerId) => {
+  const safeLocalPart = (username || '')
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]/g, '')
+    .replace(/\.+/g, '.')
+    .replace(/^\.|\.$/g, '')
+    .slice(0, 40);
+
+  const providerSuffix = String(providerId || '').replace(/\D/g, '') || '0';
+  const localPart = safeLocalPart || `provider${providerSuffix}`;
+  return `${localPart}.p${providerSuffix}@provider.local`;
+};
+
 const ProviderEdit = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -333,6 +348,30 @@ const ProviderEdit = () => {
     }
   };
 
+  const getUserForUpdate = async (userLike) => {
+    if (!userLike?.id) return userLike;
+
+    const hasRequiredFields =
+      typeof userLike.fullName === 'string' &&
+      userLike.fullName.trim() &&
+      typeof userLike.email === 'string' &&
+      userLike.email.trim();
+
+    if (hasRequiredFields) return userLike;
+
+    const res = await usersService.getUserById(userLike.id);
+    return res?.data?.data || res?.data || userLike;
+  };
+
+  const buildUserUpdatePayload = (userData, providerIdValue) => ({
+    fullName: userData?.fullName || userData?.username || '',
+    email: userData?.email || `${userData?.username || 'provider.user'}@provider.local`,
+    phone: userData?.phone || null,
+    active: userData?.active ?? true,
+    userType: userData?.role || userData?.userType || (providerIdValue ? 'PROVIDER_STAFF' : 'DATA_ENTRY'),
+    providerId: providerIdValue
+  });
+
   const fetchDocuments = async () => {
     try {
       setLoadingDocs(true);
@@ -408,7 +447,9 @@ const ProviderEdit = () => {
 
     try {
       setLoadingUser(true);
-      await usersService.updateUser(activeUser.id, { providerId: null });
+      const userForUpdate = await getUserForUpdate(activeUser);
+      const payload = buildUserUpdatePayload(userForUpdate, null);
+      await usersService.updateUser(activeUser.id, payload);
       enqueueSnackbar('تم فك الارتباط بنجاح', { variant: 'success' });
       setActiveUser(null);
       setUnlinkDialog({ open: false, confirmationText: '' });
@@ -429,7 +470,9 @@ const ProviderEdit = () => {
 
     try {
       setLoadingUser(true);
-      await usersService.updateUser(selectedUserToLink.id, { providerId: id });
+      const userForUpdate = await getUserForUpdate(selectedUserToLink);
+      const payload = buildUserUpdatePayload(userForUpdate, Number(id));
+      await usersService.updateUser(selectedUserToLink.id, payload);
 
       // ✨ AUTO-REFRESH TOKEN: If linking current user to provider
       const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
@@ -451,7 +494,8 @@ const ProviderEdit = () => {
       fetchLinkedUser();
     } catch (error) {
       console.error('Error linking user:', error);
-      enqueueSnackbar('فشل ربط المستخدم', { variant: 'error' });
+      const backendMessage = error?.response?.data?.messageAr || error?.response?.data?.message || error?.message;
+      enqueueSnackbar(backendMessage || 'فشل ربط المستخدم', { variant: 'error' });
     } finally {
       setLoadingUser(false);
     }
@@ -460,12 +504,14 @@ const ProviderEdit = () => {
   const handleCreateAndLinkUser = async (newUserData) => {
     try {
       setLoadingUser(true);
+      const numericProviderId = Number(id);
+      const email = buildProviderSystemEmail(newUserData.username, numericProviderId);
       const userPayload = {
         username: newUserData.username,
         password: newUserData.password,
         fullName: newUserData.fullName || newUserData.username,
-        email: `${newUserData.username}@provider.local`,
-        providerId: id,
+        email,
+        providerId: numericProviderId,
         userType: 'PROVIDER_STAFF',
         enabled: true
       };
@@ -482,7 +528,8 @@ const ProviderEdit = () => {
       fetchLinkedUser();
     } catch (error) {
       console.error('Error creating user:', error);
-      enqueueSnackbar('فشل إنشاء المستخدم', { variant: 'error' });
+      const backendMessage = error?.response?.data?.messageAr || error?.response?.data?.message || error?.message;
+      enqueueSnackbar(backendMessage || 'فشل إنشاء المستخدم', { variant: 'error' });
     } finally {
       setLoadingUser(false);
     }

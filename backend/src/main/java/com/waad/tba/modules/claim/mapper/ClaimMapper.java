@@ -1,25 +1,35 @@
 package com.waad.tba.modules.claim.mapper;
 
-import com.waad.tba.common.exception.BusinessRuleException;
-import com.waad.tba.modules.claim.dto.*;
-import com.waad.tba.modules.claim.entity.*;
-import com.waad.tba.modules.provider.entity.Provider;
-import com.waad.tba.modules.visit.entity.Visit;
-import com.waad.tba.modules.medicaltaxonomy.entity.MedicalService;
-import com.waad.tba.modules.provider.dto.EffectivePriceResponseDto;
-import com.waad.tba.modules.provider.service.ProviderContractService;
-import com.waad.tba.modules.benefitpolicy.repository.BenefitPolicyRepository;
-import com.waad.tba.modules.benefitpolicy.service.BenefitPolicyCoverageService;
-import com.waad.tba.modules.preauthorization.entity.PreAuthorization;
-import com.waad.tba.modules.medicaltaxonomy.repository.MedicalCategoryRepository;
-import com.waad.tba.modules.providercontract.repository.ProviderContractPricingItemRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
 import org.springframework.stereotype.Component;
+
+import com.waad.tba.common.exception.BusinessRuleException;
+import com.waad.tba.modules.benefitpolicy.repository.BenefitPolicyRepository;
+import com.waad.tba.modules.benefitpolicy.service.BenefitPolicyCoverageService;
+import com.waad.tba.modules.claim.dto.ClaimAttachmentDto;
+import com.waad.tba.modules.claim.dto.ClaimCreateDto;
+import com.waad.tba.modules.claim.dto.ClaimLineDto;
+import com.waad.tba.modules.claim.dto.ClaimUpdateDto;
+import com.waad.tba.modules.claim.dto.ClaimViewDto;
+import com.waad.tba.modules.claim.entity.Claim;
+import com.waad.tba.modules.claim.entity.ClaimAttachment;
+import com.waad.tba.modules.claim.entity.ClaimBatch;
+import com.waad.tba.modules.claim.entity.ClaimLine;
+import com.waad.tba.modules.claim.entity.ClaimStatus;
+import com.waad.tba.modules.medicaltaxonomy.entity.MedicalService;
+import com.waad.tba.modules.medicaltaxonomy.repository.MedicalCategoryRepository;
+import com.waad.tba.modules.preauthorization.entity.PreAuthorization;
+import com.waad.tba.modules.provider.dto.EffectivePriceResponseDto;
+import com.waad.tba.modules.provider.entity.Provider;
+import com.waad.tba.modules.provider.service.ProviderContractService;
+import com.waad.tba.modules.providercontract.repository.ProviderContractPricingItemRepository;
+import com.waad.tba.modules.visit.entity.Visit;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -677,7 +687,9 @@ public class ClaimMapper {
     public ClaimViewDto toViewDto(Claim claim) {
         ClaimViewDto dto = ClaimViewDto.builder()
                 .id(claim.getId())
-                .claimNumber("CLM-" + claim.getId())
+            .claimNumber(claim.getClaimNumber() != null && !claim.getClaimNumber().isBlank()
+                ? claim.getClaimNumber()
+                : ("CLM-" + claim.getId()))
                 .providerName(claim.getProviderName())
                 .providerId(claim.getProviderId())
                 .doctorName(claim.getDoctorName())
