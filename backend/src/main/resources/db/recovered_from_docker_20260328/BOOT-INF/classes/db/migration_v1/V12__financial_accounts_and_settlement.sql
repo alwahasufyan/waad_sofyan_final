@@ -1,0 +1,3 @@
+-- V12__financial_accounts_and_settlement.sql
+-- Placeholder file for sequential migration track.
+-- Content will be extracted from legacy migrations during consolidation.

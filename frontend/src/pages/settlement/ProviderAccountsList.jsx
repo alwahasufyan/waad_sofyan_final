@@ -154,27 +154,8 @@ export default function ProviderAccountsList() {
     keepPreviousData: true
   });
 
-  const { data: claimsSummaryData, isLoading: isSummaryLoading } = useQuery({
-    queryKey: ['settlement-claims-provider-summary', appliedFilters],
-    queryFn: () => {
-      const params = {
-        page: 1,
-        size: 1000,
-        sortBy: 'createdAt',
-        sortDir: 'desc',
-        status: appliedFilters.status !== 'ALL' ? appliedFilters.status : undefined,
-        providerId: appliedFilters.providerId || undefined,
-        createdDateFrom: formatDateParam(appliedFilters.dateFrom),
-        createdDateTo: formatDateParam(appliedFilters.dateTo)
-      };
-      return claimsService.list(params);
-    },
-    keepPreviousData: true
-  });
-
   const claims = claimsData?.items || claimsData?.content || [];
   const totalElements = claimsData?.total ?? claimsData?.totalElements ?? 0;
-  const summaryClaims = claimsSummaryData?.items || claimsSummaryData?.content || [];
 
   const providerIdsInPage = useMemo(() => {
     const ids = claims.map((row) => Number(row.providerId)).filter((id) => Number.isFinite(id) && id > 0);
@@ -224,45 +205,6 @@ export default function ProviderAccountsList() {
     const payable = getPayableAmount(row);
     return (payable * COMPANY_SHARE_PERCENT) / 100;
   };
-
-  const providerFinancialSummaryRows = useMemo(() => {
-    const map = new Map();
-
-    summaryClaims.forEach((row) => {
-      const providerId = Number(row?.providerId) || 0;
-      const providerName = row?.providerName || `مقدم خدمة #${providerId || '-'}`;
-      const key = `${providerId}-${providerName}`;
-      const requested = Number(row?.requestedAmount) || 0;
-      const refused = getRefusedAmount(row);
-      const payable = getPayableAmount(row);
-      const companyShare = getCompanyShareAmount(row);
-      const facilityShare = getFacilityShareAmount(row);
-
-      if (!map.has(key)) {
-        map.set(key, {
-          id: key,
-          providerId,
-          providerName,
-          claimsCount: 0,
-          gross: 0,
-          refused: 0,
-          payable: 0,
-          companyShare: 0,
-          facilityShare: 0
-        });
-      }
-
-      const acc = map.get(key);
-      acc.claimsCount += 1;
-      acc.gross += requested;
-      acc.refused += refused;
-      acc.payable += payable;
-      acc.companyShare += companyShare;
-      acc.facilityShare += facilityShare;
-    });
-
-    return Array.from(map.values()).sort((a, b) => b.payable - a.payable);
-  }, [summaryClaims, providerDiscountMap]);
 
   const totals = useMemo(() => {
     const totalPayable = claims.reduce((acc, curr) => acc + getPayableAmount(curr), 0);
@@ -437,61 +379,6 @@ export default function ProviderAccountsList() {
       }
     ],
     [providerDiscountMap]
-  );
-
-  const providerSummaryColumns = useMemo(
-    () => [
-      {
-        accessorKey: 'providerName',
-        header: 'مقدم الخدمة',
-        minWidth: '12.5rem',
-        align: 'center',
-        cell: ({ row }) => row.original.providerName || '-'
-      },
-      {
-        accessorKey: 'claimsCount',
-        header: 'عدد المطالبات',
-        minWidth: '7.5rem',
-        align: 'center',
-        cell: ({ row }) => row.original.claimsCount || 0
-      },
-      {
-        accessorKey: 'gross',
-        header: 'الإجمالي قبل',
-        minWidth: '8.75rem',
-        align: 'center',
-        cell: ({ row }) => formatCurrency(row.original.gross)
-      },
-      {
-        accessorKey: 'refused',
-        header: 'المرفوض',
-        minWidth: '7.5rem',
-        align: 'center',
-        cell: ({ row }) => <Typography color="error.main" fontWeight={700}>{formatCurrency(row.original.refused)}</Typography>
-      },
-      {
-        accessorKey: 'payable',
-        header: 'القيمة المستحقة',
-        minWidth: '8.75rem',
-        align: 'center',
-        cell: ({ row }) => <Typography fontWeight={700}>{formatCurrency(row.original.payable)}</Typography>
-      },
-      {
-        accessorKey: 'companyShare',
-        header: 'حصة الشركة',
-        minWidth: '7.5rem',
-        align: 'center',
-        cell: ({ row }) => <Typography color="warning.main" fontWeight={700}>{formatCurrency(row.original.companyShare)}</Typography>
-      },
-      {
-        accessorKey: 'facilityShare',
-        header: 'نصيب المرفق',
-        minWidth: '7.5rem',
-        align: 'center',
-        cell: ({ row }) => <Typography color="success.main" fontWeight={700}>{formatCurrency(row.original.facilityShare)}</Typography>
-      }
-    ],
-    []
   );
 
   return (
@@ -670,27 +557,6 @@ export default function ProviderAccountsList() {
           />
         </MainCard>
 
-        <MainCard
-          title="سجل ملخص مالي حسب مقدم الخدمة"
-          subheader="تجميع مبسط للمطالبات حسب مقدم الخدمة وفق الفلاتر الحالية (حتى 1000 مطالبة)"
-          content={false}
-        >
-          <GenericDataTable
-            columns={providerSummaryColumns}
-            data={providerFinancialSummaryRows}
-            totalCount={providerFinancialSummaryRows.length}
-            isLoading={isSummaryLoading}
-            enableFiltering={false}
-            enableSorting={true}
-            enablePagination={false}
-            compact={true}
-            tableSize="small"
-            stickyHeader={false}
-            minHeight={0}
-            maxHeight="auto"
-            emptyMessage="لا توجد بيانات لعرض الملخص المالي حسب مقدم الخدمة"
-          />
-        </MainCard>
       </Box>
     </PermissionGuard>
   );

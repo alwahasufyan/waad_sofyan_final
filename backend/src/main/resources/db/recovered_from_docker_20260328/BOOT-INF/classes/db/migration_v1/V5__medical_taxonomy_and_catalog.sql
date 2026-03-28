@@ -1,0 +1,3 @@
+-- V5__medical_taxonomy_and_catalog.sql
+-- Placeholder file for sequential migration track.
+-- Content will be extracted from legacy migrations during consolidation.

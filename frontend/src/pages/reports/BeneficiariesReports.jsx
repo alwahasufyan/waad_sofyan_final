@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import axiosClient from 'utils/axios';
 import { useQuery } from '@tanstack/react-query';
 import { useReactToPrint } from 'react-to-print';
@@ -10,6 +10,9 @@ import {
   Grid,
   TextField,
   MenuItem,
+  FormControl,
+  InputLabel,
+  Select,
   Stack,
   Typography,
   InputAdornment,
@@ -28,7 +31,8 @@ import {
   TableContainer,
   TablePagination,
   TableSortLabel,
-  Skeleton
+  Skeleton,
+  LinearProgress
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 
@@ -133,6 +137,8 @@ const BeneficiariesReports = () => {
   const [selectedMember, setSelectedMember] = useState(null);
   const [financialStats, setFinancialStats] = useState(null);
   const [loadingStats, setLoadingStats] = useState(false);
+  const [memberActivity, setMemberActivity] = useState({ claims: [], preAuths: [] });
+  const [loadingActivity, setLoadingActivity] = useState(false);
 
   // PDF Modal State - disabled, Excel is the official format
   // const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
@@ -218,15 +224,42 @@ const BeneficiariesReports = () => {
     setSelectedMember(member);
     setViewMode('SINGLE');
     setLoadingStats(true);
+    setLoadingActivity(true);
+
     try {
-      const stats = await claimsService.getMemberStatement(member.id);
-      setFinancialStats(stats);
+      const [financialSummaryResult, statementResult, claimsResult, preAuthResult] = await Promise.allSettled([
+        axiosClient.get(`/unified-members/${member.id}/financial-summary`),
+        claimsService.getMemberStatement(member.id),
+        axiosClient.get(`/claims/member/${member.id}`),
+        axiosClient.get(`/pre-authorizations/member/${member.id}?page=0&size=500&sortBy=requestDate&sortDirection=DESC`)
+      ]);
+
+      const financialSummaryPayload =
+        financialSummaryResult.status === 'fulfilled'
+          ? financialSummaryResult.value?.data?.data || financialSummaryResult.value?.data || financialSummaryResult.value
+          : null;
+
+      const statementPayload = statementResult.status === 'fulfilled' ? statementResult.value : null;
+      setFinancialStats(normalizeFinancialSnapshot(financialSummaryPayload, statementPayload));
+
+      const claimsPayload =
+        claimsResult.status === 'fulfilled' ? claimsResult.value?.data?.data || claimsResult.value?.data || claimsResult.value : [];
+      const preAuthPayload =
+        preAuthResult.status === 'fulfilled'
+          ? preAuthResult.value?.data?.data || preAuthResult.value?.data || preAuthResult.value
+          : [];
+
+      setMemberActivity({
+        claims: normalizeClaims(claimsPayload),
+        preAuths: normalizePreAuths(preAuthPayload)
+      });
     } catch (error) {
       console.error('Failed to load financial stats', error);
-      // Fallback with empty stats to still show the page
-      setFinancialStats({ totalClaimsAmount: 0, totalApprovedAmount: 0, totalCopayAmount: 0, remainingBalance: 0 });
+      setFinancialStats(normalizeFinancialSnapshot(null, null));
+      setMemberActivity({ claims: [], preAuths: [] });
     } finally {
       setLoadingStats(false);
+      setLoadingActivity(false);
     }
   };
 
@@ -234,6 +267,7 @@ const BeneficiariesReports = () => {
     setViewMode('TABLE');
     setSelectedMember(null);
     setFinancialStats(null);
+    setMemberActivity({ claims: [], preAuths: [] });
   };
 
   // --- Print Handlers ---
@@ -864,6 +898,8 @@ const BeneficiariesReports = () => {
           member={selectedMember}
           financialStats={financialStats}
           loadingStats={loadingStats}
+          loadingActivity={loadingActivity}
+          memberActivity={memberActivity}
           onBack={handleBackToTable}
         />
       )}
@@ -915,20 +951,162 @@ const SummaryCard = ({ title, value, icon, color }) => (
   </Paper>
 );
 
+const extractCollection = (payload) => {
+  if (Array.isArray(payload)) return payload;
+
+  const candidates = [
+    payload?.content,
+    payload?.items,
+    payload?.data?.content,
+    payload?.data?.items,
+    payload?.data,
+    payload?.results
+  ];
+
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) return candidate;
+  }
+
+  return [];
+};
+
+const normalizeCurrencyValue = (value) => {
+  const normalized = Number(value ?? 0);
+  return Number.isFinite(normalized) ? normalized : 0;
+};
+
+const normalizeFinancialSnapshot = (summary, statement) => {
+  const annualLimit = normalizeCurrencyValue(summary?.annualLimit);
+  const totalClaimed = normalizeCurrencyValue(summary?.totalClaimed ?? statement?.totalRequested);
+  const totalApproved = normalizeCurrencyValue(summary?.totalApproved ?? statement?.totalNetPayable);
+  const totalNetPayable = normalizeCurrencyValue(summary?.totalNetPayable ?? statement?.totalNetPayable ?? totalApproved);
+  const totalPatientCoPay = normalizeCurrencyValue(summary?.totalPatientCoPay ?? statement?.totalPatientCoPay);
+  const remainingCoverage = normalizeCurrencyValue(
+    summary?.remainingCoverage ?? summary?.remainingBalance ?? (annualLimit > 0 ? Math.max(annualLimit - totalApproved, 0) : 0)
+  );
+  const utilizationPercent =
+    annualLimit > 0
+      ? Math.max(0, Math.min(100, normalizeCurrencyValue(summary?.utilizationPercent ?? (totalApproved / annualLimit) * 100)))
+      : 0;
+
+  return {
+    annualLimit,
+    totalClaimed,
+    totalApproved,
+    totalNetPayable,
+    totalPatientCoPay,
+    remainingCoverage,
+    utilizationPercent,
+    claimsCount: Number(summary?.claimsCount ?? statement?.totalClaims ?? 0),
+    approvedClaimsCount: Number(summary?.approvedClaimsCount ?? statement?.approvedClaims ?? 0),
+    pendingClaimsCount: Number(summary?.pendingClaimsCount ?? statement?.pendingClaims ?? 0),
+    rejectedClaimsCount: Number(summary?.rejectedClaimsCount ?? statement?.rejectedClaims ?? 0),
+    lastClaimDate: summary?.lastClaimDate || null
+  };
+};
+
+const normalizeClaims = (payload) => {
+  const claims = extractCollection(payload)
+    .map((item) => ({
+      id: item?.id,
+      reference: item?.claimNumber || (item?.id ? `#${item.id}` : '-'),
+      date: item?.serviceDate || item?.createdAt || item?.updatedAt || null,
+      status: item?.statusLabel || item?.status || '-',
+      requestedAmount: normalizeCurrencyValue(item?.requestedAmount ?? item?.totalAmount),
+      approvedAmount: normalizeCurrencyValue(item?.approvedAmount ?? item?.netProviderAmount),
+      copayAmount: normalizeCurrencyValue(item?.patientCoPay),
+      providerName: item?.providerName || '-',
+      diagnosis: item?.diagnosisDescription || item?.diagnosisCode || '-'
+    }))
+    .sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
+
+  return claims;
+};
+
+const normalizePreAuths = (payload) => {
+  const preAuths = extractCollection(payload)
+    .map((item) => ({
+      id: item?.id,
+      reference: item?.referenceNumber || item?.preAuthNumber || (item?.id ? `#${item.id}` : '-'),
+      date: item?.requestDate || item?.createdAt || item?.updatedAt || null,
+      status: item?.status || '-',
+      requestedAmount: normalizeCurrencyValue(item?.contractPrice ?? item?.requestedAmount),
+      approvedAmount: normalizeCurrencyValue(item?.approvedAmount),
+      copayAmount: normalizeCurrencyValue(item?.copayAmount),
+      serviceName: item?.serviceName || '-',
+      providerName: item?.providerName || '-'
+    }))
+    .sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
+
+  return preAuths;
+};
+
+const mapStatusChipColor = (status) => {
+  const normalized = String(status || '').toUpperCase();
+  if (['APPROVED', 'SETTLED', 'PAID', 'USED', 'ACKNOWLEDGED'].includes(normalized)) return 'success';
+  if (['REJECTED', 'CANCELLED', 'EXPIRED', 'REFUSED'].includes(normalized)) return 'error';
+  if (['PENDING', 'UNDER_REVIEW', 'APPROVAL_IN_PROGRESS', 'NEEDS_CORRECTION', 'SUBMITTED'].includes(normalized)) return 'warning';
+  return 'default';
+};
+
 // --- Single Report Component ---
-const SingleBeneficiaryReport = ({ member, financialStats, loadingStats, onBack }) => {
+const SingleBeneficiaryReport = ({ member, financialStats, loadingStats, loadingActivity, memberActivity, onBack }) => {
   const theme = useTheme();
   const componentRef = useRef();
+  const [activityViewMode, setActivityViewMode] = useState('LAST_5');
+  const [activityFromDate, setActivityFromDate] = useState('');
+  const [activityToDate, setActivityToDate] = useState('');
 
   // Get company branding from SSOT
   const { getLogoSrc, companyName, hasLogo } = useCompanySettings();
+
+  useEffect(() => {
+    setActivityViewMode('LAST_5');
+    setActivityFromDate('');
+    setActivityToDate('');
+  }, [member?.id]);
+
+  const isDateInSelectedRange = (dateValue) => {
+    if (!dateValue) return false;
+    const value = new Date(dateValue);
+    if (Number.isNaN(value.getTime())) return false;
+
+    const from = activityFromDate ? new Date(activityFromDate) : null;
+    const to = activityToDate ? new Date(activityToDate) : null;
+
+    if (from && !Number.isNaN(from.getTime()) && value < from) return false;
+    if (to && !Number.isNaN(to.getTime())) {
+      const endOfDay = new Date(to);
+      endOfDay.setHours(23, 59, 59, 999);
+      if (value > endOfDay) return false;
+    }
+    return true;
+  };
 
   const handlePrint = useReactToPrint({
     contentRef: componentRef,
     documentTitle: `Member_Report_${member?.cardNumber || 'Unknown'}`,
     pageStyle: `
-      @page { size: A4 portrait; margin: 10mm; }
-      @media print { body { -webkit-print-color-adjust: exact; } }
+      @page { size: A4 landscape; margin: 7mm; }
+      @media print {
+        body {
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+        .print-root {
+          font-size: 10px !important;
+          line-height: 1.3 !important;
+        }
+        .print-hide { display: none !important; }
+        .print-card { box-shadow: none !important; border: 1px solid #ddd !important; }
+        .print-compact { padding: 8px !important; }
+        .print-table { page-break-inside: auto; }
+        .print-table thead { display: table-header-group; }
+        .print-table tr { page-break-inside: avoid; page-break-after: auto; }
+        .MuiTableCell-root { padding: 4px 6px !important; font-size: 10px !important; }
+        .MuiTypography-h4, .MuiTypography-h5, .MuiTypography-h6 { font-size: 14px !important; }
+        .MuiPaper-root { margin-bottom: 6px !important; }
+      }
     `
   });
 
@@ -953,12 +1131,33 @@ const SingleBeneficiaryReport = ({ member, financialStats, loadingStats, onBack 
     );
   }
 
+  const allClaimsRows = memberActivity?.claims || [];
+  const allPreAuthRows = memberActivity?.preAuths || [];
+
+  const claimsRows = useMemo(() => {
+    if (activityViewMode === 'ALL') return allClaimsRows;
+    if (activityViewMode === 'DATE_RANGE') {
+      return allClaimsRows.filter((item) => isDateInSelectedRange(item.date));
+    }
+    return allClaimsRows.slice(0, 5);
+  }, [allClaimsRows, activityViewMode, activityFromDate, activityToDate]);
+
+  const preAuthRows = useMemo(() => {
+    if (activityViewMode === 'ALL') return allPreAuthRows;
+    if (activityViewMode === 'DATE_RANGE') {
+      return allPreAuthRows.filter((item) => isDateInSelectedRange(item.date));
+    }
+    return allPreAuthRows.slice(0, 5);
+  }, [allPreAuthRows, activityViewMode, activityFromDate, activityToDate]);
+
   return (
     <Box>
       {/* Printable Area */}
-      <Box ref={componentRef} sx={{ p: '1.0rem', bgcolor: 'background.paper', borderRadius: '0.25rem' }}>
+      <Box ref={componentRef} className="print-root" sx={{ p: '0.75rem', bgcolor: 'background.paper', borderRadius: '0.25rem' }}>
         {/* Report Header */}
-        <Box sx={{ borderBottom: '2px solid #eee', mb: '1.5rem', pb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Box
+          sx={{ borderBottom: '2px solid #eee', mb: '0.75rem', pb: 0.75, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+        >
           <Box>
             <Typography variant="h4" color="primary.main" fontWeight="bold">
               تقرير تفاصيل المنتفع
@@ -976,11 +1175,11 @@ const SingleBeneficiaryReport = ({ member, financialStats, loadingStats, onBack 
           )}
         </Box>
 
-        <Grid container spacing={4}>
+        <Grid container spacing={1.5}>
           {/* Left Col: Member Info */}
-          <Grid size={{ xs: 12, md: 5 }}>
-            <MainCard title="البيانات الشخصية والتعريفية">
-              <Stack spacing={2}>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <MainCard title="بيانات المنتفع والهوية" className="print-card" contentSX={{ p: '0.75rem' }}>
+              <Stack spacing={1.25} className="print-compact">
                 <Box display="flex" alignItems="center" gap={2}>
                   <MemberAvatar member={member} size={64} />
                   <Box>
@@ -994,8 +1193,8 @@ const SingleBeneficiaryReport = ({ member, financialStats, loadingStats, onBack 
                   display="flex"
                   flexDirection="column"
                   alignItems="center"
-                  mb={3}
-                  p={2}
+                  mb={1}
+                  p={1.25}
                   border="1px solid #e0e0e0"
                   borderRadius={2}
                   bgcolor="#f8f9fa"
@@ -1042,8 +1241,10 @@ const SingleBeneficiaryReport = ({ member, financialStats, loadingStats, onBack 
                     </Box>
                   </Stack>
                 </Box>
-                <Divider sx={{ mb: '1.0rem' }} />
+                <Divider />
                 <InfoRow icon={<CreditCardIcon />} label="رقم البطاقة" value={member?.cardNumber} isMono />
+                <InfoRow icon={<NumbersIcon />} label="الباركود" value={member?.barcode} isMono />
+                <InfoRow icon={<BadgeIcon />} label="رقم الهوية" value={member?.nationalNumber} isMono />
                 <InfoRow icon={<BusinessIcon />} label="الشركة/الشريك" value={member?.employerName} />
                 <InfoRow icon={<DateRangeIcon />} label="تاريخ الانضمام" value={member?.joinDate} />
                 <InfoRow
@@ -1063,26 +1264,31 @@ const SingleBeneficiaryReport = ({ member, financialStats, loadingStats, onBack 
           </Grid>
 
           {/* Right Col: Financial Summary */}
-          <Grid size={{ xs: 12, md: 7 }}>
-            <MainCard title="الملخص المالي (للسنة الحالية)" secondary={<Chip label="للقراءة فقط" size="small" variant="outlined" />}>
-              <Grid container spacing={2}>
-                <Grid size={6}>
+          <Grid size={{ xs: 12, md: 8 }}>
+            <MainCard
+              title="كشف استخدام التغطية"
+              className="print-card"
+              contentSX={{ p: '0.75rem' }}
+              secondary={<Chip label="للقراءة فقط" size="small" variant="outlined" />}
+            >
+              <Grid container spacing={1} className="print-compact">
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <SummaryCard
-                    title="إجمالي المطالبات"
-                    value={formatCurrency(financialStats?.totalRequested || 0)}
+                    title="الحد السنوي"
+                    value={formatCurrency(financialStats?.annualLimit || 0)}
                     icon={<AssignmentIcon />}
                     color="primary"
                   />
                 </Grid>
-                <Grid size={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <SummaryCard
-                    title="المبالغ المعتمدة"
-                    value={formatCurrency(financialStats?.totalNetPayable || 0)}
+                    title="المبلغ المستخدم"
+                    value={formatCurrency(financialStats?.totalApproved || 0)}
                     icon={<AttachMoneyIcon />}
                     color="success"
                   />
                 </Grid>
-                <Grid size={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <SummaryCard
                     title="مبلغ التحمل (Co-Pay)"
                     value={formatCurrency(financialStats?.totalPatientCoPay || 0)}
@@ -1090,26 +1296,209 @@ const SingleBeneficiaryReport = ({ member, financialStats, loadingStats, onBack 
                     color="warning"
                   />
                 </Grid>
-                <Grid size={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <SummaryCard
-                    title="المتبقي"
-                    value={formatCurrency(financialStats?.remainingBalance || 0)}
+                    title="المتبقي من الحد"
+                    value={formatCurrency(financialStats?.remainingCoverage || 0)}
                     icon={<NumbersIcon />} // Use Numbers or similar
                     color="info"
                   />
                 </Grid>
               </Grid>
 
-              {/* Placeholder Table for recent claims */}
-              <Box mt={3}>
-                <Divider sx={{ mb: '1.0rem' }} />
-                <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-                  آخر 5 مطالبات
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  لا توجد مطالبات حديثة للعرض في هذا الموجز.
-                </Typography>
+              <Box mt={1}>
+                <Paper className="print-card" sx={{ p: '0.75rem', bgcolor: 'grey.50', border: '1px solid', borderColor: 'divider' }}>
+                  <Stack spacing={1}>
+                    <Stack direction="row" justifyContent="space-between" alignItems="center">
+                      <Typography variant="subtitle2" fontWeight="bold">
+                        نسبة استخدام الحد السنوي
+                      </Typography>
+                      <Typography variant="body2" fontWeight="bold" color="primary.main">
+                        {Number(financialStats?.utilizationPercent || 0).toFixed(1)}%
+                      </Typography>
+                    </Stack>
+                    <LinearProgress
+                      variant="determinate"
+                      value={Math.min(100, Math.max(0, Number(financialStats?.utilizationPercent || 0)))}
+                      sx={{ height: '0.625rem', borderRadius: 99 }}
+                    />
+                    <Typography variant="caption" color="text.secondary">
+                      إجمالي عدد المطالبات: {financialStats?.claimsCount || 0} | معتمد: {financialStats?.approvedClaimsCount || 0} | قيد المعالجة:{' '}
+                      {financialStats?.pendingClaimsCount || 0} | مرفوض: {financialStats?.rejectedClaimsCount || 0}
+                    </Typography>
+                  </Stack>
+                </Paper>
+
+                <Alert severity="info" sx={{ mt: 1, py: 0 }}>
+                  هذا الكشف يوضح ما تم استخدامه من التغطية، وما تبقى، وحصة التحمل على المنتفع بشكل مباشر.
+                </Alert>
               </Box>
+            </MainCard>
+          </Grid>
+
+          <Grid size={{ xs: 12 }} className="print-hide">
+            <MainCard title="خيارات عرض نشاط المنتفع" className="print-card" contentSX={{ p: '0.75rem' }}>
+              <Grid container spacing={1.5} alignItems="center">
+                <Grid size={{ xs: 12, md: 3 }}>
+                  <FormControl fullWidth size="small">
+                    <InputLabel id="activity-view-mode-label">نمط العرض</InputLabel>
+                    <Select
+                      labelId="activity-view-mode-label"
+                      value={activityViewMode}
+                      label="نمط العرض"
+                      onChange={(event) => setActivityViewMode(event.target.value)}
+                    >
+                      <MenuItem value="LAST_5">آخر 5</MenuItem>
+                      <MenuItem value="ALL">عرض كامل</MenuItem>
+                      <MenuItem value="DATE_RANGE">من تاريخ إلى تاريخ</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+
+                <Grid size={{ xs: 12, md: 3 }}>
+                  <TextField
+                    fullWidth
+                    type="date"
+                    label="من تاريخ"
+                    value={activityFromDate}
+                    onChange={(event) => setActivityFromDate(event.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                    size="small"
+                    disabled={activityViewMode !== 'DATE_RANGE'}
+                  />
+                </Grid>
+
+                <Grid size={{ xs: 12, md: 3 }}>
+                  <TextField
+                    fullWidth
+                    type="date"
+                    label="إلى تاريخ"
+                    value={activityToDate}
+                    onChange={(event) => setActivityToDate(event.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                    size="small"
+                    disabled={activityViewMode !== 'DATE_RANGE'}
+                  />
+                </Grid>
+
+                <Grid size={{ xs: 12, md: 3 }}>
+                  <Alert severity="info" sx={{ py: 0 }}>
+                    المطالبات: {claimsRows.length} | الموافقات: {preAuthRows.length}
+                  </Alert>
+                </Grid>
+              </Grid>
+            </MainCard>
+          </Grid>
+
+          <Grid size={{ xs: 12, md: 6 }}>
+            <MainCard
+              title={
+                activityViewMode === 'ALL'
+                  ? 'كامل مطالبات المنتفع'
+                  : activityViewMode === 'DATE_RANGE'
+                    ? 'مطالبات المنتفع ضمن الفترة'
+                    : 'آخر 5 مطالبات للمنتفع'
+              }
+              className="print-card"
+              contentSX={{ p: '0.75rem' }}
+            >
+              {loadingActivity ? (
+                <Stack spacing={1}>
+                  {[...Array(3)].map((_, i) => (
+                    <Skeleton key={i} variant="rectangular" height={44} sx={{ borderRadius: 1 }} />
+                  ))}
+                </Stack>
+              ) : claimsRows.length === 0 ? (
+                <Alert severity="info">لا توجد مطالبات حديثة لهذا المنتفع.</Alert>
+              ) : (
+                <TableContainer>
+                  <Table size="small" className="print-table">
+                    <TableHead>
+                      <TableRow sx={{ '& th': { fontWeight: 'bold', bgcolor: 'grey.100' } }}>
+                        <TableCell>رقم المطالبة</TableCell>
+                        <TableCell>التاريخ</TableCell>
+                        <TableCell>مقدم الخدمة</TableCell>
+                        <TableCell>الحالة</TableCell>
+                        <TableCell>المطلوب</TableCell>
+                        <TableCell>المعتمد</TableCell>
+                        <TableCell>التحمل</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {claimsRows.map((claim) => (
+                        <TableRow key={claim.id || claim.reference}>
+                          <TableCell>{claim.reference}</TableCell>
+                          <TableCell>{claim.date ? new Date(claim.date).toLocaleDateString('en-US') : '-'}</TableCell>
+                          <TableCell>{claim.providerName || '-'}</TableCell>
+                          <TableCell>
+                            <Chip size="small" label={claim.status} color={mapStatusChipColor(claim.status)} variant="outlined" />
+                          </TableCell>
+                          <TableCell>{formatCurrency(claim.requestedAmount)}</TableCell>
+                          <TableCell>{formatCurrency(claim.approvedAmount)}</TableCell>
+                          <TableCell>{formatCurrency(claim.copayAmount)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
+            </MainCard>
+          </Grid>
+
+          <Grid size={{ xs: 12, md: 6 }}>
+            <MainCard
+              title={
+                activityViewMode === 'ALL'
+                  ? 'كامل الموافقات المسبقة للمنتفع'
+                  : activityViewMode === 'DATE_RANGE'
+                    ? 'الموافقات المسبقة ضمن الفترة'
+                    : 'آخر 5 موافقات مسبقة للمنتفع'
+              }
+              className="print-card"
+              contentSX={{ p: '0.75rem' }}
+            >
+              {loadingActivity ? (
+                <Stack spacing={1}>
+                  {[...Array(3)].map((_, i) => (
+                    <Skeleton key={i} variant="rectangular" height={44} sx={{ borderRadius: 1 }} />
+                  ))}
+                </Stack>
+              ) : preAuthRows.length === 0 ? (
+                <Alert severity="info">لا توجد موافقات مسبقة حديثة لهذا المنتفع.</Alert>
+              ) : (
+                <TableContainer>
+                  <Table size="small" className="print-table">
+                    <TableHead>
+                      <TableRow sx={{ '& th': { fontWeight: 'bold', bgcolor: 'grey.100' } }}>
+                        <TableCell>رقم الموافقة</TableCell>
+                        <TableCell>تاريخ الطلب</TableCell>
+                        <TableCell>الخدمة</TableCell>
+                        <TableCell>مقدم الخدمة</TableCell>
+                        <TableCell>الحالة</TableCell>
+                        <TableCell>القيمة</TableCell>
+                        <TableCell>المعتمد</TableCell>
+                        <TableCell>التحمل</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {preAuthRows.map((preAuth) => (
+                        <TableRow key={preAuth.id || preAuth.reference}>
+                          <TableCell>{preAuth.reference}</TableCell>
+                          <TableCell>{preAuth.date ? new Date(preAuth.date).toLocaleDateString('en-US') : '-'}</TableCell>
+                          <TableCell>{preAuth.serviceName || '-'}</TableCell>
+                          <TableCell>{preAuth.providerName || '-'}</TableCell>
+                          <TableCell>
+                            <Chip size="small" label={preAuth.status} color={mapStatusChipColor(preAuth.status)} variant="outlined" />
+                          </TableCell>
+                          <TableCell>{formatCurrency(preAuth.requestedAmount)}</TableCell>
+                          <TableCell>{formatCurrency(preAuth.approvedAmount)}</TableCell>
+                          <TableCell>{formatCurrency(preAuth.copayAmount)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
             </MainCard>
           </Grid>
         </Grid>

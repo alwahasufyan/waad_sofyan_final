@@ -199,6 +199,36 @@ export const searchMedicalServices = async (params = {}) => {
  * @returns {Promise<Array>} List of services with full category context
  */
 export const lookupMedicalServices = async (params = {}) => {
-  const response = await axiosClient.get(`${BASE_URL}/lookup`, { params });
-  return unwrap(response);
+  const { categoryId, q } = params;
+
+  // Canonical backend contract: services must be looked up through a category.
+  if (!categoryId) {
+    return [];
+  }
+
+  const response = await axiosClient.get(`/medical-categories/${categoryId}/medical-services`);
+  const services = unwrap(response) || [];
+
+  // Keep search UX parity by filtering client-side on code/name/category labels.
+  const query = (q || '').trim().toLowerCase();
+  if (!query) {
+    return services;
+  }
+
+  return services.filter((service) => {
+    const searchable = [
+      service.code,
+      service.name,
+      service.nameAr,
+      service.nameEn,
+      service.categoryName,
+      service.categoryNameAr,
+      service.categoryNameEn
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+
+    return searchable.includes(query);
+  });
 };

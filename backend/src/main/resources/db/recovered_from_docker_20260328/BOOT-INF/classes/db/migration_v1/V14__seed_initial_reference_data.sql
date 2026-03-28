@@ -1,0 +1,3 @@
+-- V14__seed_initial_reference_data.sql
+-- Placeholder file for sequential migration track.
+-- Content will be extracted from legacy migrations during consolidation.

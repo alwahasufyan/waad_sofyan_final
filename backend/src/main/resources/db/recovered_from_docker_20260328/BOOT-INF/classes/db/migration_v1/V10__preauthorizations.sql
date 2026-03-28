@@ -1,0 +1,3 @@
+-- V10__preauthorizations.sql
+-- Placeholder file for sequential migration track.
+-- Content will be extracted from legacy migrations during consolidation.
