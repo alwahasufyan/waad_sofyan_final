@@ -12,6 +12,8 @@ import com.waad.tba.modules.member.dto.MemberViewDto;
 import com.waad.tba.modules.member.service.MemberFinancialSummaryService;
 import com.waad.tba.modules.member.service.UnifiedMemberService;
 import com.waad.tba.modules.member.service.MemberExcelExportService;
+import com.waad.tba.modules.claim.dto.ClaimViewDto;
+import com.waad.tba.modules.claim.service.ClaimService;
 import com.waad.tba.common.file.FileStorageService;
 import com.waad.tba.common.file.FileUploadResult;
 import com.waad.tba.services.pdf.HtmlToPdfService;
@@ -42,6 +44,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -117,6 +120,7 @@ public class UnifiedMemberController {
 
     private final UnifiedMemberService unifiedMemberService;
     private final MemberFinancialSummaryService financialSummaryService;
+        private final ClaimService claimService;
     private final PdfTemplateService pdfTemplateService;
     private final HtmlToPdfService htmlToPdfService;
     private final FileStorageService fileStorageService;
@@ -621,6 +625,93 @@ public class UnifiedMemberController {
         return ResponseEntity.ok(response);
     }
 
+        /**
+         * HTML preview endpoint for beneficiaries report (used by statement-preview page).
+         */
+        @GetMapping(value = "/html/report", produces = MediaType.TEXT_HTML_VALUE)
+        @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'EMPLOYER_ADMIN')")
+        public ResponseEntity<String> previewBeneficiariesHtml(
+                        @RequestParam(name = "nameAr", required = false) String nameAr,
+                        @RequestParam(name = "nameEn", required = false) String nameEn,
+                        @RequestParam(name = "civilId", required = false) String civilId,
+                        @RequestParam(name = "barcode", required = false) String barcode,
+                        @RequestParam(name = "cardNumber", required = false) String cardNumber,
+                        @RequestParam(name = "organizationId", required = false) Long organizationId,
+                        @RequestParam(name = "employerId", required = false) Long employerId,
+                        @RequestParam(name = "benefitPolicyId", required = false) Long benefitPolicyId,
+                        @RequestParam(name = "status", required = false) String status,
+                        @RequestParam(name = "type", required = false) String type,
+                        @RequestParam(name = "startDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+                        @RequestParam(name = "endDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+
+                Long effectiveEmployerId = employerId != null ? employerId : organizationId;
+
+                Pageable pageable = PageRequest.of(0, 1000, Sort.by(Sort.Direction.DESC, "id"));
+                Page<MemberViewDto> membersPage = unifiedMemberService.searchMembers(
+                                nameAr, nameEn, civilId, barcode, cardNumber,
+                                effectiveEmployerId, benefitPolicyId, status, type, startDate, endDate, false, pageable);
+
+                List<MemberViewDto> members = membersPage.getContent();
+                Map<String, Object> data = new HashMap<>();
+                String reportDate = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+
+                data.put("reportDate", reportDate);
+                data.put("members", members);
+                data.put("totalMembers", membersPage.getTotalElements());
+                data.put("activeMembers",
+                                members.stream().filter(m -> (m.getStatus() != null && "ACTIVE".equals(m.getStatus().name())) ||
+                                                (m.getCardStatus() != null && "ACTIVE".equals(m.getCardStatus().name()))).count());
+                data.put("familiesCount", members.stream().filter(m -> m.getType() != null && "PRINCIPAL".equals(m.getType())).count());
+
+                StringBuilder filterDesc = new StringBuilder();
+                if (effectiveEmployerId != null)
+                        filterDesc.append("Company ID: ").append(effectiveEmployerId).append(", ");
+                if (status != null)
+                        filterDesc.append("Status: ").append(status).append(", ");
+                if (type != null)
+                        filterDesc.append("Type: ").append(type).append(", ");
+                data.put("filterDescription", filterDesc.length() > 0 ? filterDesc.toString() : "الكل");
+
+                String html = pdfTemplateService.processTemplate("pdf/beneficiaries-report", data);
+                return ResponseEntity.ok().contentType(MediaType.TEXT_HTML).body(html);
+        }
+
+        /**
+         * HTML preview endpoint for single beneficiary report (used by statement-preview page).
+         */
+        @GetMapping(value = "/{id}/html", produces = MediaType.TEXT_HTML_VALUE)
+        @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'EMPLOYER_ADMIN', 'PROVIDER_STAFF')")
+        public ResponseEntity<String> previewMemberHtml(@PathVariable("id") Long id) {
+                MemberViewDto member = unifiedMemberService.getMemberWithDependents(id);
+                MemberFinancialSummaryDto financialSummary = financialSummaryService.getFinancialSummary(id);
+                List<ClaimViewDto> claims = claimService.getClaimsByMember(id)
+                        .stream()
+                        .sorted(Comparator.comparing(ClaimViewDto::getServiceDate,
+                                Comparator.nullsLast(Comparator.reverseOrder())))
+                        .toList();
+
+                Map<String, Object> data = new HashMap<>();
+                data.put("reportDate", LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+                data.put("member", member);
+                data.put("members", List.of(member));
+                data.put("totalMembers", 1);
+
+                boolean isActive = (member.getStatus() != null && "ACTIVE".equals(member.getStatus().name())) ||
+                                (member.getCardStatus() != null && "ACTIVE".equals(member.getCardStatus().name()));
+                data.put("activeMembers", isActive ? 1 : 0);
+                data.put("familiesCount", (member.getType() != null && "PRINCIPAL".equals(member.getType())) ? 1 : 0);
+                data.put("filterDescription", "تفاصيل منتفع فردي: " + member.getFullName());
+                data.put("financialSummary", financialSummary);
+                data.put("memberClaims", claims);
+                data.put("memberGenderLabel", resolveGenderLabel(member));
+                data.put("memberStatusLabel", resolveStatusLabel(member));
+                data.put("memberStatusCss", resolveStatusCss(member));
+                data.put("companyDisplayName", "شركة وعد لادارة النفقات الطبية");
+
+                String html = pdfTemplateService.processTemplate("pdf/beneficiary-profile-report", data);
+                return ResponseEntity.ok().contentType(MediaType.TEXT_HTML).body(html);
+        }
+
     /**
      * Generate PDF Report for Beneficiaries (Insured Members)
      * 
@@ -732,10 +823,17 @@ public class UnifiedMemberController {
         // Let's implement a simple single page report.
 
         MemberViewDto member = unifiedMemberService.getMemberWithDependents(id);
+        MemberFinancialSummaryDto financialSummary = financialSummaryService.getFinancialSummary(id);
+        List<ClaimViewDto> claims = claimService.getClaimsByMember(id)
+                .stream()
+                .sorted(Comparator.comparing(ClaimViewDto::getServiceDate,
+                        Comparator.nullsLast(Comparator.reverseOrder())))
+                .toList();
 
         Map<String, Object> data = new HashMap<>();
         data.put("reportDate", LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
-        data.put("members", List.of(member)); // Wrap single member in list
+        data.put("member", member);
+        data.put("members", List.of(member)); // keep for backward compatibility
         data.put("totalMembers", 1);
         boolean isActive = (member.getStatus() != null && "ACTIVE".equals(member.getStatus().name())) ||
                 (member.getCardStatus() != null && "ACTIVE".equals(member.getCardStatus().name()));
@@ -744,8 +842,14 @@ public class UnifiedMemberController {
         boolean isPrincipal = member.getType() != null && "PRINCIPAL".equals(member.getType());
         data.put("familiesCount", isPrincipal ? 1 : 0);
         data.put("filterDescription", "تفاصيل منتفع فردي: " + member.getFullName());
+        data.put("financialSummary", financialSummary);
+        data.put("memberClaims", claims);
+        data.put("memberGenderLabel", resolveGenderLabel(member));
+        data.put("memberStatusLabel", resolveStatusLabel(member));
+        data.put("memberStatusCss", resolveStatusCss(member));
+        data.put("companyDisplayName", "شركة وعد لادارة النفقات الطبية");
 
-        String html = pdfTemplateService.processTemplate("pdf/beneficiaries-report", data);
+        String html = pdfTemplateService.processTemplate("pdf/beneficiary-profile-report", data);
         byte[] pdfBytes = htmlToPdfService.convertHtmlToPdf(html);
 
         String filename = "member-" + member.getCardNumber() + ".pdf";
@@ -756,6 +860,59 @@ public class UnifiedMemberController {
 
         return ResponseEntity.ok().headers(headers).body(pdfBytes);
     }
+
+        private String resolveGenderLabel(MemberViewDto member) {
+                if (member == null || member.getGender() == null) {
+                        return "-";
+                }
+
+                String value = member.getGender().toString().toUpperCase();
+                if (value.contains("MALE")) {
+                        return "ذكر";
+                }
+                if (value.contains("FEMALE")) {
+                        return "أنثى";
+                }
+                return "-";
+        }
+
+        private String resolveStatusValue(MemberViewDto member) {
+                if (member == null) {
+                        return "";
+                }
+                if (member.getStatus() != null) {
+                        return member.getStatus().toString().toUpperCase();
+                }
+                if (member.getCardStatus() != null) {
+                        return member.getCardStatus().toString().toUpperCase();
+                }
+                return "";
+        }
+
+        private String resolveStatusLabel(MemberViewDto member) {
+                String statusValue = resolveStatusValue(member);
+                if ("ACTIVE".equals(statusValue)) {
+                        return "نشط";
+                }
+                if ("SUSPENDED".equals(statusValue)) {
+                        return "موقوف";
+                }
+                if ("EXPIRED".equals(statusValue) || "INACTIVE".equals(statusValue)) {
+                        return "غير نشط";
+                }
+                return statusValue.isBlank() ? "-" : statusValue;
+        }
+
+        private String resolveStatusCss(MemberViewDto member) {
+                String statusValue = resolveStatusValue(member);
+                if ("ACTIVE".equals(statusValue)) {
+                        return "status-active";
+                }
+                if ("SUSPENDED".equals(statusValue)) {
+                        return "status-suspended";
+                }
+                return "status-inactive";
+        }
 
     // ==================== FINANCIAL REGISTER REPORT ====================
 

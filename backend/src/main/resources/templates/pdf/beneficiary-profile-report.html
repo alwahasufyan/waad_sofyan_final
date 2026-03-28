@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8"/>
+    <title th:text="|تقرير منتفع - ${reportDate}|">Beneficiary Profile Report</title>
+    <style th:inline="css">
+        @page {
+            size: A4;
+            margin: 12mm;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            color: #1f2937;
+            direction: rtl;
+            font-size: 11pt;
+            line-height: 1.5;
+            background: #fff;
+        }
+
+        :root {
+            --brand-primary: [[${company.claimReportPrimaryColor != null ? company.claimReportPrimaryColor : (company.headerColor != null ? company.headerColor : '#12806a')}]];
+            --brand-secondary: #16a085;
+            --brand-muted: #4b5563;
+            --brand-border: #d7e3f0;
+            --brand-soft: #f8fbff;
+        }
+
+        .sheet {
+            border: 1px solid var(--brand-border);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .top-band {
+            background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%);
+            color: #fff;
+            padding: 14px 16px;
+            overflow: hidden;
+        }
+
+        .top-brand {
+            display: table;
+            width: 100%;
+        }
+
+        .logo-col,
+        .title-col {
+            display: table-cell;
+            vertical-align: middle;
+        }
+
+        .logo-col {
+            width: 88px;
+            text-align: left;
+        }
+
+        .logo-col img {
+            max-height: 58px;
+            max-width: 80px;
+            border-radius: 6px;
+            background: #fff;
+            padding: 4px;
+        }
+
+        .logo-fallback {
+            display: inline-block;
+            padding: 6px 10px;
+            border-radius: 8px;
+            background: #ffffff;
+            color: var(--brand-primary);
+            font-weight: 800;
+            font-size: 11pt;
+        }
+
+        .title-col {
+            text-align: right;
+        }
+
+        .org {
+            font-size: 14pt;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .subtitle {
+            font-size: 9pt;
+            opacity: 0.95;
+        }
+
+        .contact-strip {
+            margin-top: 8px;
+            font-size: 8.5pt;
+            opacity: 0.95;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .content {
+            padding: 16px;
+        }
+
+        .heading {
+            margin: 0 0 6px;
+            font-size: 16pt;
+            color: var(--brand-primary);
+        }
+
+        .meta {
+            color: #6b7280;
+            font-size: 9pt;
+            margin-bottom: 12px;
+        }
+
+        .summary-row {
+            width: 100%;
+            margin-bottom: 14px;
+        }
+
+        .summary-box {
+            width: 32.2%;
+            display: inline-block;
+            vertical-align: top;
+            border: 1px solid #e5edf6;
+            border-radius: 8px;
+            padding: 8px;
+            margin-left: 1%;
+            background: var(--brand-soft);
+            text-align: center;
+        }
+
+        .summary-box:last-child {
+            margin-left: 0;
+        }
+
+        .summary-value {
+            font-size: 15pt;
+            font-weight: 700;
+            color: var(--brand-primary);
+        }
+
+        .summary-label {
+            color: #5b6472;
+            font-size: 9pt;
+        }
+
+        .section {
+            margin-bottom: 12px;
+            border: 1px solid #e7edf5;
+            border-radius: 8px;
+            padding: 10px 12px;
+            background: #fff;
+        }
+
+        .section-title {
+            margin: 0 0 8px;
+            font-size: 11pt;
+            font-weight: 700;
+            color: var(--brand-primary);
+        }
+
+        .points {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .point-item {
+            margin-bottom: 6px;
+            padding: 5px 8px;
+            background: #f8fafc;
+            border-radius: 6px;
+            border: 1px solid #eef2f7;
+        }
+
+        .point-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .label {
+            font-weight: 700;
+            color: #111827;
+            margin-left: 6px;
+        }
+
+        .mono {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 10pt;
+            direction: ltr;
+            unicode-bidi: plaintext;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 99px;
+            font-size: 8.5pt;
+            font-weight: 700;
+            border: 1px solid transparent;
+        }
+
+        .status-active {
+            background: #e8f5e9;
+            color: #1b5e20;
+            border-color: #c8e6c9;
+        }
+
+        .status-suspended {
+            background: #fff8e1;
+            color: #8d6e00;
+            border-color: #ffecb3;
+        }
+
+        .status-inactive {
+            background: #ffebee;
+            color: #b71c1c;
+            border-color: #ffcdd2;
+        }
+
+        .notes {
+            margin-top: 4px;
+            font-size: 9pt;
+            color: #4b5563;
+        }
+
+        .footer {
+            margin-top: 8px;
+            padding-top: 10px;
+            border-top: 1px solid #e5e7eb;
+            font-size: 8pt;
+            color: var(--brand-muted);
+            text-align: center;
+        }
+
+        .claims-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 6px;
+            font-size: 9pt;
+        }
+
+        .claims-table th,
+        .claims-table td {
+            border: 1px solid #e5e7eb;
+            padding: 6px;
+            text-align: right;
+            vertical-align: top;
+        }
+
+        .claims-table th {
+            background: #f3f8f6;
+            color: #1f2937;
+            font-weight: 700;
+        }
+
+        .claims-table tr:nth-child(even) {
+            background: #fbfdfc;
+        }
+
+        .money {
+            font-family: Consolas, "Courier New", monospace;
+            direction: ltr;
+            unicode-bidi: plaintext;
+            white-space: nowrap;
+        }
+
+        .empty-claims {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+<div class="sheet">
+    <div class="top-band">
+        <div class="top-brand">
+            <div class="title-col">
+                <div class="org" th:text="${companyDisplayName != null ? companyDisplayName : 'شركة وعد لادارة النفقات الطبية'}">Company Name</div>
+                <div class="subtitle">نموذج تقرير منتفع معتمد - Professional Beneficiary Profile</div>
+            </div>
+            <div class="logo-col" th:if="${company.hasLogo()}">
+                <img th:src="${company.logoBase64DataUrl}" alt="Company Logo"/>
+            </div>
+            <div class="logo-col" th:unless="${company.hasLogo()}">
+                <span class="logo-fallback">وعد</span>
+            </div>
+        </div>
+        <div class="contact-strip">
+            <span th:if="${company.address != null}" th:text="${company.address}">العنوان</span>
+            <span th:if="${company.phone != null}"> • </span>
+            <span th:if="${company.phone != null}" th:text="${company.phone}">الهاتف</span>
+            <span th:if="${company.email != null}"> • </span>
+            <span th:if="${company.email != null}" th:text="${company.email}">البريد الإلكتروني</span>
+            <span th:if="${company.website != null}"> • </span>
+            <span th:if="${company.website != null}" th:text="${company.website}">الموقع الإلكتروني</span>
+        </div>
+    </div>
+
+    <div class="content">
+        <h1 class="heading">تقرير المنتفع الفردي</h1>
+        <div class="meta">
+            تاريخ التقرير: <span th:text="${reportDate}">2026-03-28</span>
+        </div>
+
+        <div class="summary-row">
+            <div class="summary-box">
+                <div class="summary-value" th:text="${totalMembers}">1</div>
+                <div class="summary-label">عدد السجلات</div>
+            </div>
+            <div class="summary-box">
+                <div class="summary-value" th:text="${activeMembers}">1</div>
+                <div class="summary-label">سجلات نشطة</div>
+            </div>
+            <div class="summary-box">
+                <div class="summary-value" th:text="${familiesCount}">1</div>
+                <div class="summary-label">عدد الأسر الرئيسية</div>
+            </div>
+        </div>
+
+        <div class="section" th:if="${member != null}">
+            <h2 class="section-title">البيانات الأساسية</h2>
+            <ul class="points">
+                <li class="point-item"><span class="label">الاسم:</span><span th:text="${member.fullName != null ? member.fullName : '-'}">-</span></li>
+                <li class="point-item"><span class="label">رقم البطاقة:</span><span class="mono" th:text="${member.cardNumber != null ? member.cardNumber : '-'}">-</span></li>
+                <li class="point-item"><span class="label">الهوية الوطنية:</span><span class="mono" th:text="${member.nationalNumber != null ? member.nationalNumber : '-'}">-</span></li>
+                <li class="point-item"><span class="label">الباركود:</span><span class="mono" th:text="${member.barcode != null ? member.barcode : '-'}">-</span></li>
+                <li class="point-item"><span class="label">الشركة/جهة العمل:</span><span th:text="${member.employerName != null ? member.employerName : '-'}">-</span></li>
+                <li class="point-item"><span class="label">النوع:</span><span th:text="${member.type != null ? (member.type == 'PRINCIPAL' ? 'مشترك أساسي' : 'تابع') : '-'}">-</span></li>
+                <li class="point-item"><span class="label">الجنس والعمر:</span>
+                    <span th:text="${memberGenderLabel != null ? memberGenderLabel : '-'}">-</span>
+                    <span th:text="| / ${member.age != null ? member.age : '-'} سنة|"> / - سنة</span>
+                </li>
+                <li class="point-item"><span class="label">تاريخ الانضمام:</span><span th:text="${member.joinDate != null ? member.joinDate : '-'}">-</span></li>
+                <li class="point-item">
+                    <span class="label">الحالة:</span>
+                    <span th:class="${'status ' + (memberStatusCss != null ? memberStatusCss : 'status-inactive')}" th:text="${memberStatusLabel != null ? memberStatusLabel : '-'}">
+                        نشط
+                    </span>
+                </li>
+            </ul>
+            <div class="notes">
+                ملاحظة: هذا التقرير يعرض بيانات المنتفع الأساسية المعتمدة لدى النظام بتاريخ الإصدار.
+            </div>
+        </div>
+
+        <div class="section" th:if="${financialSummary != null}">
+            <h2 class="section-title">كشف استخدام التغطية</h2>
+            <ul class="points">
+                <li class="point-item"><span class="label">الحد السنوي:</span><span class="money" th:text="${#numbers.formatDecimal(financialSummary.annualLimit != null ? financialSummary.annualLimit : 0, 1, 2)} + ' د.ل'">0.00</span></li>
+                <li class="point-item"><span class="label">إجمالي المطالبات:</span><span class="money" th:text="${#numbers.formatDecimal(financialSummary.totalClaimed != null ? financialSummary.totalClaimed : 0, 1, 2)} + ' د.ل'">0.00</span></li>
+                <li class="point-item"><span class="label">المعتمد:</span><span class="money" th:text="${#numbers.formatDecimal(financialSummary.totalApproved != null ? financialSummary.totalApproved : 0, 1, 2)} + ' د.ل'">0.00</span></li>
+                <li class="point-item"><span class="label">التحمل:</span><span class="money" th:text="${#numbers.formatDecimal(financialSummary.totalPatientCoPay != null ? financialSummary.totalPatientCoPay : 0, 1, 2)} + ' د.ل'">0.00</span></li>
+                <li class="point-item"><span class="label">المتبقي:</span><span class="money" th:text="${#numbers.formatDecimal(financialSummary.remainingCoverage != null ? financialSummary.remainingCoverage : 0, 1, 2)} + ' د.ل'">0.00</span></li>
+                <li class="point-item"><span class="label">نسبة الاستخدام:</span><span th:text="${#numbers.formatDecimal(financialSummary.utilizationPercent != null ? financialSummary.utilizationPercent : 0, 1, 1)} + '%'">0%</span></li>
+            </ul>
+        </div>
+
+        <div class="section" th:if="${memberClaims != null}">
+            <h2 class="section-title">نشاط المنتفع - المطالبات (كامل)</h2>
+            <table class="claims-table">
+                <thead>
+                <tr>
+                    <th>#</th>
+                    <th>رقم المطالبة</th>
+                    <th>تاريخ الخدمة</th>
+                    <th>مقدم الخدمة</th>
+                    <th>الحالة</th>
+                    <th>المطلوب</th>
+                    <th>المعتمد</th>
+                    <th>التحمل</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="c, stat : ${memberClaims}">
+                    <td th:text="${stat.count}">1</td>
+                    <td th:text="${c.claimNumber != null ? c.claimNumber : (c.id != null ? 'CLM-' + c.id : '-')}">-</td>
+                    <td th:text="${c.serviceDate != null ? c.serviceDate : '-'}">-</td>
+                    <td th:text="${c.providerName != null ? c.providerName : '-'}">-</td>
+                    <td th:text="${c.statusLabel != null ? c.statusLabel : (c.status != null ? c.status : '-')}">-</td>
+                    <td class="money" th:text="${#numbers.formatDecimal(c.requestedAmount != null ? c.requestedAmount : 0, 1, 2)}">0.00</td>
+                    <td class="money" th:text="${#numbers.formatDecimal(c.approvedAmount != null ? c.approvedAmount : 0, 1, 2)}">0.00</td>
+                    <td class="money" th:text="${#numbers.formatDecimal(c.patientCoPay != null ? c.patientCoPay : 0, 1, 2)}">0.00</td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(memberClaims)}">
+                    <td colspan="8" class="empty-claims">لا توجد مطالبات لهذا المنتفع.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="footer">
+            جميع الحقوق محفوظة نظام وعد
+        </div>
+    </div>
+</div>
+</body>
+</html>

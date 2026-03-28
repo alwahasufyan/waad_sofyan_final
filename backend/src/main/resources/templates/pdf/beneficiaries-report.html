@@ -3,28 +3,78 @@
 <head>
     <meta charset="UTF-8"/>
     <title th:text="|تقرير المنتفعين - ${reportDate}|">Beneficiaries Report</title>
-    
-    <style>
+    <style th:inline="css">
         @page {
             size: A4 landscape;
             margin: 15mm;
         }
-        
+
         * {
             box-sizing: border-box;
         }
-        
+
         body {
-            font-family: 'Arial', sans-serif; /* Fallback */
+            font-family: Arial, sans-serif;
             font-size: 10pt;
             direction: rtl;
+            color: #1f2937;
+        }
+
+        :root {
+            --brand-primary: [[${company.claimReportPrimaryColor != null ? company.claimReportPrimaryColor : (company.headerColor != null ? company.headerColor : '#12806a')}]];
+            --brand-secondary: #16a085;
         }
 
         .header {
-            border-bottom: 2px solid #1976d2;
+            border-bottom: 2px solid var(--brand-primary);
             padding-bottom: 10px;
             margin-bottom: 20px;
+            display: table;
+            width: 100%;
+        }
+
+        .header-left,
+        .header-right {
+            display: table-cell;
+            vertical-align: middle;
+        }
+
+        .header-left {
+            width: 90px;
+            text-align: left;
+        }
+
+        .header-left img {
+            height: 52px;
+            max-width: 82px;
+            background: #fff;
+            padding: 4px;
+            border-radius: 6px;
+        }
+
+        .logo-fallback {
+            display: inline-block;
+            padding: 6px 10px;
+            border-radius: 8px;
+            background: #f3fffb;
+            color: var(--brand-primary);
+            font-weight: bold;
+        }
+
+        .header-right {
             text-align: right;
+        }
+
+        h1 {
+            font-size: 18pt;
+            color: var(--brand-primary);
+            margin: 0 0 10px 0;
+        }
+
+        .report-title {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 16pt;
         }
 
         .footer {
@@ -34,12 +84,6 @@
             font-size: 8pt;
             color: #777;
             margin-top: 15px;
-        }
-
-        h1 {
-            font-size: 18pt;
-            color: #1976d2;
-            margin: 0 0 10px 0;
         }
 
         .meta-info {
@@ -64,7 +108,7 @@
         }
 
         th {
-            background-color: #f2f2f2;
+            background-color: #f2f6f4;
             color: #333;
             font-weight: bold;
         }
@@ -72,24 +116,25 @@
         tr:nth-child(even) {
             background-color: #fafafa;
         }
-        
+
         .status-badge {
             padding: 2px 6px;
             border-radius: 4px;
             font-size: 8pt;
             display: inline-block;
         }
-        
+
         .status-ACTIVE { background-color: #e8f5e9; color: #2e7d32; }
         .status-INACTIVE { background-color: #ffebee; color: #c62828; }
         .status-SUSPENDED { background-color: #fff3e0; color: #ef6c00; }
-        
+        .status-EXPIRED { background-color: #ffebee; color: #c62828; }
+
         .summary-box {
             display: table;
             width: 100%;
             margin-bottom: 20px;
         }
-        
+
         .summary-item {
             display: table-cell;
             border: 1px solid #eee;
@@ -97,101 +142,112 @@
             text-align: center;
             width: 33.33%;
         }
-        
+
         .summary-value {
             font-size: 14pt;
             font-weight: bold;
-            color: #1976d2;
+            color: var(--brand-primary);
         }
-        
+
         .summary-label {
             font-size: 9pt;
             color: #666;
+        }
+
+        .member-name {
+            font-weight: bold;
+        }
+
+        .member-barcode {
+            font-size: 8pt;
+            color: #777;
+        }
+
+        .mono-text {
+            font-family: monospace;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 20px;
         }
     </style>
 </head>
 <body>
 
-    <!-- Header -->
-    <div class="header">
-        <div>
-            <h1 th:text="${companyName != null ? companyName : 'شركة الوعد للتأمين الطبي'}">Waad Insurance</h1>
-            <div th:text="|تاريخ التقرير: ${reportDate}|">Date</div>
-        </div>
-        <div th:if="${logoBase64 != null}" style="text-align: left; margin-top: 8px;">
-            <img th:src="${logoBase64}" style="height: 50px;" alt="Logo"/>
-        </div>
+<div class="header">
+    <div class="header-left">
+        <img th:if="${company.hasLogo()}" th:src="${company.logoBase64DataUrl}" alt="Logo"/>
+        <span class="logo-fallback" th:unless="${company.hasLogo()}">وعد</span>
     </div>
-
-    <!-- Title -->
-    <h2 style="text-align: center; margin-bottom: 20px;">تقرير المنتفعين المؤمن عليهم</h2>
-
-    <!-- Summary -->
-    <div class="summary-box">
-        <div class="summary-item">
-            <div class="summary-value" th:text="${totalMembers}">0</div>
-            <div class="summary-label">إجمالي المنتفعين</div>
-        </div>
-        <div class="summary-item">
-            <div class="summary-value" th:text="${activeMembers}">0</div>
-            <div class="summary-label">نشط</div>
-        </div>
-        <div class="summary-item">
-            <div class="summary-value" th:text="${familiesCount}">0</div>
-            <div class="summary-label">عدد العائلات</div>
-        </div>
+    <div class="header-right">
+        <h1>شركة وعد لادارة النفقات الطبية</h1>
+        <div th:text="|تاريخ التقرير: ${reportDate}|">Date</div>
     </div>
+</div>
 
-    <!-- Filter Info -->
-    <div class="meta-info" th:if="${filterDescription != null}">
-        <strong>معايير التقرير:</strong> <span th:text="${filterDescription}"></span>
+<h2 class="report-title">تقرير المنتفعين المؤمن عليهم</h2>
+
+<div class="summary-box">
+    <div class="summary-item">
+        <div class="summary-value" th:text="${totalMembers}">0</div>
+        <div class="summary-label">إجمالي المنتفعين</div>
     </div>
-
-    <!-- Data Table -->
-    <table>
-        <thead>
-            <tr>
-                <th width="5%">#</th>
-                <th width="20%">اسم المنتفع</th>
-                <th width="15%">رقم البطاقة</th>
-                <th width="15%">العلاقة</th>
-                <th width="15%">الجنس / العمر</th>
-                <th width="15%">جهة العمل</th>
-                <th width="10%">تاريخ الانضمام</th>
-                <th width="5%">الحالة</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr th:each="member, stat : ${members}">
-                <td th:text="${stat.count}">1</td>
-                <td>
-                    <div style="font-weight: bold;" th:text="${member.fullName}">Name</div>
-                    <div style="font-size: 8pt; color: #777;" th:if="${member.barcode != null}" th:text="${member.barcode}">Barcode</div>
-                </td>
-                <td style="font-family: monospace;" th:text="${member.cardNumber}">123456</td>
-                <td th:text="${member.type == 'PRINCIPAL' ? 'مشترك أساسي' : (member.relationship != null ? member.relationship : 'تابع')}">Principal</td>
-                <td th:text="|${member.gender == 'MALE' ? 'ذكر' : 'أنثى'} / ${member.age != null ? member.age : '-'} سنة|">Male / 30</td>
-                <td th:text="${member.employerName}">Employer</td>
-                <td th:text="${member.joinDate}">2026-01-01</td>
-                <td>
-                    <span th:class="|status-badge status-${member.cardStatus}|" 
-                          th:text="${member.cardStatus == 'ACTIVE' ? 'نشط' : (member.cardStatus == 'EXPIRED' ? 'منتهي' : 'موقوف')}">
-                        Active
-                    </span>
-                </td>
-            </tr>
-            <tr th:if="${#lists.isEmpty(members)}">
-                <td colspan="8" style="text-align: center; padding: 20px;">لا توجد بيانات للعرض</td>
-            </tr>
-        </tbody>
-    </table>
-
-    <!-- Footer -->
-    <div class="footer">
-        <span th:text="|تم إصدار التقرير بواسطة النظام في ${reportDate}|">Generated by System</span>
-        <br/>
-        <span th:text="${footerText != null ? footerText : 'جميع الحقوق محفوظة'}">All Rights Reserved</span>
+    <div class="summary-item">
+        <div class="summary-value" th:text="${activeMembers}">0</div>
+        <div class="summary-label">نشط</div>
     </div>
+    <div class="summary-item">
+        <div class="summary-value" th:text="${familiesCount}">0</div>
+        <div class="summary-label">عدد العائلات</div>
+    </div>
+</div>
+
+<div class="meta-info" th:if="${filterDescription != null}">
+    <strong>معايير التقرير:</strong> <span th:text="${filterDescription}"></span>
+</div>
+
+<table>
+    <thead>
+    <tr>
+        <th width="5%">#</th>
+        <th width="20%">اسم المنتفع</th>
+        <th width="15%">رقم البطاقة</th>
+        <th width="15%">العلاقة</th>
+        <th width="15%">الجنس / العمر</th>
+        <th width="15%">جهة العمل</th>
+        <th width="10%">تاريخ الانضمام</th>
+        <th width="5%">الحالة</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="member, stat : ${members}">
+        <td th:text="${stat.count}">1</td>
+        <td>
+            <div class="member-name" th:text="${member.fullName}">Name</div>
+            <div class="member-barcode" th:if="${member.barcode != null}" th:text="${member.barcode}">Barcode</div>
+        </td>
+        <td class="mono-text" th:text="${member.cardNumber}">123456</td>
+        <td th:text="${member.type == 'PRINCIPAL' ? 'مشترك أساسي' : (member.relationship != null ? member.relationship : 'تابع')}">Principal</td>
+        <td th:text="|${member.gender != null and member.gender.toString() == 'MALE' ? 'ذكر' : 'أنثى'} / ${member.age != null ? member.age : '-'} سنة|">Male / 30</td>
+        <td th:text="${member.employerName}">Employer</td>
+        <td th:text="${member.joinDate}">2026-01-01</td>
+        <td>
+            <span th:class="|status-badge status-${member.cardStatus}|"
+                  th:text="${member.cardStatus != null and member.cardStatus.toString() == 'ACTIVE' ? 'نشط' : (member.cardStatus != null and member.cardStatus.toString() == 'EXPIRED' ? 'غير نشط' : 'موقوف')}">
+                Active
+            </span>
+        </td>
+    </tr>
+    <tr th:if="${#lists.isEmpty(members)}">
+        <td colspan="8" class="empty-state">لا توجد بيانات للعرض</td>
+    </tr>
+    </tbody>
+</table>
+
+<div class="footer">
+    <span>جميع الحقوق محفوظة نظام وعد</span>
+</div>
 
 </body>
 </html>

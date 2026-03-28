@@ -151,6 +151,7 @@ const EmployerDashboard = Loadable(lazy(() => import('pages/reports/employer-das
 // ProviderDashboard REMOVED (2026-01-14) - No business value, Provider role restricted
 const ClaimsReport = Loadable(lazy(() => import('pages/reports/claims')));
 const ClaimStatementPreview = Loadable(lazy(() => import('pages/reports/claims/ClaimStatementPreview')));
+const BeneficiariesStatementPreview = Loadable(lazy(() => import('pages/reports/beneficiaries/BeneficiariesStatementPreview')));
 const PreApprovalsReport = Loadable(lazy(() => import('pages/reports/pre-approvals')));
 const VisitsReport = Loadable(lazy(() => import('pages/reports/visits')));
 const BenefitPolicyReport = Loadable(lazy(() => import('pages/reports/benefit-policy')));
@@ -902,6 +903,14 @@ const MainRoutes = {
           element: (
             <PermissionGuard resource="report_beneficiaries" action="view" isRouteGuard>
               <BeneficiariesReports />
+            </PermissionGuard>
+          )
+        },
+        {
+          path: 'beneficiaries/statement-preview',
+          element: (
+            <PermissionGuard resource="report_beneficiaries" action="view" isRouteGuard>
+              <BeneficiariesStatementPreview />
             </PermissionGuard>
           )
         },

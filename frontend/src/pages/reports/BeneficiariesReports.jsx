@@ -1,7 +1,7 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import axiosClient from 'utils/axios';
 import { useQuery } from '@tanstack/react-query';
-import { useReactToPrint } from 'react-to-print';
+import { useNavigate } from 'react-router-dom';
 import { QRCodeCanvas } from 'qrcode.react';
 import {
   Box,
@@ -116,6 +116,7 @@ const BusinessIcon = (props) => (
 
 const BeneficiariesReports = () => {
   const theme = useTheme();
+  const navigate = useNavigate();
   const printRef = useRef();
 
   // --- State ---
@@ -270,42 +271,39 @@ const BeneficiariesReports = () => {
     setMemberActivity({ claims: [], preAuths: [] });
   };
 
-  // --- Print Handlers ---
+  // --- Print Handlers (Backend PDF) ---
 
-  // Print the table with proper header/footer
-  const handlePrintTable = useReactToPrint({
-    contentRef: printRef,
-    documentTitle: `Members_Report_${new Date().toISOString().split('T')[0]}`,
-    pageStyle: `
-      @page { 
-        size: A4 landscape; 
-        margin: 15mm;
-      }
-      @media print {
-        body { 
-          -webkit-print-color-adjust: exact; 
-          print-color-adjust: exact;
-        }
-        .print-hide { display: none !important; }
-        .print-header { 
-          position: running(header);
-          display: block !important;
-        }
-        .print-footer {
-          position: running(footer);
-          display: block !important;
-        }
-        table { page-break-inside: auto; }
-        tr { page-break-inside: avoid; page-break-after: auto; }
-        thead { display: table-header-group; }
-        tfoot { display: table-footer-group; }
-      }
-    `
-  });
+  const buildBeneficiariesPdfParams = () => {
+    const params = new URLSearchParams();
+
+    if (activeFilters.employerId) params.append('organizationId', activeFilters.employerId);
+    if (activeFilters.cardStatus && activeFilters.cardStatus !== 'ALL') params.append('status', activeFilters.cardStatus);
+    if (activeFilters.memberType && activeFilters.memberType !== 'ALL') params.append('type', activeFilters.memberType);
+    if (activeFilters.startDate) params.append('startDate', activeFilters.startDate);
+    if (activeFilters.endDate) params.append('endDate', activeFilters.endDate);
+
+    if (liveSearch && liveSearch.trim()) {
+      params.append('nameAr', liveSearch.trim());
+    }
+
+    return params;
+  };
+
+  const handlePrintTable = async () => {
+    const params = buildBeneficiariesPdfParams();
+    params.append('autoPrint', '1');
+    navigate(`/reports/beneficiaries/statement-preview?${params.toString()}`);
+  };
 
   // Show print preview
   const handleShowPrintPreview = () => {
-    setViewMode('PRINT_PREVIEW');
+    const params = buildBeneficiariesPdfParams();
+    navigate(`/reports/beneficiaries/statement-preview?${params.toString()}`);
+  };
+
+  const handlePreviewSingleMemberPdf = async (memberId) => {
+    if (!memberId) return;
+    navigate(`/reports/beneficiaries/statement-preview?memberId=${memberId}`);
   };
 
   const handleExportExcel = async () => {
@@ -709,7 +707,7 @@ const BeneficiariesReports = () => {
                     </IconButton>
                   </Tooltip>
 
-                  <Tooltip title="طباعة">
+                  <Tooltip title="إنشاء PDF">
                     <IconButton color="primary" onClick={handlePrintTable}>
                       <PrintIcon />
                     </IconButton>
@@ -901,6 +899,7 @@ const BeneficiariesReports = () => {
           loadingActivity={loadingActivity}
           memberActivity={memberActivity}
           onBack={handleBackToTable}
+          onPreviewPdf={handlePreviewSingleMemberPdf}
         />
       )}
 
@@ -1050,9 +1049,8 @@ const mapStatusChipColor = (status) => {
 };
 
 // --- Single Report Component ---
-const SingleBeneficiaryReport = ({ member, financialStats, loadingStats, loadingActivity, memberActivity, onBack }) => {
+const SingleBeneficiaryReport = ({ member, financialStats, loadingStats, loadingActivity, memberActivity, onBack, onPreviewPdf }) => {
   const theme = useTheme();
-  const componentRef = useRef();
   const [activityViewMode, setActivityViewMode] = useState('LAST_5');
   const [activityFromDate, setActivityFromDate] = useState('');
   const [activityToDate, setActivityToDate] = useState('');
@@ -1083,53 +1081,11 @@ const SingleBeneficiaryReport = ({ member, financialStats, loadingStats, loading
     return true;
   };
 
-  const handlePrint = useReactToPrint({
-    contentRef: componentRef,
-    documentTitle: `Member_Report_${member?.cardNumber || 'Unknown'}`,
-    pageStyle: `
-      @page { size: A4 landscape; margin: 7mm; }
-      @media print {
-        body {
-          -webkit-print-color-adjust: exact;
-          print-color-adjust: exact;
-        }
-        .print-root {
-          font-size: 10px !important;
-          line-height: 1.3 !important;
-        }
-        .print-hide { display: none !important; }
-        .print-card { box-shadow: none !important; border: 1px solid #ddd !important; }
-        .print-compact { padding: 8px !important; }
-        .print-table { page-break-inside: auto; }
-        .print-table thead { display: table-header-group; }
-        .print-table tr { page-break-inside: avoid; page-break-after: auto; }
-        .MuiTableCell-root { padding: 4px 6px !important; font-size: 10px !important; }
-        .MuiTypography-h4, .MuiTypography-h5, .MuiTypography-h6 { font-size: 14px !important; }
-        .MuiPaper-root { margin-bottom: 6px !important; }
-      }
-    `
-  });
-
-  const handlePdfPreview = async () => {
-    try {
-      const response = await axiosClient.get(`/unified-members/${member?.id}/pdf`, {
-        responseType: 'blob'
-      });
-      const url = window.URL.createObjectURL(new Blob([response]));
-      window.open(url, '_blank');
-    } catch (error) {
-      console.error('PDF Preview failed', error);
+  const handlePdfPreview = () => {
+    if (onPreviewPdf) {
+      onPreviewPdf(member?.id);
     }
   };
-
-  if (loadingStats) {
-    return (
-      <Stack alignItems="center" justifyContent="center" height={300}>
-        <CircularLoader />
-        <Typography mt={2}>جاري تحميل البيانات المالية...</Typography>
-      </Stack>
-    );
-  }
 
   const allClaimsRows = memberActivity?.claims || [];
   const allPreAuthRows = memberActivity?.preAuths || [];
@@ -1150,10 +1106,19 @@ const SingleBeneficiaryReport = ({ member, financialStats, loadingStats, loading
     return allPreAuthRows.slice(0, 5);
   }, [allPreAuthRows, activityViewMode, activityFromDate, activityToDate]);
 
+  if (loadingStats) {
+    return (
+      <Stack alignItems="center" justifyContent="center" height={300}>
+        <CircularLoader />
+        <Typography mt={2}>جاري تحميل البيانات المالية...</Typography>
+      </Stack>
+    );
+  }
+
   return (
     <Box>
       {/* Printable Area */}
-      <Box ref={componentRef} className="print-root" sx={{ p: '0.75rem', bgcolor: 'background.paper', borderRadius: '0.25rem' }}>
+      <Box className="print-root" sx={{ p: '0.75rem', bgcolor: 'background.paper', borderRadius: '0.25rem' }}>
         {/* Report Header */}
         <Box
           sx={{ borderBottom: '2px solid #eee', mb: '0.75rem', pb: 0.75, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
@@ -1514,8 +1479,8 @@ const SingleBeneficiaryReport = ({ member, financialStats, loadingStats, loading
                    معاينة PDF
                 </Button>
                 */}
-        <Button variant="contained" color="secondary" startIcon={<PrintIcon />} onClick={handlePrint}>
-          طباعة التقرير الفردي
+        <Button variant="contained" color="secondary" startIcon={<PrintIcon />} onClick={handlePdfPreview}>
+          طباعة PDF احترافية
         </Button>
       </Box>
     </Box>
