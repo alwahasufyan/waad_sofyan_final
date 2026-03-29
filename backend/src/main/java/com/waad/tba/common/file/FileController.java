@@ -18,17 +18,20 @@ import org.springframework.web.multipart.MultipartFile;
  * REST endpoints for file upload, download, and management
  * 
  * Endpoints:
- * - POST   /api/files/upload         - Upload file
- * - GET    /api/files/{key}/download - Download file
- * - DELETE /api/files/{key}          - Delete file
- * - GET    /api/files/{key}/url      - Get presigned URL
+ * - POST   /api/v1/files/upload         - Upload file
+ * - GET    /api/v1/files/{key}/download - Download file
+ * - DELETE /api/v1/files/{key}          - Delete file
+ * - GET    /api/v1/files/{key}/url      - Get presigned URL
+ *
+ * Backward compatibility:
+ * - Legacy /api/files/** routes remain supported for previously persisted URLs.
  * 
  * @author TBA System
  * @version 1.0
  */
 @Slf4j
 @RestController
-@RequestMapping("/api/v1/files")
+@RequestMapping({ "/api/v1/files", "/api/files" })
 @RequiredArgsConstructor@SuppressWarnings("null")@PreAuthorize("isAuthenticated()")
 public class FileController {
     

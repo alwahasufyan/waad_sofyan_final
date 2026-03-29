@@ -601,10 +601,13 @@ export const deleteEmployer = async (id) => {
  * @param {number} id - Employer ID
  * @returns {Promise<Object>} Archived employer
  */
-export const archiveEmployer = async (id) => {
+export const archiveEmployer = async (id, currentPassword) => {
   try {
     console.debug(`[EmployerService] Archiving employer ID: ${id}...`);
-    const response = await axiosClient.post(`${BASE_URL}/${id}/archive`);
+    if (!currentPassword) {
+      throw new Error('كلمة المرور الحالية مطلوبة');
+    }
+    const response = await axiosClient.post(`${BASE_URL}/${id}/archive`, { currentPassword });
     console.info(`[EmployerService] Employer ID: ${id} archived successfully`);
     return unwrap(response);
   } catch (error) {

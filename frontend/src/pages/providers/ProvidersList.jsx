@@ -53,6 +53,7 @@ import MainCard from 'components/MainCard';
 import UnifiedPageHeader from 'components/UnifiedPageHeader';
 import PermissionGuard from 'components/PermissionGuard';
 import { UnifiedMedicalTable } from 'components/common';
+import { ActionConfirmDialog } from 'components/tba';
 
 // Hooks
 import useTableState from 'hooks/useTableState';
@@ -300,6 +301,9 @@ export default function ProvidersList() {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
+  const [deleteDialog, setDeleteDialog] = useState({ open: false, id: null, name: '' });
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   // ========================================
   // TABLE STATE
@@ -355,28 +359,34 @@ export default function ProvidersList() {
     [navigate]
   );
 
-  const handleDelete = useCallback(
-    async (id, name) => {
-      const confirmMessage = `هل أنت متأكد من حذف مقدم الخدمة "${name}"؟`;
-      if (!window.confirm(confirmMessage)) return;
+  const handleDelete = useCallback((id, name) => {
+    setDeletePassword('');
+    setDeleteDialog({ open: true, id, name });
+  }, []);
 
-      try {
-        await providersService.remove(id);
-        openSnackbar({
-          message: 'تم حذف مقدم الخدمة بنجاح',
-          variant: 'success'
-        });
-        queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
-      } catch (err) {
-        console.error('[Providers] Delete failed:', err);
-        openSnackbar({
-          message: 'فشل حذف مقدم الخدمة. يرجى المحاولة لاحقاً',
-          variant: 'error'
-        });
-      }
-    },
-    [queryClient]
-  );
+  const handleConfirmDelete = useCallback(async () => {
+    if (!deleteDialog.id) return;
+
+    try {
+      setDeleteLoading(true);
+      await providersService.hardRemove(deleteDialog.id, deletePassword);
+      openSnackbar({
+        message: 'تم الحذف النهائي لمقدم الخدمة بنجاح',
+        variant: 'success'
+      });
+      setDeleteDialog({ open: false, id: null, name: '' });
+      setDeletePassword('');
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
+    } catch (err) {
+      console.error('[Providers] Delete failed:', err);
+      openSnackbar({
+        message: err?.response?.data?.message || err?.message || 'فشل الحذف النهائي لمقدم الخدمة',
+        variant: 'error'
+      });
+    } finally {
+      setDeleteLoading(false);
+    }
+  }, [deleteDialog.id, deletePassword, queryClient]);
 
   const handleToggleStatus = useCallback(
     async (provider) => {
@@ -390,29 +400,6 @@ export default function ProvidersList() {
       } catch (err) {
         openSnackbar({
           message: err?.message || 'تعذر تغيير الحالة',
-          variant: 'error'
-        });
-      }
-    },
-    [queryClient]
-  );
-
-  const handleHardDelete = useCallback(
-    async (id, name) => {
-      const confirmMessage = `تأكيد الحذف النهائي لمقدم الخدمة "${name}"؟\nلا يمكن التراجع عن هذه العملية.`;
-      if (!window.confirm(confirmMessage)) return;
-
-      try {
-        await providersService.hardRemove(id);
-        openSnackbar({
-          message: 'تم الحذف النهائي لمقدم الخدمة بنجاح',
-          variant: 'success'
-        });
-        queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
-      } catch (err) {
-        console.error('[Providers] Hard delete failed:', err);
-        openSnackbar({
-          message: err?.response?.data?.message || 'تعذر الحذف النهائي: مقدم الخدمة مرتبط بعمليات/مطالبات سابقة',
           variant: 'error'
         });
       }
@@ -650,13 +637,13 @@ export default function ProvidersList() {
               </Tooltip>
 
               <PermissionGuard resource="providers" action="delete">
-                <Tooltip title="حذف نهائي (إذا غير مرتبط بعمليات/مطالبات)">
+                <Tooltip title="حذف نهائي">
                   <IconButton
                     size="small"
                     color="error"
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleHardDelete(provider.id, provider.name);
+                      handleDelete(provider.id, provider.name);
                     }}
                   >
                     <DeleteForeverIcon fontSize="small" />
@@ -670,7 +657,7 @@ export default function ProvidersList() {
           return null;
       }
     },
-    [handleNavigateView, handleNavigateEdit, handleCreateContract, handleHardDelete, handleToggleStatus]
+    [handleNavigateView, handleNavigateEdit, handleCreateContract, handleDelete, handleToggleStatus]
   );
 
   // ========================================
@@ -715,6 +702,24 @@ export default function ProvidersList() {
 
   return (
     <Box>
+
+      <ActionConfirmDialog
+        open={deleteDialog.open}
+        title="حذف نهائي لمقدم الخدمة"
+        message={`سيتم حذف مقدم الخدمة "${deleteDialog.name}" نهائياً فقط إذا لم يكن مرتبطاً بعقود نشطة أو عمليات مالية/تشغيلية سابقة.\n\nأدخل كلمة مرورك للمتابعة.`}
+        onClose={() => {
+          if (deleteLoading) return;
+          setDeleteDialog({ open: false, id: null, name: '' });
+          setDeletePassword('');
+        }}
+        onConfirm={handleConfirmDelete}
+        confirmText={deleteLoading ? 'جار التنفيذ...' : 'حذف نهائي'}
+        confirmColor="error"
+        requirePassword
+        passwordValue={deletePassword}
+        onPasswordChange={setDeletePassword}
+        confirmLoading={deleteLoading}
+      />
       {/* ====== UNIFIED PAGE HEADER ====== */}
       <PermissionGuard resource="providers" action="view">
         <UnifiedPageHeader

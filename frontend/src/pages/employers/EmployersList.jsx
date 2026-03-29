@@ -29,7 +29,7 @@ import { ModernPageHeader, SoftDeleteToggle, DataExportWizard, ActionConfirmDial
 import PermissionGuard from 'components/PermissionGuard';
 
 // Services
-import { getEmployers, archiveEmployer, restoreEmployer, deleteEmployer, exportEmployers } from 'services/api/employers.service';
+import { getEmployers, archiveEmployer, restoreEmployer, exportEmployers } from 'services/api/employers.service';
 import { useSnackbar } from 'notistack';
 
 // ============================================================================
@@ -58,6 +58,8 @@ const EmployersList = () => {
   const [showArchived, setShowArchived] = useState(false);
   const [exportWizardOpen, setExportWizardOpen] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState({ open: false, title: '', message: '', onConfirm: null, confirmColor: 'primary' });
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [confirmLoading, setConfirmLoading] = useState(false);
 
   const handleResetFilters = () => {
     setFilters({ active: '' });
@@ -82,14 +84,16 @@ const EmployersList = () => {
 
   const handleArchive = useCallback(
     (id, name) => {
+      setConfirmPassword('');
       setConfirmDialog({
         open: true,
         title: 'تأكيد الحذف',
         message: `هل أنت متأكد من حذف جهة العمل "${name}"؟\n\nملاحظة: الحذف لا يمسح البيانات نهائياً، بل يخفيها من القوائم مع الحفاظ على جميع العلاقات.`,
         confirmColor: 'error',
-        onConfirm: async () => {
+        onConfirm: async (password) => {
           try {
-            await archiveEmployer(id);
+            setConfirmLoading(true);
+            await archiveEmployer(id, password);
             enqueueSnackbar('تم حذف جهة العمل بنجاح', { variant: 'success' });
             queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
           } catch (err) {
@@ -97,6 +101,8 @@ const EmployersList = () => {
             const apiMsg = err?.response?.data?.message;
             enqueueSnackbar(apiMsg || err.message || 'فشل حذف جهة العمل', { variant: 'error' });
           } finally {
+            setConfirmLoading(false);
+            setConfirmPassword('');
             setConfirmDialog(prev => ({ ...prev, open: false }));
           }
         }
@@ -120,31 +126,6 @@ const EmployersList = () => {
           } catch (err) {
             console.error('[Employers] Restore failed:', err);
             enqueueSnackbar('فشل استعادة جهة العمل', { variant: 'error' });
-          } finally {
-            setConfirmDialog(prev => ({ ...prev, open: false }));
-          }
-        }
-      });
-    },
-    [queryClient]
-  );
-
-  const handlePermanentDelete = useCallback(
-    (id, name) => {
-      setConfirmDialog({
-        open: true,
-        title: 'حذف نهائي',
-        message: `⚠️ سيتم حذف جهة العمل "${name}" نهائياً ولا يمكن التراجع عن هذا الإجراء.\n\nهل أنت متأكد؟`,
-        confirmColor: 'error',
-        onConfirm: async () => {
-          try {
-            await deleteEmployer(id);
-            enqueueSnackbar('تم الحذف النهائي بنجاح', { variant: 'success' });
-            queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
-          } catch (err) {
-            console.error('[Employers] Permanent delete failed:', err);
-            const apiMsg = err?.response?.data?.message || err?.message;
-            enqueueSnackbar(apiMsg || 'فشل الحذف النهائي', { variant: 'error' });
           } finally {
             setConfirmDialog(prev => ({ ...prev, open: false }));
           }
@@ -275,7 +256,7 @@ const EmployersList = () => {
         return (
           <Stack direction="row" spacing={0.5} justifyContent="center">
             {row.active === false ? (
-              /* ── سجل المحذوفات: استعادة + حذف نهائي ── */
+              /* ── سجل المحذوفات: استعادة فقط ── */
               <>
                 <PermissionGuard resource="employers" action="delete">
                   <Tooltip title="استعادة">
@@ -285,17 +266,6 @@ const EmployersList = () => {
                       onClick={() => handleRestore(row.id, row.name || row.code)}
                     >
                       <UndoIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                </PermissionGuard>
-                <PermissionGuard resource="employers" action="delete">
-                  <Tooltip title="حذف نهائي">
-                    <IconButton
-                      size="small"
-                      color="error"
-                      onClick={() => handlePermanentDelete(row.id, row.name || row.code)}
-                    >
-                      <DeleteIcon fontSize="small" />
                     </IconButton>
                   </Tooltip>
                 </PermissionGuard>
@@ -498,8 +468,16 @@ const EmployersList = () => {
         title={confirmDialog.title}
         message={confirmDialog.message}
         confirmColor={confirmDialog.confirmColor}
-        onConfirm={confirmDialog.onConfirm}
-        onClose={() => setConfirmDialog(prev => ({ ...prev, open: false }))}
+        onConfirm={() => confirmDialog.onConfirm?.(confirmPassword)}
+        onClose={() => {
+          if (confirmLoading) return;
+          setConfirmPassword('');
+          setConfirmDialog(prev => ({ ...prev, open: false }));
+        }}
+        requirePassword={confirmDialog.confirmColor === 'error'}
+        passwordValue={confirmPassword}
+        onPasswordChange={setConfirmPassword}
+        confirmLoading={confirmLoading}
       />
     </Box>
   );

@@ -45,7 +45,8 @@ import {
     TrendingUp as TrendingUpIcon,
     People as PeopleIcon,
     AttachMoney as AttachMoneyIcon,
-    Pending as PendingIcon
+    Pending as PendingIcon,
+    Close as CloseIcon
 } from '@mui/icons-material';
 
 import { useQuery } from '@tanstack/react-query';
@@ -455,15 +456,27 @@ export default function ClaimBatchManagement() {
         }
     }, [selectedEmployer]);
 
+    const handleEmployerDialogClose = useCallback(() => {
+        setEmployerDialogOpen(false);
+    }, []);
+
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', px: { xs: 2, sm: 3 } }}>
             <Dialog
                 open={employerDialogOpen}
+                onClose={handleEmployerDialogClose}
                 fullWidth
                 maxWidth="sm"
                 disableEscapeKeyDown
             >
-                <DialogTitle sx={{ fontWeight: 700 }}>اختيار جهة العمل</DialogTitle>
+                <DialogTitle sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Typography component="span" variant="h5" sx={{ fontWeight: 700 }}>
+                        اختيار جهة العمل
+                    </Typography>
+                    <IconButton onClick={handleEmployerDialogClose} size="small" aria-label="إغلاق نافذة اختيار جهة العمل">
+                        <CloseIcon />
+                    </IconButton>
+                </DialogTitle>
                 <DialogContent>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                         اختر جهة العمل أولاً لعرض مقدمي الخدمة ودفعات المطالبات.

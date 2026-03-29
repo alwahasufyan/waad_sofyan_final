@@ -116,7 +116,7 @@ public class LocalFileStorageService implements FileStorageService {
                     .size(size)
                     .folder(folder)
                     .filePath(targetPath.toString())
-                    .url("/api/files/" + fileKey + "/download")
+                    .url("/api/v1/files/" + fileKey + "/download")
                     .uploadedAt(LocalDateTime.now())
                     .uploadedBy(getCurrentUserId())
                     .build();
@@ -169,7 +169,7 @@ public class LocalFileStorageService implements FileStorageService {
     public String getPresignedUrl(String fileKey, int expiryMinutes) {
         // For local storage, return direct download URL
         // In production with S3/MinIO, generate actual presigned URL
-        return "/api/files/" + fileKey + "/download";
+        return "/api/v1/files/" + fileKey + "/download";
     }
 
     @Override

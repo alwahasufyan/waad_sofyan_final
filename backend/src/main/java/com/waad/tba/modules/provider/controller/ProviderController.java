@@ -1,12 +1,14 @@
 package com.waad.tba.modules.provider.controller;
 
 import com.waad.tba.common.dto.ApiResponse;
+import com.waad.tba.common.dto.CurrentPasswordConfirmationRequest;
 import com.waad.tba.common.dto.PaginationResponse;
 import com.waad.tba.modules.provider.dto.*;
 import com.waad.tba.modules.provider.service.ProviderService;
 import com.waad.tba.modules.provider.service.ProviderServiceService;
 import com.waad.tba.modules.provider.service.ProviderContractService;
 import com.waad.tba.modules.provider.service.ProviderAdminDocumentService;
+import com.waad.tba.modules.rbac.service.UserSecurityService;
 import com.waad.tba.security.AuthorizationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +16,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -33,6 +37,7 @@ public class ProviderController {
     private final ProviderContractService providerContractService;
     private final ProviderAdminDocumentService providerAdminDocumentService;
     private final AuthorizationService authorizationService;
+    private final UserSecurityService userSecurityService;
 
     /**
      * Get provider selector options with pagination
@@ -137,9 +142,10 @@ public class ProviderController {
      */
     @DeleteMapping("/{id:\\d+}")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
-    public ResponseEntity<ApiResponse<Void>> deactivateProvider(@PathVariable("id") Long id) {
+    public ResponseEntity<ApiResponse<Void>> deactivateProvider(
+            @PathVariable("id") Long id) {
         providerService.deactivateProvider(id);
-        return ResponseEntity.ok(ApiResponse.success("Provider deactivated successfully", null));
+        return ResponseEntity.ok(ApiResponse.success("تم تعطيل مقدم الخدمة بنجاح", null));
     }
 
     /**
@@ -147,9 +153,16 @@ public class ProviderController {
      */
     @DeleteMapping("/{id:\\d+}/hard")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
-    public ResponseEntity<ApiResponse<Void>> hardDeleteProvider(@PathVariable("id") Long id) {
+    public ResponseEntity<ApiResponse<Void>> hardDeleteProvider(
+            @PathVariable("id") Long id,
+            @Valid @RequestBody(required = false) CurrentPasswordConfirmationRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        if (request == null || request.getCurrentPassword() == null || request.getCurrentPassword().isBlank()) {
+            throw new com.waad.tba.common.exception.BusinessRuleException("كلمة المرور الحالية مطلوبة قبل الحذف النهائي لمقدم الخدمة.");
+        }
+        userSecurityService.verifyCurrentPassword(userDetails.getUsername(), request.getCurrentPassword());
         providerService.hardDeleteProvider(id);
-        return ResponseEntity.ok(ApiResponse.success("Provider permanently deleted", null));
+        return ResponseEntity.ok(ApiResponse.success("تم الحذف النهائي لمقدم الخدمة بنجاح", null));
     }
 
     /**

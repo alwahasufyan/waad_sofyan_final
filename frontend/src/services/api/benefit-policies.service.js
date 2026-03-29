@@ -260,8 +260,10 @@ export const restoreBenefitPolicy = async (id) => {
  * Endpoint: DELETE /api/benefit-policies/{id}/permanent
  * @param {number} id - Policy ID
  */
-export const permanentDeleteBenefitPolicy = async (id) => {
-  await axiosClient.delete(`${BASE_URL}/${id}/permanent`);
+export const permanentDeleteBenefitPolicy = async (id, currentPassword) => {
+  await axiosClient.delete(`${BASE_URL}/${id}/permanent`, {
+    data: { currentPassword }
+  });
 };
 
 // ═══════════════════════════════════════════════════════════════════════════

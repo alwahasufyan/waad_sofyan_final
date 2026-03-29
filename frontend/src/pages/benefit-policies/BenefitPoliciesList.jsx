@@ -70,8 +70,13 @@ const BenefitPoliciesList = () => {
     title: '',
     message: '',
     confirmColor: 'primary',
-    onConfirm: null
+    confirmText: 'تأكيد',
+    action: null,
+    policy: null,
+    requirePassword: false
   });
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [confirmLoading, setConfirmLoading] = useState(false);
 
   const fetchEmployers = useCallback(async () => {
     try {
@@ -163,7 +168,18 @@ const BenefitPoliciesList = () => {
   }, []);
 
   const closeDialog = useCallback(() => {
-    setConfirmDialog((prev) => ({ ...prev, open: false }));
+    if (confirmLoading) return;
+    setConfirmDialog({
+      open: false,
+      title: '',
+      message: '',
+      confirmColor: 'primary',
+      confirmText: 'تأكيد',
+      action: null,
+      policy: null,
+      requirePassword: false
+    });
+    setConfirmPassword('');
   }, []);
 
   const handleDelete = useCallback(
@@ -173,18 +189,10 @@ const BenefitPoliciesList = () => {
         title: 'تأكيد الحذف',
         message: `هل أنت متأكد من حذف سياسة المنافع "${policy.name || policy.policyCode}"؟\n\nسيتم نقلها إلى المحذوفات ويمكن استعادتها لاحقاً.`,
         confirmColor: 'error',
-        onConfirm: async () => {
-          try {
-            await deleteBenefitPolicy(policy.id);
-            enqueueSnackbar('تم حذف سياسة المنافع بنجاح', { variant: 'success' });
-            closeDialog();
-            fetchPolicies();
-          } catch (error) {
-            console.error('[BenefitPolicies] Delete failed:', error);
-            const apiMessage = error?.response?.data?.message || error?.message;
-            enqueueSnackbar(apiMessage || 'فشل حذف سياسة المنافع', { variant: 'error' });
-          }
-        }
+        confirmText: 'حذف',
+        action: 'delete',
+        policy,
+        requirePassword: false
       });
     },
     [closeDialog, enqueueSnackbar, fetchPolicies]
@@ -197,18 +205,10 @@ const BenefitPoliciesList = () => {
         title: 'استعادة السياسة',
         message: `هل تريد استعادة سياسة المنافع "${policy.name || policy.policyCode}"؟`,
         confirmColor: 'success',
-        onConfirm: async () => {
-          try {
-            await restoreBenefitPolicy(policy.id);
-            enqueueSnackbar('تمت استعادة سياسة المنافع بنجاح', { variant: 'success' });
-            closeDialog();
-            fetchPolicies();
-          } catch (error) {
-            console.error('[BenefitPolicies] Restore failed:', error);
-            const apiMessage = error?.response?.data?.message || error?.message;
-            enqueueSnackbar(apiMessage || 'فشل استعادة سياسة المنافع', { variant: 'error' });
-          }
-        }
+        confirmText: 'استعادة',
+        action: 'restore',
+        policy,
+        requirePassword: false
       });
     },
     [closeDialog, enqueueSnackbar, fetchPolicies]
@@ -216,27 +216,50 @@ const BenefitPoliciesList = () => {
 
   const handlePermanentDelete = useCallback(
     (policy) => {
+      setConfirmPassword('');
       setConfirmDialog({
         open: true,
         title: 'حذف نهائي',
-        message: `تحذير: هل أنت متأكد من الحذف النهائي لـ "${policy.name || policy.policyCode}"؟\n\nلا يمكن التراجع عن هذا الإجراء.`,
+        message: `تحذير: هل أنت متأكد من الحذف النهائي لـ "${policy.name || policy.policyCode}"؟\n\nلا يمكن التراجع عن هذا الإجراء، وسيتم رفضه إذا كانت الوثيقة ما تزال مرتبطة بسجلات تاريخية. أدخل كلمة مرورك للمتابعة.`,
         confirmColor: 'error',
-        onConfirm: async () => {
-          try {
-            await permanentDeleteBenefitPolicy(policy.id);
-            enqueueSnackbar('تم الحذف النهائي بنجاح', { variant: 'success' });
-            closeDialog();
-            fetchPolicies();
-          } catch (error) {
-            console.error('[BenefitPolicies] Permanent delete failed:', error);
-            const apiMessage = error?.response?.data?.message || error?.message;
-            enqueueSnackbar(apiMessage || 'فشل الحذف النهائي', { variant: 'error' });
-          }
-        }
+        confirmText: 'حذف نهائي',
+        action: 'permanent-delete',
+        policy,
+        requirePassword: true
       });
     },
     [closeDialog, enqueueSnackbar, fetchPolicies]
   );
+
+  const handleConfirmAction = useCallback(async () => {
+    if (!confirmDialog.action || !confirmDialog.policy?.id) {
+      return;
+    }
+
+    try {
+      setConfirmLoading(true);
+
+      if (confirmDialog.action === 'delete') {
+        await deleteBenefitPolicy(confirmDialog.policy.id);
+        enqueueSnackbar('تم حذف سياسة المنافع بنجاح', { variant: 'success' });
+      } else if (confirmDialog.action === 'restore') {
+        await restoreBenefitPolicy(confirmDialog.policy.id);
+        enqueueSnackbar('تمت استعادة سياسة المنافع بنجاح', { variant: 'success' });
+      } else if (confirmDialog.action === 'permanent-delete') {
+        await permanentDeleteBenefitPolicy(confirmDialog.policy.id, confirmPassword);
+        enqueueSnackbar('تم الحذف النهائي بنجاح', { variant: 'success' });
+      }
+
+      closeDialog();
+      fetchPolicies();
+    } catch (error) {
+      console.error('[BenefitPolicies] Action failed:', error);
+      const apiMessage = error?.response?.data?.message || error?.message;
+      enqueueSnackbar(apiMessage || 'فشل تنفيذ العملية', { variant: 'error' });
+    } finally {
+      setConfirmLoading(false);
+    }
+  }, [closeDialog, confirmDialog.action, confirmDialog.policy, confirmPassword, enqueueSnackbar, fetchPolicies]);
 
   const columns = useMemo(
     () => [
@@ -471,8 +494,13 @@ const BenefitPoliciesList = () => {
         title={confirmDialog.title}
         message={confirmDialog.message}
         confirmColor={confirmDialog.confirmColor}
-        onConfirm={confirmDialog.onConfirm}
+        confirmText={confirmLoading ? 'جار التنفيذ...' : confirmDialog.confirmText}
+        onConfirm={handleConfirmAction}
         onClose={closeDialog}
+        requirePassword={confirmDialog.requirePassword}
+        passwordValue={confirmPassword}
+        onPasswordChange={setConfirmPassword}
+        confirmLoading={confirmLoading}
       />
     </Box>
   );

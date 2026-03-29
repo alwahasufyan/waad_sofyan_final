@@ -147,6 +147,17 @@ export const providerApi = {
   },
 
   /**
+   * Smart member search for provider eligibility.
+   * Supports name, partial card number, partial/full barcode, and barcode suffix.
+   */
+  searchEligibilityMembers: async (query) => {
+    const response = await api.get(`${PROVIDER_BASE_URL}/eligibility-search`, {
+      params: { query }
+    });
+    return response.data?.data || response.data || [];
+  },
+
+  /**
    * Submit claim (Prompt 2)
    *
    * @param {Object} claimData - Claim submission data

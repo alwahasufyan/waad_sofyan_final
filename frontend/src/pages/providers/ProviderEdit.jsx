@@ -65,12 +65,15 @@ import {
   Warning,
   Add as AddIcon,
   Delete as DeleteIcon,
+  Download as DownloadIcon,
   Info
 } from '@mui/icons-material';
 import MainCard from 'components/MainCard';
 import ModernPageHeader from 'components/tba/ModernPageHeader';
+import DocumentPreviewPanel from 'components/documents/DocumentPreviewPanel';
 import { useProviderDetails, useUpdateProvider } from 'hooks/useProviders';
 import GregorianDatePicker from 'components/common/GregorianDatePicker';
+import { downloadFileByUrl } from 'services/api/files.service';
 import {
   providerFormSchema,
   accountCreationSchema,
@@ -211,7 +214,9 @@ const ProviderEdit = () => {
   const [previewDialog, setPreviewDialog] = useState({
     open: false,
     url: '',
-    title: ''
+    downloadUrl: '',
+    title: '',
+    fileType: ''
   });
   const [docPage, setDocPage] = useState(0);
   const [docRowsPerPage, setDocRowsPerPage] = useState(5);
@@ -574,11 +579,82 @@ const ProviderEdit = () => {
     }
   };
 
+  const normalizeFileRoute = (route = '') => {
+    if (!route) return '';
+
+    if (/^https?:\/\//i.test(route)) {
+      return route;
+    }
+
+    if (route.startsWith('/api/files/')) {
+      return route.replace('/api/files/', '/api/v1/files/');
+    }
+
+    if (route.startsWith('/api/v1/files/')) {
+      return route;
+    }
+
+    if (route.includes('/uploads/')) {
+      const uploadsIndex = route.lastIndexOf('/uploads/');
+      const fileKey = route.substring(uploadsIndex + '/uploads/'.length).replace(/\\/g, '/');
+      return `/api/v1/files/${fileKey}/download`;
+    }
+
+    return route;
+  };
+
+  const buildDocumentDownloadUrl = (doc) => normalizeFileRoute(doc.fileUrl || doc.filePath || '');
+
+  const buildDocumentPreviewUrl = (doc) => {
+    const downloadUrl = buildDocumentDownloadUrl(doc);
+    if (!downloadUrl) return '';
+    if (downloadUrl.includes('/download')) {
+      return downloadUrl.replace('/download', '/preview');
+    }
+    return downloadUrl;
+  };
+
+  const inferFileType = (doc) => {
+    const fileName = (doc.fileName || '').toLowerCase();
+    if (fileName.endsWith('.pdf')) return 'application/pdf';
+    if (fileName.endsWith('.jpg') || fileName.endsWith('.jpeg')) return 'image/jpeg';
+    if (fileName.endsWith('.png')) return 'image/png';
+    if (fileName.endsWith('.gif')) return 'image/gif';
+    if (fileName.endsWith('.webp')) return 'image/webp';
+    if (fileName.endsWith('.bmp')) return 'image/bmp';
+    return 'application/octet-stream';
+  };
+
+  const handleDownloadDocument = async (doc) => {
+    const downloadUrl = buildDocumentDownloadUrl(doc);
+    if (!downloadUrl) {
+      enqueueSnackbar('رابط تحميل المستند غير متوفر', { variant: 'warning' });
+      return;
+    }
+
+    try {
+      await downloadFileByUrl(downloadUrl, doc.fileName || 'document');
+    } catch (error) {
+      console.error('Error downloading provider document:', error);
+      enqueueSnackbar('تعذر تحميل المستند', { variant: 'error' });
+    }
+  };
+
   const handlePreview = (doc) => {
+    const previewUrl = buildDocumentPreviewUrl(doc);
+    const downloadUrl = buildDocumentDownloadUrl(doc);
+
+    if (!previewUrl) {
+      enqueueSnackbar('رابط معاينة المستند غير متوفر', { variant: 'warning' });
+      return;
+    }
+
     setPreviewDialog({
       open: true,
-      url: doc.fileUrl || doc.filePath,
-      title: doc.fileName
+      url: previewUrl,
+      downloadUrl,
+      title: doc.fileName,
+      fileType: inferFileType(doc)
     });
   };
 
@@ -1044,6 +1120,9 @@ const ProviderEdit = () => {
                     <IconButton size="small" onClick={() => handlePreview(doc)}>
                       <Visibility fontSize="small" />
                     </IconButton>
+                    <IconButton size="small" color="primary" onClick={() => handleDownloadDocument(doc)}>
+                      <DownloadIcon fontSize="small" />
+                    </IconButton>
                     <IconButton size="small" color="error" onClick={() => setDeleteDocDialog({ open: true, docId: doc.id })}>
                       <DeleteIcon fontSize="small" />
                     </IconButton>
@@ -1259,7 +1338,12 @@ const ProviderEdit = () => {
         <DialogTitle>{previewDialog.title}</DialogTitle>
         <DialogContent sx={{ height: '80vh' }}>
           {previewDialog.url && (
-            <iframe src={previewDialog.url} style={{ width: '100%', height: '100%', border: 'none' }} title="preview" />
+            <DocumentPreviewPanel
+              fileUrl={previewDialog.url}
+              downloadUrl={previewDialog.downloadUrl}
+              fileType={previewDialog.fileType}
+              fileName={previewDialog.title}
+            />
           )}
         </DialogContent>
         <DialogActions>

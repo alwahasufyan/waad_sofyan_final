@@ -1,6 +1,7 @@
 package com.waad.tba.modules.rbac.service;
 
 import com.waad.tba.common.email.*;
+import com.waad.tba.common.exception.BusinessRuleException;
 import com.waad.tba.common.service.SystemSettingsService;
 import com.waad.tba.config.SecurityConfigurationProperties;
 import com.waad.tba.modules.rbac.dto.*;
@@ -116,6 +117,16 @@ public class UserSecurityService {
         dto.setConfirmPassword(newPassword);
 
         changePassword(user.getId(), dto, null, null);
+    }
+
+    @Transactional(readOnly = true)
+    public void verifyCurrentPassword(String username, String currentPassword) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+            throw new BusinessRuleException("كلمة المرور غير صحيحة. لا يمكن تنفيذ إجراء الحذف/الأرشفة.");
+        }
     }
 
     /**

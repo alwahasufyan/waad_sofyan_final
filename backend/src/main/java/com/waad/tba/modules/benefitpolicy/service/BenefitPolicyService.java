@@ -430,6 +430,11 @@ public class BenefitPolicyService {
             throw new BusinessRuleException(
                     "لا يمكن الحذف النهائي إلا للوثائق المحذوفة مسبقاً. استخدم الحذف العادي أولاً.");
         }
+
+        DeletionGuard.of("وثيقة التأمين")
+                .check("مستفيدون أو سجلات تاريخية مرتبطة", memberRepository.countByBenefitPolicyId(id))
+                .throwIfBlocked("لا يمكن الحذف النهائي لأن الوثيقة لها مستفيدون أو استخدام تاريخي سابق.");
+
         benefitPolicyRepository.deleteById(id);
         log.info("✅ Permanently deleted benefit policy: {}", id);
     }

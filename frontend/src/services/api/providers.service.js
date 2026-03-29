@@ -139,7 +139,7 @@ export const providersService = {
    * @param {number} id - Provider ID
    * @returns {Promise<void>}
    */
-  remove: async (id) => {
+  remove: async (id, currentPassword) => {
     try {
       if (!id) throw new Error('معرف المزود مطلوب');
       const response = await axiosClient.delete(`${BASE_URL}/${id}`);
@@ -154,10 +154,17 @@ export const providersService = {
    * @param {number} id - Provider ID
    * @returns {Promise<void>}
    */
-  hardRemove: async (id) => {
-    if (!id) throw new Error('معرف المزود مطلوب');
-    const response = await axiosClient.delete(`${BASE_URL}/${id}/hard`);
-    return unwrap(response);
+  hardRemove: async (id, currentPassword) => {
+    try {
+      if (!id) throw new Error('معرف المزود مطلوب');
+      if (!currentPassword) throw new Error('كلمة المرور الحالية مطلوبة');
+      const response = await axiosClient.delete(`${BASE_URL}/${id}/hard`, {
+        data: { currentPassword }
+      });
+      return unwrap(response);
+    } catch (error) {
+      throw handleProviderErrors(error);
+    }
   },
 
   /**

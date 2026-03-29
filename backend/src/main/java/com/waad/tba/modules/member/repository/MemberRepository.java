@@ -239,6 +239,19 @@ public interface MemberRepository extends JpaRepository<Member, Long>, JpaSpecif
                      "LOWER(m.fullName) LIKE LOWER(CONCAT('%', :name, '%'))")
        List<Member> findByFullNameContainingIgnoreCase(@Param("name") String name);
 
+       /**
+        * Smart search for provider eligibility lookup.
+        * Supports partial card number, partial/full barcode, and member name.
+        */
+       @org.springframework.data.jpa.repository.EntityGraph(attributePaths = { "employer", "benefitPolicy", "parent" })
+       @Query("SELECT m FROM Member m WHERE m.active = true AND (" +
+                     "LOWER(m.fullName) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+                     "LOWER(COALESCE(m.cardNumber, '')) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+                     "LOWER(COALESCE(m.barcode, '')) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+                     "LOWER(COALESCE(m.nationalNumber, '')) LIKE LOWER(CONCAT('%', :query, '%'))" +
+                     ") ORDER BY m.fullName ASC")
+       Page<Member> searchActiveForEligibility(@Param("query") String query, Pageable pageable);
+
        // ✅ FIX-M3: Removed deprecated findByNameContainingIgnoreCase and
        // findByNameContaining
        // Use findByFullNameContainingIgnoreCase for canonical clarity

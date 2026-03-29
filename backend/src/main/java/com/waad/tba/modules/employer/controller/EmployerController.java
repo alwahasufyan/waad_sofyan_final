@@ -9,6 +9,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -20,11 +22,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.waad.tba.common.dto.ApiResponse;
+import com.waad.tba.common.dto.CurrentPasswordConfirmationRequest;
 import com.waad.tba.modules.employer.dto.EmployerCreateDto;
 import com.waad.tba.modules.employer.dto.EmployerResponseDto;
 import com.waad.tba.modules.employer.dto.EmployerSelectorDto;
 import com.waad.tba.modules.employer.dto.EmployerUpdateDto;
 import com.waad.tba.modules.employer.service.EmployerService;
+import com.waad.tba.modules.rbac.service.UserSecurityService;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +40,7 @@ import lombok.RequiredArgsConstructor;
 public class EmployerController {
 
     private final EmployerService service;
+    private final UserSecurityService userSecurityService;
 
     @GetMapping
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'MEDICAL_REVIEWER', 'ACCOUNTANT', 'FINANCE_VIEWER')")
@@ -93,7 +98,7 @@ public class EmployerController {
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable("id") Long id) {
         service.delete(id);
-        return ResponseEntity.ok(ApiResponse.success("Employer deleted successfully", null));
+        return ResponseEntity.ok(ApiResponse.success("تم رفض الحذف النهائي", null));
     }
 
     /**
@@ -102,9 +107,16 @@ public class EmployerController {
      */
     @PostMapping("/{id:\\d+}/archive")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
-    public ResponseEntity<ApiResponse<EmployerResponseDto>> archive(@PathVariable("id") Long id) {
+    public ResponseEntity<ApiResponse<EmployerResponseDto>> archive(
+            @PathVariable("id") Long id,
+            @Valid @RequestBody(required = false) CurrentPasswordConfirmationRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        if (request == null || request.getCurrentPassword() == null || request.getCurrentPassword().isBlank()) {
+            throw new com.waad.tba.common.exception.BusinessRuleException("كلمة المرور الحالية مطلوبة قبل أرشفة جهة العمل.");
+        }
+        userSecurityService.verifyCurrentPassword(userDetails.getUsername(), request.getCurrentPassword());
         EmployerResponseDto archived = service.archive(id);
-        return ResponseEntity.ok(ApiResponse.success("Employer archived successfully", archived));
+        return ResponseEntity.ok(ApiResponse.success("تمت أرشفة جهة العمل بنجاح", archived));
     }
 
     /**

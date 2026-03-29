@@ -6,7 +6,8 @@ import {
     DialogContentText,
     DialogActions,
     Button,
-    Typography
+    Typography,
+    TextField
 } from '@mui/material';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 
@@ -23,7 +24,12 @@ const ActionConfirmDialog = ({
     confirmText = 'نعم',
     cancelText = 'إلغاء الأمر',
     confirmColor = 'primary',
-    icon = null
+    icon = null,
+    requirePassword = false,
+    passwordValue = '',
+    onPasswordChange = null,
+    passwordLabel = 'كلمة المرور الحالية',
+    confirmLoading = false
 }) => {
     return (
         <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
@@ -37,12 +43,29 @@ const ActionConfirmDialog = ({
                 <DialogContentText sx={{ whiteSpace: 'pre-wrap' }}>
                     {message}
                 </DialogContentText>
+                {requirePassword && (
+                    <TextField
+                        fullWidth
+                        margin="normal"
+                        type="password"
+                        label={passwordLabel}
+                        value={passwordValue}
+                        onChange={(event) => onPasswordChange?.(event.target.value)}
+                        autoComplete="current-password"
+                    />
+                )}
             </DialogContent>
             <DialogActions sx={{ px: '1.5rem', pb: '1.0rem' }}>
-                <Button onClick={onClose} color="inherit" variant="outlined">
+                <Button onClick={onClose} color="inherit" variant="outlined" disabled={confirmLoading}>
                     {cancelText}
                 </Button>
-                <Button onClick={onConfirm} color={confirmColor} variant="contained" autoFocus>
+                <Button
+                    onClick={onConfirm}
+                    color={confirmColor}
+                    variant="contained"
+                    autoFocus
+                    disabled={confirmLoading || (requirePassword && !passwordValue.trim())}
+                >
                     {confirmText}
                 </Button>
             </DialogActions>
@@ -59,7 +82,12 @@ ActionConfirmDialog.propTypes = {
     confirmText: PropTypes.string,
     cancelText: PropTypes.string,
     confirmColor: PropTypes.oneOf(['primary', 'secondary', 'error', 'info', 'success', 'warning']),
-    icon: PropTypes.node
+    icon: PropTypes.node,
+    requirePassword: PropTypes.bool,
+    passwordValue: PropTypes.string,
+    onPasswordChange: PropTypes.func,
+    passwordLabel: PropTypes.string,
+    confirmLoading: PropTypes.bool
 };
 
 export default ActionConfirmDialog;

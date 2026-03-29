@@ -3,18 +3,19 @@ package com.waad.tba.modules.provider.service;
 import com.waad.tba.modules.provider.dto.ProviderEligibilityRequest;
 import com.waad.tba.modules.provider.dto.ProviderEligibilityResponse;
 import com.waad.tba.modules.member.dto.FamilyEligibilityResponseDto;
+import com.waad.tba.modules.member.dto.MemberSearchDto;
 import com.waad.tba.modules.member.dto.MemberViewDto;
 import com.waad.tba.modules.member.dto.DependentViewDto;
 import com.waad.tba.modules.member.service.UnifiedMemberService;
 import com.waad.tba.modules.member.repository.MemberRepository;
 import com.waad.tba.modules.member.entity.Member;
-import com.waad.tba.modules.benefitpolicy.service.BenefitPolicyCoverageService;
 import com.waad.tba.modules.benefitpolicy.entity.BenefitPolicy;
 import com.waad.tba.modules.benefitpolicy.repository.BenefitPolicyRepository;
 import com.waad.tba.modules.claim.entity.Claim;
 import com.waad.tba.modules.claim.repository.ClaimRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,7 +26,9 @@ import java.time.LocalDateTime;
 import java.time.Period;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Provider Portal Service.
@@ -37,8 +40,6 @@ import java.util.List;
  * - Annual limit calculations
  * 
  * Uses existing UnifiedMemberService for core member operations.
- * Uses BenefitPolicyCoverageService for annual limit calculations.
- * 
  * @since Phase 1 - Provider Portal
  */
 @Slf4j
@@ -48,7 +49,6 @@ public class ProviderPortalService {
     
     private final UnifiedMemberService unifiedMemberService;
     private final MemberRepository memberRepository;
-    private final BenefitPolicyCoverageService benefitPolicyCoverageService;
     private final BenefitPolicyRepository benefitPolicyRepository;
     private final ClaimRepository claimRepository;
     
@@ -114,6 +114,30 @@ public class ProviderPortalService {
         
         return response;
     }
+
+    /**
+     * Search members for provider eligibility by name, card number, barcode, or partial suffix.
+     */
+    @Transactional(readOnly = true)
+    public List<MemberSearchDto> searchMembersForEligibility(String query, String providerUsername) {
+        String trimmedQuery = query != null ? query.trim() : "";
+        log.info("🏥 Provider eligibility search: provider={}, query={}", providerUsername, trimmedQuery);
+
+        if (trimmedQuery.isEmpty()) {
+            return List.of();
+        }
+
+        List<MemberSearchDto> exactMatches = findExactMatches(trimmedQuery);
+        if (!exactMatches.isEmpty()) {
+            return exactMatches;
+        }
+
+        return memberRepository.searchActiveForEligibility(trimmedQuery, PageRequest.of(0, 20))
+                .stream()
+                .map(member -> MemberSearchDto.fromMember(member, determineSearchType(member, trimmedQuery), null))
+                .sorted(Comparator.comparing(MemberSearchDto::getFullName, Comparator.nullsLast(String::compareToIgnoreCase)))
+                .toList();
+    }
     
     /**
      * Find member by barcode or card number.
@@ -140,6 +164,49 @@ public class ProviderPortalService {
         }
         
         return member;
+    }
+
+    private List<MemberSearchDto> findExactMatches(String query) {
+        List<MemberSearchDto> matches = new ArrayList<>();
+
+        if (looksLikeBarcode(query)) {
+            memberRepository.findByBarcode(query)
+                    .map(member -> MemberSearchDto.fromMember(member, "BARCODE", null))
+                    .ifPresent(matches::add);
+        }
+
+        if (matches.isEmpty() && isNumeric(query)) {
+            memberRepository.findByCardNumber(query)
+                    .map(member -> MemberSearchDto.fromMember(member, "CARD_NUMBER", null))
+                    .ifPresent(matches::add);
+        }
+
+        return matches;
+    }
+
+    private boolean isNumeric(String value) {
+        return value != null && value.matches("\\d+");
+    }
+
+    private boolean looksLikeBarcode(String value) {
+        if (value == null) {
+            return false;
+        }
+
+        String trimmed = value.trim();
+        return trimmed.matches("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
+                || trimmed.matches("^[A-Za-z]{2,6}-\\d{4}-[A-Za-z0-9-]+$");
+    }
+
+    private String determineSearchType(Member member, String query) {
+        String normalizedQuery = query.toLowerCase(Locale.ROOT);
+        if (member.getBarcode() != null && member.getBarcode().toLowerCase(Locale.ROOT).contains(normalizedQuery)) {
+            return "BARCODE";
+        }
+        if (member.getCardNumber() != null && member.getCardNumber().toLowerCase(Locale.ROOT).contains(normalizedQuery)) {
+            return "CARD_NUMBER";
+        }
+        return "NAME_FUZZY";
     }
 
     /**
@@ -185,14 +252,14 @@ public class ProviderPortalService {
         Member principalMemberEntity = null;
         if (principal != null) {
             principalMemberEntity = memberRepository.findById(principal.getId()).orElse(null);
-            familyMembers.add(buildFamilyMemberInfo(principal, principalMemberEntity, true, barcode));
+            familyMembers.add(buildFamilyMemberInfo(principal, principalMemberEntity, true));
         }
         
         // Add dependents with calculated limits
         for (DependentViewDto dependent : dependents) {
             Member dependentMember = memberRepository.findById(dependent.getId())
                 .orElse(null);
-            familyMembers.add(buildFamilyMemberInfo(dependent, dependentMember, false, barcode));
+            familyMembers.add(buildFamilyMemberInfo(dependent, dependentMember, barcode));
         }
         
         // Determine overall status - also check employer organization
@@ -299,8 +366,7 @@ public class ProviderPortalService {
     private ProviderEligibilityResponse.FamilyMemberInfo buildFamilyMemberInfo(
             MemberViewDto memberDto, 
             Member member,
-            boolean isPrincipal,
-            String principalBarcode) {
+            boolean isPrincipal) {
         
         // Calculate annual limits using BenefitPolicyCoverageService
         BigDecimal annualLimit = BigDecimal.ZERO;
@@ -368,7 +434,6 @@ public class ProviderPortalService {
     private ProviderEligibilityResponse.FamilyMemberInfo buildFamilyMemberInfo(
             DependentViewDto dependent,
             Member member,
-            boolean isPrincipal,
             String principalBarcode) {
         
         // Calculate annual limits using BenefitPolicyCoverageService

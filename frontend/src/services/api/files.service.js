@@ -1,3 +1,4 @@
+import axios from 'axios';
 import api from '../../utils/axios';
 
 /**
@@ -79,6 +80,45 @@ export const getFileUrl = async (folder, filename, expiryMinutes = 60) => {
     params: { expiryMinutes }
   });
   return response.data;
+};
+
+const resolveFileRequestUrl = (fileUrl) => {
+  if (!fileUrl) return '';
+  if (/^https?:\/\//i.test(fileUrl)) return fileUrl;
+  return fileUrl.startsWith('/') ? fileUrl : `/${fileUrl}`;
+};
+
+const buildFileRequestConfig = () => {
+  const token = localStorage.getItem('serviceToken');
+
+  return {
+    responseType: 'blob',
+    withCredentials: true,
+    headers: token
+      ? {
+          Authorization: `Bearer ${token}`
+        }
+      : undefined
+  };
+};
+
+export const fetchFileBlobByUrl = async (fileUrl) => {
+  const response = await axios.get(resolveFileRequestUrl(fileUrl), buildFileRequestConfig());
+  return response.data;
+};
+
+export const downloadFileByUrl = async (fileUrl, fileName = 'document') => {
+  const blob = await fetchFileBlobByUrl(fileUrl);
+  const objectUrl = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+
+  link.href = objectUrl;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  window.setTimeout(() => window.URL.revokeObjectURL(objectUrl), 1000);
 };
 
 /**

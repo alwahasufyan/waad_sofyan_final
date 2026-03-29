@@ -283,16 +283,8 @@ public class EmployerService {
      */
     @Transactional
     public void delete(Long id) {
-        Employer employer = findEmployerById(id);
-        // Only allow hard delete if already archived (inactive)
-        if (Boolean.TRUE.equals(employer.getActive())) {
-            throw new BusinessRuleException("لا يمكن الحذف النهائي إلا بعد الأرشفة. أرشف جهة العمل أولاً.");
-        }
-        DeletionGuard.of("جهة العمل")
-                .check("مستفيدون نشطون", memberRepository.countByEmployerIdAndActiveTrue(id))
-                .throwIfBlocked("أوقف تفعيل المستفيدين أولاً قبل الحذف النهائي.");
-        employerRepository.deleteById(id);
-        log.info("[EmployerService] Hard-deleted employer ID: {}", id);
+        throw new BusinessRuleException(
+                "الحذف النهائي لجهة العمل غير مسموح من داخل النظام. استخدم الأرشفة فقط للحفاظ على سلامة المستفيدين والسياسات والسجل التاريخي.");
     }
 
     /**

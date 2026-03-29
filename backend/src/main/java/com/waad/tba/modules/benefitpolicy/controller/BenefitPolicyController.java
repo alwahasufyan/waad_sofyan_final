@@ -11,7 +11,9 @@ import org.springframework.data.domain.Sort;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -23,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.waad.tba.common.dto.ApiResponse;
+import com.waad.tba.common.dto.CurrentPasswordConfirmationRequest;
 import com.waad.tba.modules.benefitpolicy.dto.BenefitPolicyCreateDto;
 import com.waad.tba.modules.benefitpolicy.dto.BenefitPolicyResponseDto;
 import com.waad.tba.modules.benefitpolicy.dto.BenefitPolicySelectorDto;
@@ -30,6 +33,7 @@ import com.waad.tba.modules.benefitpolicy.dto.BenefitPolicyUpdateDto;
 import com.waad.tba.modules.benefitpolicy.entity.BenefitPolicy.BenefitPolicyStatus;
 import com.waad.tba.modules.benefitpolicy.service.BenefitPolicyService;
 import com.waad.tba.modules.rbac.entity.User;
+import com.waad.tba.modules.rbac.service.UserSecurityService;
 import com.waad.tba.security.AuthorizationService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -77,6 +81,7 @@ public class BenefitPolicyController {
 
     private final BenefitPolicyService benefitPolicyService;
     private final AuthorizationService authorizationService;
+    private final UserSecurityService userSecurityService;
 
     // ═══════════════════════════════════════════════════════════════════════════
     // READ ENDPOINTS
@@ -353,7 +358,14 @@ public class BenefitPolicyController {
     @DeleteMapping("/{id:\\d+}/permanent")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     @Operation(summary = "Permanently delete a soft-deleted benefit policy")
-    public ResponseEntity<Void> permanentDelete(@PathVariable("id") Long id) {
+    public ResponseEntity<Void> permanentDelete(
+            @PathVariable("id") Long id,
+            @Valid @RequestBody(required = false) CurrentPasswordConfirmationRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        if (request == null || request.getCurrentPassword() == null || request.getCurrentPassword().isBlank()) {
+            throw new com.waad.tba.common.exception.BusinessRuleException("كلمة المرور الحالية مطلوبة قبل الحذف النهائي لوثيقة التأمين.");
+        }
+        userSecurityService.verifyCurrentPassword(userDetails.getUsername(), request.getCurrentPassword());
         log.info("Permanently deleting benefit policy: {}", id);
         benefitPolicyService.permanentDelete(id);
         return ResponseEntity.noContent().build();

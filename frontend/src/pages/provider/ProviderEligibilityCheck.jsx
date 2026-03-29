@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
+  Autocomplete,
   Box,
   Button,
   TextField,
@@ -78,8 +79,10 @@ export default function ProviderEligibilityCheck() {
 
   const [searchValue, setSearchValue] = useState('');
   const [loading, setLoading] = useState(false);
+  const [searchingMembers, setSearchingMembers] = useState(false);
   const [error, setError] = useState(null);
   const [result, setResult] = useState(null);
+  const [searchOptions, setSearchOptions] = useState([]);
   const [selectedMember, setSelectedMember] = useState(null);
   const [selectedVisitType, setSelectedVisitType] = useState('');
   const [registeringVisit, setRegisteringVisit] = useState(false);
@@ -92,6 +95,7 @@ export default function ProviderEligibilityCheck() {
   const html5QrCodeRef = useRef(null);
   const scannerInputRef = useRef(null);
   const autoCheckTimerRef = useRef(null);
+  const autoSearchTimerRef = useRef(null);
   const lastAutoSubmittedRef = useRef('');
 
   // ========================================
@@ -124,6 +128,27 @@ export default function ProviderEligibilityCheck() {
   const todayAcceptedCount = useMemo(() => todayChecks.filter((item) => item.eligible).length, [todayChecks]);
   const todayRejectedCount = useMemo(() => todayChecks.filter((item) => !item.eligible).length, [todayChecks]);
   const recentSuccessfulChecks = useMemo(() => checkHistory.filter((item) => item.eligible).slice(0, 5), [checkHistory]);
+
+  const looksLikeDirectBarcode = useCallback((value) => {
+    const trimmed = value?.trim();
+    if (!trimmed) return false;
+    return /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(trimmed)
+      || /^[A-Za-z]{2,6}-\d{4}-[A-Za-z0-9-]+$/.test(trimmed);
+  }, []);
+
+  const resolveLookupKey = useCallback((option) => option?.barcode || option?.cardNumber || '', []);
+
+  const findExactSearchOption = useCallback((input, options) => {
+    const trimmed = input?.trim();
+    if (!trimmed) return null;
+    const normalized = trimmed.toLowerCase();
+    return options.find((option) => {
+      const fullName = option?.fullName?.trim()?.toLowerCase();
+      const cardNumber = option?.cardNumber?.trim()?.toLowerCase();
+      const barcode = option?.barcode?.trim()?.toLowerCase();
+      return fullName === normalized || cardNumber === normalized || barcode === normalized;
+    }) || null;
+  }, []);
 
   // ========================================
   // ELIGIBILITY CHECK API
@@ -195,14 +220,51 @@ export default function ProviderEligibilityCheck() {
     setSearchValue(e.target.value);
   };
 
+  const handleSelectSearchOption = useCallback((option) => {
+    if (!option) return;
+
+    const lookupKey = resolveLookupKey(option);
+    setSearchValue(option.fullName || option.cardNumber || option.barcode || '');
+    setSearchOptions([]);
+
+    if (lookupKey) {
+      lastAutoSubmittedRef.current = lookupKey;
+      checkEligibility(lookupKey);
+    }
+  }, [checkEligibility, resolveLookupKey]);
+
   const handleSubmit = () => {
-    checkEligibility(searchValue);
+    const trimmed = searchValue?.trim();
+
+    if (!trimmed) {
+      setError('يرجى إدخال اسم المستفيد أو رقم البطاقة أو الباركود');
+      return;
+    }
+
+    const exactMatch = findExactSearchOption(trimmed, searchOptions);
+    if (exactMatch) {
+      handleSelectSearchOption(exactMatch);
+      return;
+    }
+
+    if (searchOptions.length === 1) {
+      handleSelectSearchOption(searchOptions[0]);
+      return;
+    }
+
+    if (searchOptions.length > 1 && !looksLikeDirectBarcode(trimmed)) {
+      setError('تم العثور على عدة نتائج. اختر المستفيد من القائمة لإتمام فحص الأهلية.');
+      return;
+    }
+
+    checkEligibility(trimmed);
   };
 
   const handleReset = () => {
     setSearchValue('');
     setResult(null);
     setError(null);
+    setSearchOptions([]);
     setSelectedMember(null);
     setSelectedVisitType('');
     lastAutoSubmittedRef.current = '';
@@ -211,11 +273,57 @@ export default function ProviderEligibilityCheck() {
   useEffect(() => {
     const trimmed = searchValue?.trim();
 
-    if (!trimmed || trimmed.length < 6) {
+    if (autoSearchTimerRef.current) {
+      clearTimeout(autoSearchTimerRef.current);
+    }
+
+    if (!trimmed || trimmed.length < 2) {
+      setSearchOptions([]);
+      setSearchingMembers(false);
+      return undefined;
+    }
+
+    autoSearchTimerRef.current = setTimeout(async () => {
+      try {
+        setSearchingMembers(true);
+        const results = await providerApi.searchEligibilityMembers(trimmed);
+        setSearchOptions(Array.isArray(results) ? results : []);
+      } catch (err) {
+        console.error('Eligibility member search failed:', err);
+        setSearchOptions([]);
+      } finally {
+        setSearchingMembers(false);
+      }
+    }, 300);
+
+    return () => {
+      if (autoSearchTimerRef.current) {
+        clearTimeout(autoSearchTimerRef.current);
+      }
+    };
+  }, [searchValue]);
+
+  useEffect(() => {
+    const trimmed = searchValue?.trim();
+
+    if (!trimmed || trimmed.length < 2) {
       return;
     }
 
-    if (loading || trimmed === lastAutoSubmittedRef.current) {
+    if (loading || searchingMembers) {
+      return;
+    }
+
+    const exactMatch = findExactSearchOption(trimmed, searchOptions);
+    const singleResult = searchOptions.length === 1 ? searchOptions[0] : null;
+    const autoTarget = exactMatch || (singleResult && (looksLikeDirectBarcode(trimmed) || /^\d{6,}$/.test(trimmed)) ? singleResult : null);
+
+    if (!autoTarget) {
+      return;
+    }
+
+    const lookupKey = resolveLookupKey(autoTarget);
+    if (!lookupKey || lookupKey === lastAutoSubmittedRef.current) {
       return;
     }
 
@@ -224,8 +332,8 @@ export default function ProviderEligibilityCheck() {
     }
 
     autoCheckTimerRef.current = setTimeout(() => {
-      lastAutoSubmittedRef.current = trimmed;
-      checkEligibility(trimmed);
+      lastAutoSubmittedRef.current = lookupKey;
+      checkEligibility(lookupKey);
     }, 450);
 
     return () => {
@@ -233,7 +341,7 @@ export default function ProviderEligibilityCheck() {
         clearTimeout(autoCheckTimerRef.current);
       }
     };
-  }, [searchValue, loading, checkEligibility]);
+  }, [searchValue, loading, searchingMembers, searchOptions, checkEligibility, findExactSearchOption, looksLikeDirectBarcode, resolveLookupKey]);
 
   // ========================================
   // QR SCANNER HANDLERS
@@ -258,6 +366,8 @@ export default function ProviderEligibilityCheck() {
           stopQrScanner();
           setScannerOpen(false);
           setSearchValue(decodedText);
+          setSearchOptions([]);
+          lastAutoSubmittedRef.current = decodedText;
           checkEligibility(decodedText);
         },
         (errorMessage) => {
@@ -550,50 +660,95 @@ export default function ProviderEligibilityCheck() {
               >
                 <Stack spacing={2}>
                   <Typography variant="subtitle1" fontWeight={700} textAlign="center">
-                    أدخل رقم الهوية أو امسح الباركود للتحقق
+                    أدخل اسم المستفيد أو رقم البطاقة أو امسح/اكتب الباركود للتحقق
                   </Typography>
 
                   <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} alignItems="stretch">
                     <Box sx={{ flex: 1 }}>
-                      <TextField
-                        fullWidth
-                        size="medium"
-                        label="رقم البطاقة / الباركود / رقم العضو"
-                        placeholder="ابدأ الكتابة أو المسح... يبدأ الفحص تلقائياً"
-                        value={searchValue}
-                        onChange={handleInputChange}
-                        disabled={loading}
-                        InputProps={{
-                          startAdornment: (
-                            <InputAdornment position="start">
-                              <QrCodeScannerIcon color="primary" />
-                            </InputAdornment>
-                          ),
-                          endAdornment: (
-                            <InputAdornment position="end">{loading ? <CircularProgress size={20} /> : <CreditCardIcon color="action" />}</InputAdornment>
-                          )
-                        }}
-                        sx={{
-                          direction: 'ltr',
-                          '& .MuiOutlinedInput-root': {
-                            borderRadius: '0.375rem',
-                            bgcolor: 'common.white',
-                            minHeight: '3.5rem',
-                            transition: 'all 0.2s ease',
-                            '& fieldset': {
-                              borderColor: 'divider'
-                            },
-                            '&:hover': {
-                              boxShadow: (theme) => `0 0 0 3px ${theme.palette.success.light}33`
-                            },
-                            '&:hover fieldset': {
-                              borderColor: 'success.main'
-                            },
-                            '&.Mui-focused': {
-                              boxShadow: (theme) => `0 0 0 3px ${theme.palette.primary.light}33`
-                            }
+                      <Autocomplete
+                        freeSolo
+                        options={searchOptions}
+                        filterOptions={(options) => options}
+                        loading={searchingMembers}
+                        inputValue={searchValue}
+                        onInputChange={(_, newInputValue, reason) => {
+                          if (reason === 'input' || reason === 'clear') {
+                            setSearchValue(newInputValue);
                           }
                         }}
+                        onChange={(_, newValue) => {
+                          if (newValue && typeof newValue === 'object') {
+                            handleSelectSearchOption(newValue);
+                          }
+                        }}
+                        getOptionLabel={(option) => {
+                          if (typeof option === 'string') return option;
+                          return option?.fullName || option?.cardNumber || option?.barcode || '';
+                        }}
+                        noOptionsText={searchValue.trim().length < 2 ? 'ابدأ بكتابة حرفين أو رقمين على الأقل' : 'لا توجد نتائج مطابقة'}
+                        renderOption={(props, option) => {
+                          const { key, ...optionProps } = props;
+                          return (
+                            <Box component="li" key={key} {...optionProps} sx={{ py: 1, px: 1.5 }}>
+                              <Stack spacing={0.25} sx={{ width: '100%' }}>
+                                <Typography variant="body2" fontWeight={700}>
+                                  {option.fullName}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                  {option.cardNumber ? `رقم البطاقة: ${option.cardNumber}` : 'رقم البطاقة غير متوفر'}
+                                  {option.barcode ? ` | الباركود: ${option.barcode}` : ''}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                  {option.employerName || 'جهة العمل غير محددة'}
+                                </Typography>
+                              </Stack>
+                            </Box>
+                          );
+                        }}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            fullWidth
+                            size="medium"
+                            label="اسم المستفيد / رقم البطاقة / الباركود"
+                            placeholder="ابحث بالاسم أو آخر أرقام البطاقة أو الباركود... يبدأ الفحص تلقائياً عند التطابق"
+                            disabled={loading}
+                            InputProps={{
+                              ...params.InputProps,
+                              startAdornment: (
+                                <InputAdornment position="start">
+                                  <QrCodeScannerIcon color="primary" />
+                                </InputAdornment>
+                              ),
+                              endAdornment: (
+                                <InputAdornment position="end">
+                                  {loading || searchingMembers ? <CircularProgress size={20} /> : <CreditCardIcon color="action" />}
+                                </InputAdornment>
+                              )
+                            }}
+                            sx={{
+                              direction: 'ltr',
+                              '& .MuiOutlinedInput-root': {
+                                borderRadius: '0.375rem',
+                                bgcolor: 'common.white',
+                                minHeight: '3.5rem',
+                                transition: 'all 0.2s ease',
+                                '& fieldset': {
+                                  borderColor: 'divider'
+                                },
+                                '&:hover': {
+                                  boxShadow: (theme) => `0 0 0 3px ${theme.palette.success.light}33`
+                                },
+                                '&:hover fieldset': {
+                                  borderColor: 'success.main'
+                                },
+                                '&.Mui-focused': {
+                                  boxShadow: (theme) => `0 0 0 3px ${theme.palette.primary.light}33`
+                                }
+                              }
+                            }}
+                          />
+                        )}
                       />
                     </Box>
 
@@ -621,7 +776,7 @@ export default function ProviderEligibilityCheck() {
                   </Stack>
 
                   <Typography variant="caption" color="text.secondary" textAlign="center">
-                    يتم الفحص تلقائياً عند إدخال 6 أحرف أو أكثر
+                    يمكنك البحث بالاسم أو رقم البطاقة أو آخر أرقام الباركود، كما يمكنك فتح الكاميرا أو كتابة الباركود كاملاً
                   </Typography>
 
                   <Box sx={{ height: 0, overflow: 'hidden', opacity: 0 }}>

@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.waad.tba.common.dto.ApiResponse;
+import com.waad.tba.modules.member.dto.MemberSearchDto;
 import com.waad.tba.modules.provider.dto.EffectivePriceResponseDto;
 import com.waad.tba.modules.provider.dto.ProviderClaimRequest;
 import com.waad.tba.modules.provider.dto.ProviderClaimResponse;
@@ -120,7 +121,7 @@ public class ProviderPortalController {
      * POST /api/provider/eligibility-check
      */
     @PostMapping("/eligibility-check")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PROVIDER_STAFF')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PROVIDER', 'PROVIDER_STAFF')")
     @Operation(
         summary = "Check member eligibility (Provider Portal)",
         description = "Real-time eligibility verification for healthcare providers. " +
@@ -168,6 +169,25 @@ public class ProviderPortalController {
         
         return ResponseEntity.ok(response);
     }
+
+    @GetMapping("/eligibility-search")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PROVIDER', 'PROVIDER_STAFF')")
+    @Operation(
+        summary = "Search members for provider eligibility",
+        description = "Smart search by member name, card number, full/partial barcode, or barcode suffix for provider eligibility workflows."
+    )
+    public ResponseEntity<ApiResponse<List<MemberSearchDto>>> searchMembersForEligibility(
+            @RequestParam("query") String query) {
+
+        User currentUser = authorizationService.getCurrentUser();
+        if (currentUser != null && authorizationService.isProvider(currentUser)) {
+            providerContextGuard.validateProviderBinding(currentUser);
+        }
+
+        String provider = currentUser != null ? currentUser.getUsername() : "UNKNOWN";
+        List<MemberSearchDto> results = providerPortalService.searchMembersForEligibility(query, provider);
+        return ResponseEntity.ok(ApiResponse.success("تم جلب نتائج البحث", results));
+    }
     
     /**
      * Quick Eligibility Check by Barcode (Simplified).
@@ -177,7 +197,7 @@ public class ProviderPortalController {
      * Example: GET /api/provider/eligibility/WAD-2026-00001234
      */
     @GetMapping("/eligibility/{barcode}")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PROVIDER_STAFF')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PROVIDER', 'PROVIDER_STAFF')")
     @Operation(
         summary = "Quick eligibility check by barcode (GET)",
         description = "Simplified eligibility check using barcode only. " +

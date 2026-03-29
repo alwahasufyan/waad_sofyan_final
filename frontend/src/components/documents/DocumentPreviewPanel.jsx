@@ -3,15 +3,18 @@ import { useState, useEffect } from 'react';
 import { Box, IconButton, Typography, Stack, Paper, CircularProgress, Tooltip, Button } from '@mui/material';
 import { ZoomIn, ZoomOut, NavigateBefore, NavigateNext, Download as DownloadIcon, RotateRight, CloseFullscreen } from '@mui/icons-material';
 import { Document, Page } from 'react-pdf';
+import { downloadFileByUrl, fetchFileBlobByUrl } from 'services/api/files.service';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
-export default function DocumentPreviewPanel({ fileUrl, fileType, fileName, onClose }) {
+export default function DocumentPreviewPanel({ fileUrl, downloadUrl, fileType, fileName, onClose }) {
   const [numPages, setNumPages] = useState(null);
   const [page, setPage] = useState(1);
   const [scale, setScale] = useState(1.0);
   const [rotation, setRotation] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [resolvedFileUrl, setResolvedFileUrl] = useState('');
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     // Reset state when file changes
@@ -19,6 +22,51 @@ export default function DocumentPreviewPanel({ fileUrl, fileType, fileName, onCl
     setRotation(0);
     setScale(1.0);
     setLoading(true);
+  }, [fileUrl]);
+
+  useEffect(() => {
+    let isActive = true;
+    let objectUrl = '';
+
+    const loadFile = async () => {
+      if (!fileUrl) {
+        setResolvedFileUrl('');
+        setLoading(false);
+        setLoadError(false);
+        return;
+      }
+
+      setLoading(true);
+      setLoadError(false);
+
+      try {
+        const blob = await fetchFileBlobByUrl(fileUrl);
+        objectUrl = URL.createObjectURL(blob);
+
+        if (!isActive) {
+          URL.revokeObjectURL(objectUrl);
+          return;
+        }
+
+        setResolvedFileUrl(objectUrl);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error loading document preview:', error);
+        if (!isActive) return;
+        setResolvedFileUrl('');
+        setLoadError(true);
+        setLoading(false);
+      }
+    };
+
+    loadFile();
+
+    return () => {
+      isActive = false;
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
   }, [fileUrl]);
 
   if (!fileUrl) {
@@ -40,10 +88,14 @@ export default function DocumentPreviewPanel({ fileUrl, fileType, fileName, onCl
     );
   }
 
-  const isImage = fileType?.toLowerCase().includes('image') || fileUrl.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp)$/);
+  const isImage = fileType?.toLowerCase().includes('image') || fileName?.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp|bmp)$/);
 
-  const handleDownload = () => {
-    window.open(fileUrl, '_blank');
+  const handleDownload = async () => {
+    try {
+      await downloadFileByUrl(downloadUrl || fileUrl, fileName || 'document');
+    } catch (error) {
+      console.error('Error downloading document:', error);
+    }
   };
 
   return (
@@ -135,9 +187,21 @@ export default function DocumentPreviewPanel({ fileUrl, fileType, fileName, onCl
           position: 'relative'
         }}
       >
-        {isImage ? (
+        {loading ? (
+          <Stack alignItems="center" spacing={1} mt={4}>
+            <CircularProgress size={30} />
+            <Typography variant="caption">جاري تحميل المستند...</Typography>
+          </Stack>
+        ) : loadError || !resolvedFileUrl ? (
+          <Stack alignItems="center" spacing={1} mt={4} color="error.main">
+            <Typography>تعذر تحميل المستند</Typography>
+            <Button size="small" onClick={handleDownload}>
+              تحميل الملف
+            </Button>
+          </Stack>
+        ) : isImage ? (
           <img
-            src={fileUrl}
+            src={resolvedFileUrl}
             alt="document"
             style={{
               maxWidth: '100%',
@@ -147,14 +211,13 @@ export default function DocumentPreviewPanel({ fileUrl, fileType, fileName, onCl
           />
         ) : (
           <Document
-            file={fileUrl}
+            file={resolvedFileUrl}
             onLoadSuccess={({ numPages }) => {
               setNumPages(numPages);
-              setLoading(false);
             }}
             onLoadError={(error) => {
               console.error('Error loading PDF:', error);
-              setLoading(false);
+              setLoadError(true);
             }}
             loading={
               <Stack alignItems="center" spacing={1} mt={4}>
@@ -185,6 +248,7 @@ export default function DocumentPreviewPanel({ fileUrl, fileType, fileName, onCl
 
 DocumentPreviewPanel.propTypes = {
   fileUrl: PropTypes.string,
+  downloadUrl: PropTypes.string,
   fileType: PropTypes.string,
   fileName: PropTypes.string,
   onClose: PropTypes.func
