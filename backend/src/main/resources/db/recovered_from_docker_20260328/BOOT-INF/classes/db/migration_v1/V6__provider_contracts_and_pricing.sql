@@ -1,3 +1,0 @@
--- V6__provider_contracts_and_pricing.sql
--- Placeholder file for sequential migration track.
--- Content will be extracted from legacy migrations during consolidation.

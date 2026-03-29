@@ -307,21 +307,6 @@
             تاريخ التقرير: <span th:text="${reportDate}">2026-03-28</span>
         </div>
 
-        <div class="summary-row">
-            <div class="summary-box">
-                <div class="summary-value" th:text="${totalMembers}">1</div>
-                <div class="summary-label">عدد السجلات</div>
-            </div>
-            <div class="summary-box">
-                <div class="summary-value" th:text="${activeMembers}">1</div>
-                <div class="summary-label">سجلات نشطة</div>
-            </div>
-            <div class="summary-box">
-                <div class="summary-value" th:text="${familiesCount}">1</div>
-                <div class="summary-label">عدد الأسر الرئيسية</div>
-            </div>
-        </div>
-
         <div class="section" th:if="${member != null}">
             <h2 class="section-title">البيانات الأساسية</h2>
             <ul class="points">
@@ -351,12 +336,12 @@
         <div class="section" th:if="${financialSummary != null}">
             <h2 class="section-title">كشف استخدام التغطية</h2>
             <ul class="points">
-                <li class="point-item"><span class="label">الحد السنوي:</span><span class="money" th:text="${#numbers.formatDecimal(financialSummary.annualLimit != null ? financialSummary.annualLimit : 0, 1, 2)} + ' د.ل'">0.00</span></li>
-                <li class="point-item"><span class="label">إجمالي المطالبات:</span><span class="money" th:text="${#numbers.formatDecimal(financialSummary.totalClaimed != null ? financialSummary.totalClaimed : 0, 1, 2)} + ' د.ل'">0.00</span></li>
-                <li class="point-item"><span class="label">المعتمد:</span><span class="money" th:text="${#numbers.formatDecimal(financialSummary.totalApproved != null ? financialSummary.totalApproved : 0, 1, 2)} + ' د.ل'">0.00</span></li>
-                <li class="point-item"><span class="label">التحمل:</span><span class="money" th:text="${#numbers.formatDecimal(financialSummary.totalPatientCoPay != null ? financialSummary.totalPatientCoPay : 0, 1, 2)} + ' د.ل'">0.00</span></li>
-                <li class="point-item"><span class="label">المتبقي:</span><span class="money" th:text="${#numbers.formatDecimal(financialSummary.remainingCoverage != null ? financialSummary.remainingCoverage : 0, 1, 2)} + ' د.ل'">0.00</span></li>
-                <li class="point-item"><span class="label">نسبة الاستخدام:</span><span th:text="${#numbers.formatDecimal(financialSummary.utilizationPercent != null ? financialSummary.utilizationPercent : 0, 1, 1)} + '%'">0%</span></li>
+                <li class="point-item"><span class="label">الحد السنوي:</span><span class="money" th:text="${financialSummaryDisplay.annualLimit}">0.00 د.ل</span></li>
+                <li class="point-item"><span class="label">إجمالي المطالبات:</span><span class="money" th:text="${financialSummaryDisplay.totalClaimed}">0.00 د.ل</span></li>
+                <li class="point-item"><span class="label">المعتمد:</span><span class="money" th:text="${financialSummaryDisplay.totalApproved}">0.00 د.ل</span></li>
+                <li class="point-item"><span class="label">التحمل:</span><span class="money" th:text="${financialSummaryDisplay.totalPatientCoPay}">0.00 د.ل</span></li>
+                <li class="point-item"><span class="label">المتبقي:</span><span class="money" th:text="${financialSummaryDisplay.remainingCoverage}">0.00 د.ل</span></li>
+                <li class="point-item"><span class="label">نسبة الاستخدام:</span><span class="money" th:text="${financialSummaryDisplay.utilizationPercent}">0.0%</span></li>
             </ul>
         </div>
 
@@ -376,17 +361,17 @@
                 </tr>
                 </thead>
                 <tbody>
-                <tr th:each="c, stat : ${memberClaims}">
-                    <td th:text="${stat.count}">1</td>
-                    <td th:text="${c.claimNumber != null ? c.claimNumber : (c.id != null ? 'CLM-' + c.id : '-')}">-</td>
-                    <td th:text="${c.serviceDate != null ? c.serviceDate : '-'}">-</td>
-                    <td th:text="${c.providerName != null ? c.providerName : '-'}">-</td>
-                    <td th:text="${c.statusLabel != null ? c.statusLabel : (c.status != null ? c.status : '-')}">-</td>
-                    <td class="money" th:text="${#numbers.formatDecimal(c.requestedAmount != null ? c.requestedAmount : 0, 1, 2)}">0.00</td>
-                    <td class="money" th:text="${#numbers.formatDecimal(c.approvedAmount != null ? c.approvedAmount : 0, 1, 2)}">0.00</td>
-                    <td class="money" th:text="${#numbers.formatDecimal(c.patientCoPay != null ? c.patientCoPay : 0, 1, 2)}">0.00</td>
+                <tr th:each="c : ${memberClaimsDisplay}">
+                    <td class="money" th:text="${c.rowNumber}">1</td>
+                    <td class="money" th:text="${c.claimNumber}">-</td>
+                    <td class="money" th:text="${c.serviceDate}">-</td>
+                    <td th:text="${c.providerName}">-</td>
+                    <td th:text="${c.statusLabel}">-</td>
+                    <td class="money" th:text="${c.requestedAmount}">0.00</td>
+                    <td class="money" th:text="${c.approvedAmount}">0.00</td>
+                    <td class="money" th:text="${c.patientCoPay}">0.00</td>
                 </tr>
-                <tr th:if="${#lists.isEmpty(memberClaims)}">
+                <tr th:if="${#lists.isEmpty(memberClaimsDisplay)}">
                     <td colspan="8" class="empty-claims">لا توجد مطالبات لهذا المنتفع.</td>
                 </tr>
                 </tbody>

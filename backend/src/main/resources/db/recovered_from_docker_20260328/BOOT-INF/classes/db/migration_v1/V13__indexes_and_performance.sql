@@ -1,3 +1,0 @@
--- V13__indexes_and_performance.sql
--- Placeholder file for sequential migration track.
--- Content will be extracted from legacy migrations during consolidation.

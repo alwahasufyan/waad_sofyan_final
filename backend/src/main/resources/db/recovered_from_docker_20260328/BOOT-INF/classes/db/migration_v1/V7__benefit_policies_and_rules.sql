@@ -1,3 +1,0 @@
--- V7__benefit_policies_and_rules.sql
--- Placeholder file for sequential migration track.
--- Content will be extracted from legacy migrations during consolidation.

@@ -42,11 +42,14 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -673,7 +676,11 @@ public class UnifiedMemberController {
                 data.put("filterDescription", filterDesc.length() > 0 ? filterDesc.toString() : "الكل");
 
                 String html = pdfTemplateService.processTemplate("pdf/beneficiaries-report", data);
-                return ResponseEntity.ok().contentType(MediaType.TEXT_HTML).body(html);
+                return ResponseEntity.ok()
+                                .contentType(MediaType.TEXT_HTML)
+                                .header(HttpHeaders.CACHE_CONTROL, "no-store, no-cache, must-revalidate, max-age=0")
+                                .header("Pragma", "no-cache")
+                                .body(html);
         }
 
         /**
@@ -702,14 +709,20 @@ public class UnifiedMemberController {
                 data.put("familiesCount", (member.getType() != null && "PRINCIPAL".equals(member.getType())) ? 1 : 0);
                 data.put("filterDescription", "تفاصيل منتفع فردي: " + member.getFullName());
                 data.put("financialSummary", financialSummary);
+                data.put("financialSummaryDisplay", buildFinancialSummaryDisplay(financialSummary));
                 data.put("memberClaims", claims);
+                data.put("memberClaimsDisplay", buildMemberClaimsDisplay(claims));
                 data.put("memberGenderLabel", resolveGenderLabel(member));
                 data.put("memberStatusLabel", resolveStatusLabel(member));
                 data.put("memberStatusCss", resolveStatusCss(member));
                 data.put("companyDisplayName", "شركة وعد لادارة النفقات الطبية");
 
                 String html = pdfTemplateService.processTemplate("pdf/beneficiary-profile-report", data);
-                return ResponseEntity.ok().contentType(MediaType.TEXT_HTML).body(html);
+                return ResponseEntity.ok()
+                                .contentType(MediaType.TEXT_HTML)
+                                .header(HttpHeaders.CACHE_CONTROL, "no-store, no-cache, must-revalidate, max-age=0")
+                                .header("Pragma", "no-cache")
+                                .body(html);
         }
 
     /**
@@ -843,7 +856,9 @@ public class UnifiedMemberController {
         data.put("familiesCount", isPrincipal ? 1 : 0);
         data.put("filterDescription", "تفاصيل منتفع فردي: " + member.getFullName());
         data.put("financialSummary", financialSummary);
+        data.put("financialSummaryDisplay", buildFinancialSummaryDisplay(financialSummary));
         data.put("memberClaims", claims);
+        data.put("memberClaimsDisplay", buildMemberClaimsDisplay(claims));
         data.put("memberGenderLabel", resolveGenderLabel(member));
         data.put("memberStatusLabel", resolveStatusLabel(member));
         data.put("memberStatusCss", resolveStatusCss(member));
@@ -867,11 +882,11 @@ public class UnifiedMemberController {
                 }
 
                 String value = member.getGender().toString().toUpperCase();
-                if (value.contains("MALE")) {
-                        return "ذكر";
-                }
                 if (value.contains("FEMALE")) {
                         return "أنثى";
+                }
+                if (value.contains("MALE")) {
+                        return "ذكر";
                 }
                 return "-";
         }
@@ -912,6 +927,61 @@ public class UnifiedMemberController {
                         return "status-suspended";
                 }
                 return "status-inactive";
+        }
+
+        private Map<String, String> buildFinancialSummaryDisplay(MemberFinancialSummaryDto financialSummary) {
+                Map<String, String> display = new HashMap<>();
+                display.put("annualLimit", formatEnglishAmount(financialSummary != null ? financialSummary.getAnnualLimit() : null));
+                display.put("totalClaimed", formatEnglishAmount(financialSummary != null ? financialSummary.getTotalClaimed() : null));
+                display.put("totalApproved", formatEnglishAmount(financialSummary != null ? financialSummary.getTotalApproved() : null));
+                display.put("totalPatientCoPay", formatEnglishAmount(financialSummary != null ? financialSummary.getTotalPatientCoPay() : null));
+                display.put("remainingCoverage", formatEnglishAmount(financialSummary != null ? financialSummary.getRemainingCoverage() : null));
+                display.put("utilizationPercent", formatEnglishPercent(financialSummary != null ? financialSummary.getUtilizationPercent() : null));
+                return display;
+        }
+
+        private List<Map<String, String>> buildMemberClaimsDisplay(List<ClaimViewDto> claims) {
+                List<Map<String, String>> displayRows = new java.util.ArrayList<>();
+                if (claims == null || claims.isEmpty()) {
+                        return displayRows;
+                }
+
+                for (int index = 0; index < claims.size(); index++) {
+                        ClaimViewDto claim = claims.get(index);
+                        Map<String, String> row = new HashMap<>();
+                        row.put("rowNumber", Integer.toString(index + 1));
+                        row.put("claimNumber", claim.getClaimNumber() != null ? claim.getClaimNumber() : (claim.getId() != null ? "CLM-" + claim.getId() : "-"));
+                        row.put("serviceDate", claim.getServiceDate() != null ? claim.getServiceDate().toString() : "-");
+                        row.put("providerName", claim.getProviderName() != null ? claim.getProviderName() : "-");
+                        row.put("statusLabel", claim.getStatusLabel() != null ? claim.getStatusLabel() : (claim.getStatus() != null ? claim.getStatus().toString() : "-"));
+                        row.put("requestedAmount", formatEnglishAmountValue(claim.getRequestedAmount()));
+                        row.put("approvedAmount", formatEnglishAmountValue(claim.getApprovedAmount()));
+                        row.put("patientCoPay", formatEnglishAmountValue(claim.getPatientCoPay()));
+                        displayRows.add(row);
+                }
+
+                return displayRows;
+        }
+
+        private String formatEnglishAmount(Number value) {
+                DecimalFormatSymbols symbols = DecimalFormatSymbols.getInstance(Locale.US);
+                DecimalFormat decimalFormat = new DecimalFormat("#,##0.00", symbols);
+                double numericValue = value != null ? value.doubleValue() : 0d;
+                return decimalFormat.format(numericValue) + " د.ل";
+        }
+
+        private String formatEnglishAmountValue(Number value) {
+                DecimalFormatSymbols symbols = DecimalFormatSymbols.getInstance(Locale.US);
+                DecimalFormat decimalFormat = new DecimalFormat("#,##0.00", symbols);
+                double numericValue = value != null ? value.doubleValue() : 0d;
+                return decimalFormat.format(numericValue);
+        }
+
+        private String formatEnglishPercent(Number value) {
+                DecimalFormatSymbols symbols = DecimalFormatSymbols.getInstance(Locale.US);
+                DecimalFormat decimalFormat = new DecimalFormat("0.0", symbols);
+                double numericValue = value != null ? value.doubleValue() : 0d;
+                return decimalFormat.format(numericValue) + "%";
         }
 
     // ==================== FINANCIAL REGISTER REPORT ====================

@@ -13,15 +13,17 @@ const BeneficiariesStatementPreview = () => {
   const [loading, setLoading] = useState(true);
 
   const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const previewNonce = useMemo(() => Date.now().toString(), []);
   const memberId = queryParams.get('memberId');
   const autoPrint = queryParams.get('autoPrint') === '1';
 
   const reportQuery = new URLSearchParams(queryParams);
   reportQuery.delete('memberId');
   reportQuery.delete('autoPrint');
+  reportQuery.set('previewAt', previewNonce);
 
   const htmlPreviewUrl = memberId
-    ? `/api/v1/unified-members/${memberId}/html`
+    ? `/api/v1/unified-members/${memberId}/html?previewAt=${previewNonce}`
     : `/api/v1/unified-members/html/report${reportQuery.toString() ? `?${reportQuery.toString()}` : ''}`;
 
   const handlePrint = () => {

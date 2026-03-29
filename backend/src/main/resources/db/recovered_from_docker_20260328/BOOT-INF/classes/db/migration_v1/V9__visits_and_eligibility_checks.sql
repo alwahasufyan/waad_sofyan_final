@@ -1,3 +1,0 @@
--- V9__visits_and_eligibility_checks.sql
--- Placeholder file for sequential migration track.
--- Content will be extracted from legacy migrations during consolidation.

@@ -48,9 +48,7 @@ import CreditCardIcon from '@mui/icons-material/CreditCard';
 import NumbersIcon from '@mui/icons-material/Numbers';
 import QrCode2Icon from '@mui/icons-material/QrCode2';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import AssignmentIcon from '@mui/icons-material/Assignment';
-import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import DateRangeIcon from '@mui/icons-material/DateRange';
 import AccessibilityNewIcon from '@mui/icons-material/AccessibilityNew';
 import PreviewIcon from '@mui/icons-material/Preview';
@@ -934,22 +932,6 @@ const InfoRow = ({ icon, label, value, isMono }) => (
   </Box>
 );
 
-const SummaryCard = ({ title, value, icon, color }) => (
-  <Paper sx={{ p: '1.0rem', borderLeft: `4px solid`, borderLeftColor: `${color}.main` }}>
-    <Stack spacing={1}>
-      <Box display="flex" justifyContent="space-between">
-        <Typography variant="caption" color="text.secondary">
-          {title}
-        </Typography>
-        {React.cloneElement(icon, { color: color, fontSize: 'small' })}
-      </Box>
-      <Typography variant="h5" fontWeight="bold">
-        {value}
-      </Typography>
-    </Stack>
-  </Paper>
-);
-
 const extractCollection = (payload) => {
   if (Array.isArray(payload)) return payload;
 
@@ -972,6 +954,11 @@ const extractCollection = (payload) => {
 const normalizeCurrencyValue = (value) => {
   const normalized = Number(value ?? 0);
   return Number.isFinite(normalized) ? normalized : 0;
+};
+
+const formatCoverageAmountEnglish = (value) => {
+  const normalized = normalizeCurrencyValue(value);
+  return `${normalized.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ل`;
 };
 
 const normalizeFinancialSnapshot = (summary, statement) => {
@@ -1106,6 +1093,58 @@ const SingleBeneficiaryReport = ({ member, financialStats, loadingStats, loading
     return allPreAuthRows.slice(0, 5);
   }, [allPreAuthRows, activityViewMode, activityFromDate, activityToDate]);
 
+  const memberIdentityDetails = [
+    { label: 'رقم البطاقة', value: member?.cardNumber || '-', mono: true, color: 'primary.main' },
+    { label: 'الباركود', value: member?.barcode || '-', mono: true },
+    { label: 'رقم الهوية', value: member?.nationalNumber || '-', mono: true },
+    { label: 'الشركة/الشريك', value: member?.employerName || '-' },
+    { label: 'النوع', value: member?.type === 'PRINCIPAL' ? 'مشترك أساسي' : member?.type ? 'تابع' : '-' },
+    { label: 'الجنس والعمر', value: `${member?.gender === 'MALE' ? 'ذكر' : 'أنثى'} / ${member?.age || '-'} سنة` },
+    { label: 'تاريخ الانضمام', value: member?.joinDate || '-' }
+  ];
+
+  const coverageHighlights = [
+    {
+      label: 'الحد السنوي',
+      value: formatCoverageAmountEnglish(financialStats?.annualLimit || 0),
+      accent: theme.palette.primary.main,
+      background: theme.palette.primary.lighter
+    },
+    {
+      label: 'إجمالي المطالبات',
+      value: formatCoverageAmountEnglish(financialStats?.totalClaimed || 0),
+      accent: theme.palette.info.main,
+      background: theme.palette.info.lighter
+    },
+    {
+      label: 'المعتمد',
+      value: formatCoverageAmountEnglish(financialStats?.totalApproved || 0),
+      accent: theme.palette.success.main,
+      background: theme.palette.success.lighter
+    },
+    {
+      label: 'التحمل',
+      value: formatCoverageAmountEnglish(financialStats?.totalPatientCoPay || 0),
+      accent: theme.palette.warning.dark,
+      background: theme.palette.warning.lighter
+    },
+    {
+      label: 'المتبقي',
+      value: formatCoverageAmountEnglish(financialStats?.remainingCoverage || 0),
+      accent: theme.palette.secondary.main,
+      background: theme.palette.secondary.lighter
+    },
+    {
+      label: 'نسبة الاستخدام',
+      value: `${Number(financialStats?.utilizationPercent || 0).toLocaleString('en-US', {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1
+      })}%`,
+      accent: theme.palette.error.main,
+      background: theme.palette.error.lighter
+    }
+  ];
+
   if (loadingStats) {
     return (
       <Stack alignItems="center" justifyContent="center" height={300}>
@@ -1141,163 +1180,190 @@ const SingleBeneficiaryReport = ({ member, financialStats, loadingStats, loading
         </Box>
 
         <Grid container spacing={1.5}>
-          {/* Left Col: Member Info */}
-          <Grid size={{ xs: 12, md: 4 }}>
+          <Grid size={{ xs: 12 }}>
             <MainCard title="بيانات المنتفع والهوية" className="print-card" contentSX={{ p: '0.75rem' }}>
-              <Stack spacing={1.25} className="print-compact">
-                <Box display="flex" alignItems="center" gap={2}>
-                  <MemberAvatar member={member} size={64} />
-                  <Box>
-                    <Typography variant="h6">{member?.fullName}</Typography>
-                    <MemberTypeIndicator type={member?.type} />
-                  </Box>
-                </Box>
-                <Divider />
+              <Grid container spacing={1.5} alignItems="stretch">
+                <Grid size={{ xs: 12, lg: 4 }}>
+                  <Paper
+                    sx={{
+                      p: 1.5,
+                      height: '100%',
+                      borderRadius: 3,
+                      color: 'common.white',
+                      background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`
+                    }}
+                  >
+                    <Stack spacing={1.5} height="100%" justifyContent="space-between">
+                      <Stack direction={{ xs: 'column', sm: 'row', lg: 'column' }} spacing={1.5} alignItems="center">
+                        <MemberAvatar member={member} size={72} />
+                        <Box textAlign={{ xs: 'center', sm: 'right' }}>
+                          <Typography variant="h5" fontWeight={700}>
+                            {member?.fullName || '-'}
+                          </Typography>
+                          <Box mt={0.75} display="flex" justifyContent={{ xs: 'center', sm: 'flex-start' }}>
+                            <MemberTypeIndicator type={member?.type} />
+                          </Box>
+                        </Box>
+                      </Stack>
 
-                <Box
-                  display="flex"
-                  flexDirection="column"
-                  alignItems="center"
-                  mb={1}
-                  p={1.25}
-                  border="1px solid #e0e0e0"
-                  borderRadius={2}
-                  bgcolor="#f8f9fa"
-                >
-                  <Typography variant="caption" fontWeight="bold" color="text.secondary" gutterBottom>
-                    SCAN MEMBER IDENTITY
-                  </Typography>
-                  <Box p={1.5} bgcolor="white" borderRadius={2} border="1px solid #eee" boxShadow={2} mb={2}>
-                    {member?.barcode ? (
-                      <QRCodeCanvas value={member.barcode} size={150} level={'H'} includeMargin={true} />
-                    ) : (
-                      <Typography variant="caption" color="error">
-                        BARCODE MISSING
-                      </Typography>
-                    )}
-                  </Box>
+                      <Box
+                        sx={{
+                          p: 1.25,
+                          borderRadius: 2,
+                          bgcolor: 'rgba(255,255,255,0.12)',
+                          border: '1px solid rgba(255,255,255,0.18)'
+                        }}
+                      >
+                        <Stack direction={{ xs: 'column', sm: 'row', lg: 'column' }} spacing={1.5} alignItems="center">
+                          <Box p={1} bgcolor="common.white" borderRadius={2} boxShadow={2}>
+                            {member?.barcode ? (
+                              <QRCodeCanvas value={member.barcode} size={116} level={'H'} includeMargin={true} />
+                            ) : (
+                              <Typography variant="caption" color="error.main">
+                                BARCODE MISSING
+                              </Typography>
+                            )}
+                          </Box>
+                          <Stack spacing={0.75} width="100%">
+                            <Typography variant="caption" sx={{ opacity: 0.8 }}>
+                              معرف الهوية السريع
+                            </Typography>
+                            <Typography variant="body2" fontFamily="monospace" fontWeight={700} sx={{ direction: 'ltr', unicodeBidi: 'embed' }}>
+                              {member?.barcode || '-'}
+                            </Typography>
+                            <Typography variant="body2" fontFamily="monospace" sx={{ direction: 'ltr', unicodeBidi: 'embed', opacity: 0.92 }}>
+                              {member?.cardNumber || '-'}
+                            </Typography>
+                          </Stack>
+                        </Stack>
+                      </Box>
+                    </Stack>
+                  </Paper>
+                </Grid>
 
-                  <Stack spacing={1} width="100%">
-                    <Box display="flex" justifyContent="space-between" alignItems="center" borderBottom="1px dashed #ddd" pb={0.5}>
-                      <Typography variant="caption" color="text.secondary">
-                        BARCODE (Ref)
-                      </Typography>
-                      <Typography variant="body2" fontFamily="monospace" fontWeight="bold" letterSpacing={1}>
-                        {member?.barcode || '-'}
-                      </Typography>
-                    </Box>
+                <Grid size={{ xs: 12, lg: 8 }}>
+                  <Grid container spacing={1.25}>
+                    {memberIdentityDetails.map((detail) => (
+                      <Grid key={detail.label} size={{ xs: 12, sm: 6 }}>
+                        <Paper
+                          sx={{
+                            p: 1.25,
+                            borderRadius: 2,
+                            height: '100%',
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            bgcolor: 'grey.50'
+                          }}
+                        >
+                          <Typography variant="caption" color="text.secondary" display="block" mb={0.5}>
+                            {detail.label}
+                          </Typography>
+                          <Typography
+                            variant="body1"
+                            fontWeight={700}
+                            color={detail.color || 'text.primary'}
+                            sx={detail.mono ? { fontFamily: 'monospace', direction: 'ltr', unicodeBidi: 'embed' } : undefined}
+                          >
+                            {detail.value}
+                          </Typography>
+                        </Paper>
+                      </Grid>
+                    ))}
 
-                    <Box display="flex" justifyContent="space-between" alignItems="center" borderBottom="1px dashed #ddd" pb={0.5}>
-                      <Typography variant="caption" color="text.secondary">
-                        CARD NUMBER
-                      </Typography>
-                      <Typography variant="body2" fontFamily="monospace" fontWeight="bold" color="primary">
-                        {member?.cardNumber || '-'}
-                      </Typography>
-                    </Box>
-
-                    <Box display="flex" justifyContent="space-between" alignItems="center">
-                      <Typography variant="caption" color="text.secondary">
-                        NATIONAL ID
-                      </Typography>
-                      <Typography variant="body2" fontFamily="monospace">
-                        {member?.nationalNumber || '-'}
-                      </Typography>
-                    </Box>
-                  </Stack>
-                </Box>
-                <Divider />
-                <InfoRow icon={<CreditCardIcon />} label="رقم البطاقة" value={member?.cardNumber} isMono />
-                <InfoRow icon={<NumbersIcon />} label="الباركود" value={member?.barcode} isMono />
-                <InfoRow icon={<BadgeIcon />} label="رقم الهوية" value={member?.nationalNumber} isMono />
-                <InfoRow icon={<BusinessIcon />} label="الشركة/الشريك" value={member?.employerName} />
-                <InfoRow icon={<DateRangeIcon />} label="تاريخ الانضمام" value={member?.joinDate} />
-                <InfoRow
-                  icon={<AccessibilityNewIcon />}
-                  label="الجنس والعمر"
-                  value={`${member?.gender === 'MALE' ? 'ذكر' : 'أنثى'} / ${member?.age || '-'} سنة`}
-                />
-
-                <Box mt={2}>
-                  <Typography variant="subtitle2" gutterBottom>
-                    حالة البطاقة
-                  </Typography>
-                  <CardStatusBadge status={member?.cardStatus} />
-                </Box>
-              </Stack>
+                    <Grid size={{ xs: 12 }}>
+                      <Paper
+                        sx={{
+                          p: 1.25,
+                          borderRadius: 2,
+                          border: '1px solid',
+                          borderColor: 'divider',
+                          bgcolor: 'background.paper'
+                        }}
+                      >
+                        <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={1}>
+                          <Box>
+                            <Typography variant="subtitle2" fontWeight={700}>
+                              حالة البطاقة
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              بيانات الهوية مرتبة للطباعة والقراءة السريعة
+                            </Typography>
+                          </Box>
+                          <CardStatusBadge status={member?.cardStatus} />
+                        </Stack>
+                      </Paper>
+                    </Grid>
+                  </Grid>
+                </Grid>
+              </Grid>
             </MainCard>
           </Grid>
 
-          {/* Right Col: Financial Summary */}
-          <Grid size={{ xs: 12, md: 8 }}>
+          <Grid size={{ xs: 12 }}>
             <MainCard
               title="كشف استخدام التغطية"
               className="print-card"
               contentSX={{ p: '0.75rem' }}
               secondary={<Chip label="للقراءة فقط" size="small" variant="outlined" />}
             >
-              <Grid container spacing={1} className="print-compact">
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <SummaryCard
-                    title="الحد السنوي"
-                    value={formatCurrency(financialStats?.annualLimit || 0)}
-                    icon={<AssignmentIcon />}
-                    color="primary"
-                  />
-                </Grid>
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <SummaryCard
-                    title="المبلغ المستخدم"
-                    value={formatCurrency(financialStats?.totalApproved || 0)}
-                    icon={<AttachMoneyIcon />}
-                    color="success"
-                  />
-                </Grid>
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <SummaryCard
-                    title="مبلغ التحمل (Co-Pay)"
-                    value={formatCurrency(financialStats?.totalPatientCoPay || 0)}
-                    icon={<AccountBalanceWalletIcon />}
-                    color="warning"
-                  />
-                </Grid>
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <SummaryCard
-                    title="المتبقي من الحد"
-                    value={formatCurrency(financialStats?.remainingCoverage || 0)}
-                    icon={<NumbersIcon />} // Use Numbers or similar
-                    color="info"
-                  />
-                </Grid>
-              </Grid>
-
-              <Box mt={1}>
-                <Paper className="print-card" sx={{ p: '0.75rem', bgcolor: 'grey.50', border: '1px solid', borderColor: 'divider' }}>
-                  <Stack spacing={1}>
-                    <Stack direction="row" justifyContent="space-between" alignItems="center">
-                      <Typography variant="subtitle2" fontWeight="bold">
-                        نسبة استخدام الحد السنوي
+              <Grid container spacing={1.25}>
+                {coverageHighlights.map((item) => (
+                  <Grid key={item.label} size={{ xs: 12, sm: 6, lg: 4 }}>
+                    <Paper
+                      className="print-card"
+                      sx={{
+                        p: 1.25,
+                        height: '100%',
+                        borderRadius: 2,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        bgcolor: item.background
+                      }}
+                    >
+                      <Typography variant="caption" color="text.secondary" display="block" mb={0.5}>
+                        {item.label}
                       </Typography>
-                      <Typography variant="body2" fontWeight="bold" color="primary.main">
-                        {Number(financialStats?.utilizationPercent || 0).toFixed(1)}%
+                      <Typography variant="h6" fontWeight={700} sx={{ color: item.accent, direction: 'ltr', unicodeBidi: 'embed' }}>
+                        {item.value}
+                      </Typography>
+                    </Paper>
+                  </Grid>
+                ))}
+
+                <Grid size={{ xs: 12 }}>
+                  <Paper className="print-card" sx={{ p: '0.9rem', bgcolor: 'grey.50', border: '1px solid', borderColor: 'divider' }}>
+                    <Stack spacing={1}>
+                      <Stack direction="row" justifyContent="space-between" alignItems="center">
+                        <Typography variant="subtitle2" fontWeight="bold">
+                          نسبة استخدام الحد السنوي
+                        </Typography>
+                        <Typography variant="body2" fontWeight="bold" color="primary.main" sx={{ direction: 'ltr', unicodeBidi: 'embed' }}>
+                          {Number(financialStats?.utilizationPercent || 0).toLocaleString('en-US', {
+                            minimumFractionDigits: 1,
+                            maximumFractionDigits: 1
+                          })}
+                          %
+                        </Typography>
+                      </Stack>
+                      <LinearProgress
+                        variant="determinate"
+                        value={Math.min(100, Math.max(0, Number(financialStats?.utilizationPercent || 0)))}
+                        sx={{ height: '0.7rem', borderRadius: 99 }}
+                      />
+                      <Typography variant="caption" color="text.secondary">
+                        إجمالي عدد المطالبات: {Number(financialStats?.claimsCount || 0).toLocaleString('en-US')} | معتمد:{' '}
+                        {Number(financialStats?.approvedClaimsCount || 0).toLocaleString('en-US')} | قيد المعالجة:{' '}
+                        {Number(financialStats?.pendingClaimsCount || 0).toLocaleString('en-US')} | مرفوض:{' '}
+                        {Number(financialStats?.rejectedClaimsCount || 0).toLocaleString('en-US')}
                       </Typography>
                     </Stack>
-                    <LinearProgress
-                      variant="determinate"
-                      value={Math.min(100, Math.max(0, Number(financialStats?.utilizationPercent || 0)))}
-                      sx={{ height: '0.625rem', borderRadius: 99 }}
-                    />
-                    <Typography variant="caption" color="text.secondary">
-                      إجمالي عدد المطالبات: {financialStats?.claimsCount || 0} | معتمد: {financialStats?.approvedClaimsCount || 0} | قيد المعالجة:{' '}
-                      {financialStats?.pendingClaimsCount || 0} | مرفوض: {financialStats?.rejectedClaimsCount || 0}
-                    </Typography>
-                  </Stack>
-                </Paper>
+                  </Paper>
 
-                <Alert severity="info" sx={{ mt: 1, py: 0 }}>
-                  هذا الكشف يوضح ما تم استخدامه من التغطية، وما تبقى، وحصة التحمل على المنتفع بشكل مباشر.
-                </Alert>
-              </Box>
+                  <Alert severity="info" sx={{ mt: 1, py: 0 }}>
+                    هذا الكشف يوضح ما تم استخدامه من التغطية، وما تبقى، وحصة التحمل على المنتفع بشكل مباشر.
+                  </Alert>
+                </Grid>
+              </Grid>
             </MainCard>
           </Grid>
 
@@ -1480,7 +1546,7 @@ const SingleBeneficiaryReport = ({ member, financialStats, loadingStats, loading
                 </Button>
                 */}
         <Button variant="contained" color="secondary" startIcon={<PrintIcon />} onClick={handlePdfPreview}>
-          طباعة PDF احترافية
+          طباعة فقط
         </Button>
       </Box>
     </Box>

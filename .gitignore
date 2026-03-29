@@ -55,3 +55,14 @@ coverage/
 # Local dev Docker overrides
 ############################
 docker-compose.override.yml
+
+############################
+# Migration archives / recovery artifacts
+############################
+migration_archives/
+tmp_docker_recovery/
+backend/src/main/resources/db/archive_legacy_*/
+backend/src/main/resources/db/migration_consolidated_failed_*/
+backend/src/main/resources/db/migration_squash_draft/
+backend/src/main/resources/db/recovered_from_docker_*/
+backend/src/main/resources/db/MIGRATION_REORG_PLAN.md
