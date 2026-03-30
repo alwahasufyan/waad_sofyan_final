@@ -380,6 +380,42 @@ public class ProviderAccountService {
         }
 
         /**
+         * Record a receipt collected from provider (or reverse a prior payment).
+         * Financial effect: running_balance increases and total_paid decreases.
+         */
+        @Transactional
+        public AccountTransaction creditOnReceiptCollection(Long providerId, BigDecimal amount,
+                        String note, Long userId) {
+                ProviderAccount account = accountRepository.findByProviderIdForUpdate(providerId)
+                                .orElseThrow(() -> new EntityNotFoundException(
+                                                "Provider account not found for provider: " + providerId));
+
+                if (!account.isActive()) {
+                        throw new IllegalStateException(
+                                        "Cannot credit receipt on inactive account for provider " + providerId);
+                }
+
+                BigDecimal balanceBefore = account.getRunningBalance() != null ? account.getRunningBalance()
+                                : BigDecimal.ZERO;
+
+                account.reversePaid(amount);
+                accountRepository.save(account);
+
+                AccountTransaction transaction = transactionService.createAdjustment(
+                                account,
+                                amount,
+                                true,
+                                balanceBefore,
+                                note != null && !note.isBlank() ? note : "تحصيل من مقدم الخدمة",
+                                userId);
+
+                log.info("RECEIPT CREDIT: provider={}, amount={}, newBalance={}",
+                                providerId, amount, account.getRunningBalance());
+
+                return transaction;
+        }
+
+        /**
          * Settle the full remaining balance using a manual adjustment debit.
          * Used for legacy outstanding balances when no claim-level settlement
          * candidates exist.

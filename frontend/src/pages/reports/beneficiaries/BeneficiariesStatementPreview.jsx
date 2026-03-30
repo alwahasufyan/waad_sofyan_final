@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Box, Stack, Typography, Button, Divider, CircularProgress, Chip } from '@mui/material';
 import { Print as PrintIcon, ArrowBack as ArrowBackIcon, People as PeopleIcon } from '@mui/icons-material';
 import { useSnackbar } from 'notistack';
+import { openWaadPrintWindow } from 'utils/printLayout';
 
 const BeneficiariesStatementPreview = () => {
   const location = useLocation();
@@ -26,10 +27,32 @@ const BeneficiariesStatementPreview = () => {
     ? `/api/v1/unified-members/${memberId}/html?previewAt=${previewNonce}`
     : `/api/v1/unified-members/html/report${reportQuery.toString() ? `?${reportQuery.toString()}` : ''}`;
 
-  const handlePrint = () => {
-    if (iframeRef.current?.contentWindow) {
-      iframeRef.current.contentWindow.print();
+  const handleCentralPrint = () => {
+    const iframeDoc = iframeRef.current?.contentDocument || iframeRef.current?.contentWindow?.document;
+    if (!iframeDoc?.body) {
+      enqueueSnackbar('تعذر تجهيز المعاينة للطباعة بالقالب المركزي', { variant: 'warning' });
+      return;
     }
+
+    const embeddedStyles = Array.from(iframeDoc.querySelectorAll('style')).map((s) => s.outerHTML).join('\n');
+    const embeddedBody = iframeDoc.body.innerHTML;
+    const title = memberId ? 'تقرير تفاصيل المنتفعين' : 'تقرير المنتفعين';
+    const subtitle = memberId ? `منتفع رقم #${memberId}` : 'تقرير المنتفعين العام';
+
+    openWaadPrintWindow({
+      title,
+      subtitle,
+      verificationMeta: {
+        docCode: memberId ? `BEN-DETAIL-${memberId}` : 'BEN-SUMMARY',
+        providerCode: memberId ? `MEMBER-${memberId}` : 'ALL',
+        qrValue: JSON.stringify({ title, memberId: memberId || null, printedAt: new Date().toISOString() }),
+        qrSize: 170
+      },
+      contentHtml: `
+        ${embeddedStyles}
+        <div class="embedded-beneficiaries-report">${embeddedBody}</div>
+      `
+    });
   };
 
   useEffect(() => {
@@ -101,6 +124,16 @@ const BeneficiariesStatementPreview = () => {
         <Box sx={{ flexGrow: 1 }} />
 
         <Stack direction="row" spacing={1.5}>
+          <Button
+            variant="contained"
+            size="small"
+            startIcon={<PrintIcon />}
+            onClick={handleCentralPrint}
+            disabled={loading}
+            sx={{ bgcolor: '#0b7285', '&:hover': { bgcolor: '#095f6f' } }}
+          >
+            طباعة بالقالب المركزي
+          </Button>
           <Button
             variant="outlined"
             size="small"

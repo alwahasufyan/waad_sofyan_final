@@ -231,4 +231,41 @@ public interface AccountTransactionRepository extends JpaRepository<AccountTrans
            "WHERE at.providerAccountId = :accountId " +
            "ORDER BY at.createdAt DESC LIMIT 1")
     Optional<BigDecimal> getLatestBalance(@Param("accountId") Long accountId);
+
+       /**
+        * Monthly approved totals from ledger (claim approval credits only).
+        */
+       @Query(value = """
+                     SELECT
+                            EXTRACT(MONTH FROM transaction_date)::int AS month_no,
+                            COALESCE(SUM(amount), 0) AS total_approved
+                     FROM account_transactions
+                     WHERE provider_account_id = :accountId
+                       AND EXTRACT(YEAR FROM transaction_date)::int = :year
+                       AND transaction_type = 'CREDIT'
+                       AND reference_type = 'CLAIM_APPROVAL'
+                     GROUP BY EXTRACT(MONTH FROM transaction_date)::int
+                     """, nativeQuery = true)
+       List<Object[]> getApprovedByMonthForYear(@Param("accountId") Long accountId, @Param("year") Integer year);
+
+       /**
+        * Monthly net paid totals from ledger.
+        * DEBIT increases total paid, receipt-like CREDIT adjustments decrease total paid.
+        */
+       @Query(value = """
+                     SELECT
+                            EXTRACT(MONTH FROM transaction_date)::int AS month_no,
+                            COALESCE(SUM(
+                                   CASE
+                                          WHEN transaction_type = 'DEBIT' THEN amount
+                                          WHEN transaction_type = 'CREDIT' AND reference_type = 'ADJUSTMENT' THEN -amount
+                                          ELSE 0
+                                   END
+                            ), 0) AS total_paid
+                     FROM account_transactions
+                     WHERE provider_account_id = :accountId
+                       AND EXTRACT(YEAR FROM transaction_date)::int = :year
+                     GROUP BY EXTRACT(MONTH FROM transaction_date)::int
+                     """, nativeQuery = true)
+       List<Object[]> getNetPaidByMonthForYear(@Param("accountId") Long accountId, @Param("year") Integer year);
 }

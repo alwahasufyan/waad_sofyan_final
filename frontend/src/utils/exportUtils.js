@@ -1,4 +1,5 @@
 import ExcelJS from 'exceljs';
+import { openWaadPrintWindow } from './printLayout';
 
 /**
  * Export Utilities
@@ -348,108 +349,28 @@ export const exportToPDF = (arg1, arg2, arg3, arg4, arg5) => {
     columns = Array.from({ length: rows[0].length }, (_, i) => `Column ${i + 1}`);
   }
 
-  // Build header with company branding
-  const headerHTML =
-    companyName || logoBase64
-      ? `
-    <div class="header">
-      ${logoBase64 ? `<img src="${logoBase64}" alt="${companyName || 'Logo'}" class="logo" />` : ''}
-      ${companyName ? `<div class="company-name">${companyName}</div>` : ''}
-    </div>
-  `
-      : '';
-
-  const tableHTML = `
-    <!DOCTYPE html>
-    <html dir="rtl" lang="ar">
-    <head>
-      <meta charset="UTF-8">
-      <title>${title}</title>
-      <style>
-        * { box-sizing: border-box; }
-        body {
-          font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
-          margin: 20px;
-          direction: rtl;
-        }
-        .header {
-          text-align: center;
-          margin-bottom: 20px;
-          padding-bottom: 15px;
-          border-bottom: 2px solid ${primaryColor};
-        }
-        .logo {
-          max-height: 60px;
-          max-width: 200px;
-          object-fit: contain;
-        }
-        .company-name {
-          font-size: 18px;
-          font-weight: bold;
-          color: ${primaryColor};
-          margin-top: 8px;
-        }
-        h1 {
-          text-align: center;
-          color: #333;
-          margin-bottom: 20px;
-        }
-        table {
-          width: '6.25rem'%;
-          border-collapse: collapse;
-          margin-bottom: 20px;
-        }
-        th, td {
-          border: 1px solid #ddd;
-          padding: 10px 8px;
-          text-align: right;
-        }
-        th {
-          background-color: ${primaryColor};
-          color: white;
-          font-weight: bold;
-        }
-        tr:nth-child(even) { background-color: #f9f9f9; }
-        tr:hover { background-color: #f5f5f5; }
-        .footer {
-          text-align: center;
-          color: #666;
-          font-size: 12px;
-          margin-top: 20px;
-          padding-top: 15px;
-          border-top: 1px solid #ddd;
-        }
-        @media print {
-          body { margin: 0; }
-          .no-print { display: none; }
-        }
-      </style>
-    </head>
-    <body>
-      ${headerHTML}
-      <h1>${title}</h1>
-      <table>
-        <thead>
-          <tr>${columns.map((col) => `<th>${col}</th>`).join('')}</tr>
-        </thead>
-        <tbody>
-          ${rows.map((row) => `<tr>${row.map((cell) => `<td>${cell ?? '-'}</td>`).join('')}</tr>`).join('')}
-        </tbody>
-      </table>
-      <div class="footer">
-        ${footerText || (companyName ? `${companyName} - ` : '')}تم الإنشاء: ${new Date().toLocaleDateString('en-US')} ${new Date().toLocaleTimeString('en-US')}
-      </div>
-    </body>
-    </html>
+  const contentHtml = `
+    <table>
+      <thead>
+        <tr>${columns.map((col) => `<th>${col}</th>`).join('')}</tr>
+      </thead>
+      <tbody>
+        ${rows.map((row) => `<tr>${row.map((cell) => `<td>${cell ?? '-'}</td>`).join('')}</tr>`).join('')}
+      </tbody>
+    </table>
   `;
 
-  const printWindow = window.open('', '_blank');
-  if (printWindow) {
-    printWindow.document.write(tableHTML);
-    printWindow.document.close();
-    printWindow.focus();
-    setTimeout(() => printWindow.print(), 250);
-  } else {
+  const printed = openWaadPrintWindow({
+    title,
+    subtitle: 'تقرير تصدير PDF',
+    contentHtml,
+    companyName,
+    logoUrl: logoBase64,
+    primaryColor,
+    footerNote: footerText || `${companyName ? `${companyName} - ` : ''}تم الإنشاء: ${new Date().toLocaleDateString('en-US')} ${new Date().toLocaleTimeString('en-US')}`
+  });
+
+  if (!printed) {
     console.error('Could not open print window');
   }
 };

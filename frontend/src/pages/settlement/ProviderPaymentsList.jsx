@@ -24,6 +24,7 @@ import { providerAccountsService } from 'services/api/settlement.service';
 
 // Utils
 import { exportAccountsListToExcel } from 'utils/settlementExcelExport';
+import { exportToPDF } from 'utils/exportUtils';
 
 const formatCurrency = (value) => {
   if (value === null || value === undefined || isNaN(value)) return '0.00 د.ل';
@@ -198,7 +199,22 @@ export default function ProviderPaymentsList() {
   };
 
   const handlePrint = () => {
-    window.print();
+    if (!withComputed.length) return;
+
+    const columns = ['مقدم الخدمة', 'رقم المقدم', 'إجمالي المعتمد', 'إجمالي المدفوع', 'الرصيد المستحق', 'الحالة'];
+    const rows = withComputed.map((row) => [
+      row.providerName || '-',
+      row.providerCode || row.providerId || '-',
+      formatCurrency(row.totalApproved),
+      formatCurrency(row.totalPaid),
+      formatCurrency(row.runningBalance),
+      STATUS_LABELS[row.status] || row.status || '-'
+    ]);
+
+    exportToPDF(columns, rows, 'تقرير حسابات مقدمي الخدمة', `provider_accounts_${dayjs().format('YYYY-MM-DD')}`, {
+      companyName: 'وعد لإدارة النفقات الطبية',
+      primaryColor: '#0b7285'
+    });
   };
 
   const renderSummaryCard = (title, value, icon, borderColor = 'primary.main') => (

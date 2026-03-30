@@ -1,3 +1,51 @@
 * {
   -webkit-tap-highlight-color: transparent;
 }
+
+@media print {
+  body {
+    margin-top: 34mm !important;
+    margin-bottom: 20mm !important;
+  }
+
+  body::before {
+    content: "وعد لإدارة النفقات الطبية  |  نظام إدارة النفقات الطبية";
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 28mm;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: Tahoma, Arial, sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: #0b7285;
+    border-bottom: 1px solid #cfe0e5;
+    background: #ffffff;
+    background-image: url('/waad-icon.png');
+    background-repeat: no-repeat;
+    background-position: 18px center;
+    background-size: 22px 22px;
+    z-index: 9999;
+  }
+
+  body::after {
+    content: "وثيقة رسمية - وعد لإدارة النفقات الطبية";
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 12mm;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: Tahoma, Arial, sans-serif;
+    font-size: 11px;
+    color: #5f7380;
+    border-top: 1px solid #d8e2e7;
+    background: #ffffff;
+    z-index: 9999;
+  }
+}

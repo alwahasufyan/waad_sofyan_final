@@ -32,6 +32,7 @@ import SearchOffIcon from '@mui/icons-material/SearchOff';
 // Project Components
 import ModernEmptyState from 'components/tba/ModernEmptyState';
 import ExcelUploadButton from 'components/tba/ExcelUploadButton';
+import { openWaadPrintWindow } from 'utils/printLayout';
 
 // ============================================================================
 // CONSTANTS
@@ -128,58 +129,35 @@ const printTable = (data, columns, title = 'تقرير') => {
   if (!Array.isArray(data) || data.length === 0) return;
 
   const exportColumns = columns.filter((col) => col.accessorKey && col.enableHiding !== false);
-
-  const printWindow = window.open('', '_blank');
-  if (!printWindow) return;
-
-  const html = `
-    <!DOCTYPE html>
-    <html dir="rtl" lang="ar">
-    <head>
-      <meta charset="UTF-8">
-      <title>${title}</title>
-      <style>
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; padding: 20px; direction: rtl; }
-        h1 { text-align: center; margin-bottom: 20px; }
-        table { width: '6.25rem'%; border-collapse: collapse; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: right; }
-        th { background-color: #f5f5f5; font-weight: bold; }
-        tr:nth-child(even) { background-color: #fafafa; }
-        .print-date { text-align: left; color: #666; font-size: 12px; margin-bottom: 10px; }
-        @media print { body { -webkit-print-color-adjust: exact; } }
-      </style>
-    </head>
-    <body>
-      <div class="print-date">تاريخ الطباعة: ${new Date().toLocaleDateString('en-US')}</div>
-      <h1>${title}</h1>
-      <table>
-        <thead>
-          <tr>${exportColumns.map((col) => `<th>${col.header || col.accessorKey}</th>`).join('')}</tr>
-        </thead>
-        <tbody>
-          ${data
-            .map(
-              (row) => `
-            <tr>
-              ${exportColumns
-                .map((col) => {
-                  const value = row[col.accessorKey];
-                  return `<td>${value ?? '-'}</td>`;
-                })
-                .join('')}
-            </tr>
-          `
-            )
-            .join('')}
-        </tbody>
-      </table>
-      <script>window.onload = () => { window.print(); }</script>
-    </body>
-    </html>
+  const contentHtml = `
+    <table>
+      <thead>
+        <tr>${exportColumns.map((col) => `<th>${col.header || col.accessorKey}</th>`).join('')}</tr>
+      </thead>
+      <tbody>
+        ${data
+          .map(
+            (row) => `
+          <tr>
+            ${exportColumns
+              .map((col) => {
+                const value = row[col.accessorKey];
+                return `<td>${value ?? '-'}</td>`;
+              })
+              .join('')}
+          </tr>
+        `
+          )
+          .join('')}
+      </tbody>
+    </table>
   `;
 
-  printWindow.document.write(html);
-  printWindow.document.close();
+  openWaadPrintWindow({
+    title,
+    subtitle: `عدد الصفوف: ${data.length}`,
+    contentHtml
+  });
 };
 
 // ============================================================================

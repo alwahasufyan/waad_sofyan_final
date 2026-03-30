@@ -15,6 +15,7 @@ import {
   ReceiptLong as ReceiptIcon
 } from '@mui/icons-material';
 import { useSnackbar } from 'notistack';
+import { openWaadPrintWindow } from 'utils/printLayout';
 
 const ClaimStatementPreview = () => {
   const location = useLocation();
@@ -36,8 +37,38 @@ const ClaimStatementPreview = () => {
     }
   }, [claimIds, navigate, enqueueSnackbar]);
 
-  const handlePrint = () => {
-    if (iframeRef.current) iframeRef.current.contentWindow.print();
+  const handleCentralPrint = () => {
+    const iframeDoc = iframeRef.current?.contentDocument || iframeRef.current?.contentWindow?.document;
+    if (!iframeDoc?.body) {
+      enqueueSnackbar('تعذر تجهيز كشف المطالبات للطباعة بالقالب المركزي', { variant: 'warning' });
+      return;
+    }
+
+    const embeddedStyles = Array.from(iframeDoc.querySelectorAll('style')).map((s) => s.outerHTML).join('\n');
+    const clonedBody = iframeDoc.body.cloneNode(true);
+    clonedBody
+      .querySelectorAll('.header, .top-band, .footer, .report-title, #screen-header, #page-running-header')
+      .forEach((node) => node.remove());
+    const embeddedBody = clonedBody.innerHTML;
+
+    openWaadPrintWindow({
+      title: 'تقرير المطالبات',
+      subtitle: `${claimCount} مطالبة`,
+      verificationMeta: {
+        docCode: `CLM-REPORT-${Date.now()}`,
+        providerCode: 'CLAIMS',
+        qrValue: JSON.stringify({ title: 'claims-report', claimCount, claimIds, printedAt: new Date().toISOString() }),
+        qrSize: 170
+      },
+      contentHtml: `
+        ${embeddedStyles}
+        <style>
+          .embedded-claim-report .sheet { border: none !important; border-radius: 0 !important; box-shadow: none !important; }
+          .embedded-claim-report .content { padding-top: 0 !important; }
+        </style>
+        <div class="embedded-claim-report">${embeddedBody}</div>
+      `
+    });
   };
 
   return (
@@ -103,19 +134,14 @@ const ClaimStatementPreview = () => {
 
         <Stack direction="row" spacing={1.5}>
           <Button
-            variant="outlined"
+            variant="contained"
             size="small"
             startIcon={<PrintIcon />}
-            onClick={handlePrint}
+            onClick={handleCentralPrint}
             disabled={loading}
-            sx={{
-              color: 'rgba(255,255,255,0.8)',
-              borderColor: 'rgba(255,255,255,0.22)',
-              '&:hover': { borderColor: '#fff', bgcolor: 'rgba(255,255,255,0.07)', color: '#fff' },
-              '&.Mui-disabled': { color: 'rgba(255,255,255,0.25)', borderColor: 'rgba(255,255,255,0.1)' }
-            }}
+            sx={{ bgcolor: '#0b7285', '&:hover': { bgcolor: '#095f6f' } }}
           >
-            طباعة
+            طباعة بالقالب المركزي
           </Button>
         </Stack>
       </Box>

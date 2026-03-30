@@ -40,7 +40,8 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  TextField
+  TextField,
+  MenuItem
 } from '@mui/material';
 
 // MUI Icons
@@ -55,7 +56,6 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
 import PrintIcon from '@mui/icons-material/Print';
 import TableChartIcon from '@mui/icons-material/TableChart';
-import PaymentIcon from '@mui/icons-material/Payment';
 
 // Project Components
 import MainCard from 'components/MainCard';
@@ -77,6 +77,16 @@ import { openSnackbar } from 'api/snackbar';
 // ============================================================================
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50];
+const AR_MONTH_LABELS = ['يناير', 'فبراير', 'مارس', 'ابريل', 'مايو', 'يونيو', 'يوليو', 'اغسطس', 'سبتمبر', 'اكتوبر', 'نوفمبر', 'ديسمبر'];
+const PRINT_BRAND = {
+  companyName: 'وعد لإدارة النفقات الطبية',
+  systemName: 'نظام تسويات مقدمي الخدمة',
+  logoPath: '/waad-icon.png',
+  primaryColor: '#0b7285',
+  accentColor: '#0f9d58',
+  qrApiBase: 'https://api.qrserver.com/v1/create-qr-code/',
+  qrSize: 220
+};
 
 // Transaction type labels in Arabic
 const TRANSACTION_TYPE_LABELS = {
@@ -230,6 +240,24 @@ const appendTotalsRow = (transactions, totals, suffix) => {
       runningBalanceAfter: Number(totals?.netMovement) || 0
     }
   ];
+};
+
+const buildPrintVerificationPayload = ({ title, providerName, providerId, docCode, amount, period, issuedAt }) => {
+  return JSON.stringify({
+    system: 'WAAD_MEDICAL_EXPENSES',
+    title,
+    providerName,
+    providerId,
+    docCode,
+    amount,
+    period,
+    issuedAt
+  });
+};
+
+const buildQrCodeImageUrl = (value) => {
+  const encoded = encodeURIComponent(value || 'WAAD');
+  return `${PRINT_BRAND.qrApiBase}?size=${PRINT_BRAND.qrSize}x${PRINT_BRAND.qrSize}&margin=0&data=${encoded}`;
 };
 
 // ============================================================================
@@ -405,9 +433,17 @@ const ProviderAccountView = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [verificationResult, setVerificationResult] = useState(null);
   const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 10 });
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-  const [paymentForm, setPaymentForm] = useState({ amount: '', paymentReference: '', notes: '' });
-  const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [isMonthlyDocModalOpen, setIsMonthlyDocModalOpen] = useState(false);
+  const [editingMonthlyDoc, setEditingMonthlyDoc] = useState(null);
+  const [monthlyDocForm, setMonthlyDocForm] = useState({
+    documentType: 'PAYMENT_VOUCHER',
+    amount: '',
+    paymentDate: new Date().toISOString().slice(0, 10),
+    paymentReference: '',
+    notes: ''
+  });
+  const [unlockReason, setUnlockReason] = useState('');
 
   // ========================================
   // DATA FETCHING
@@ -445,6 +481,21 @@ const ProviderAccountView = () => {
   const { data: recentTransactionsRaw, isLoading: isLoadingRecent } = useQuery({
     queryKey: ['provider-account', providerId, 'recent'],
     queryFn: () => providerAccountsService.getRecentTransactions(providerId),
+    enabled: isValidProvider,
+    staleTime: 1000 * 60 * 2
+  });
+
+  const currentYear = new Date().getFullYear();
+  const { data: monthlySummaryRaw, isLoading: isLoadingMonthlySummary } = useQuery({
+    queryKey: ['provider-account', providerId, 'monthly-summary', currentYear],
+    queryFn: () => providerPaymentsService.getProviderMonthlySummary(providerId, currentYear),
+    enabled: isValidProvider,
+    staleTime: 1000 * 60 * 2
+  });
+
+  const { data: monthlyPaymentsRaw, isLoading: isLoadingMonthlyPayments } = useQuery({
+    queryKey: ['provider-account', providerId, 'monthly-payments', currentYear, selectedMonth],
+    queryFn: () => providerPaymentsService.listMonthlyPayments(providerId, currentYear, selectedMonth),
     enabled: isValidProvider,
     staleTime: 1000 * 60 * 2
   });
@@ -488,6 +539,22 @@ const ProviderAccountView = () => {
   }, [transactionsData, processTransactions, accountData, paginationModel.page]);
 
   const totalTransactions = transactionsData?.total || transactionsData?.totalElements || allTransactions.length;
+  const monthlySummary = useMemo(() => {
+    const list = Array.isArray(monthlySummaryRaw) ? monthlySummaryRaw : [];
+    if (!list.length) return [];
+
+    return [...list]
+      .sort((a, b) => Number(a.month || 0) - Number(b.month || 0))
+      .map((row) => ({
+        ...row,
+        monthLabel: AR_MONTH_LABELS[Math.max(0, Math.min(11, Number(row.month || 1) - 1))] || `شهر ${row.month}`
+      }));
+  }, [monthlySummaryRaw]);
+  const selectedMonthSummary = useMemo(
+    () => monthlySummary.find((row) => Number(row.month) === Number(selectedMonth)) || null,
+    [monthlySummary, selectedMonth]
+  );
+  const monthlyPayments = useMemo(() => (Array.isArray(monthlyPaymentsRaw) ? monthlyPaymentsRaw : []), [monthlyPaymentsRaw]);
   const recentTotals = useMemo(() => calculateTransactionTotals(recentTransactions), [recentTransactions]);
   const allTotals = useMemo(() => calculateTransactionTotals(allTransactions), [allTransactions]);
   const recentRowsWithTotals = useMemo(() => appendTotalsRow(recentTransactions, recentTotals, 'recent'), [recentTransactions, recentTotals]);
@@ -531,38 +598,497 @@ const ProviderAccountView = () => {
     }
   }, [accountData]);
 
-  const handlePaymentSubmit = async () => {
-    if (!paymentForm.amount || !paymentForm.paymentReference) {
-      openSnackbar({ message: 'الرجاء تعبئة الحقول المطلوبة', variant: 'warning' });
-      return;
-    }
+  const handleTabChange = (_, newValue) => {
+    setActiveTab(newValue);
+  };
 
-    // Amount can not be greater than outstanding balance
-    const currentBalance = Number(accountData?.runningBalance) || 0;
-    const amountVal = Number(paymentForm.amount);
-    
-    if (amountVal > currentBalance) {
-      openSnackbar({ message: 'المبلغ المدخل يجب ألا يتجاوز رصيد مقدم الخدمة', variant: 'error' });
-      return;
-    }
+  const invalidateMonthlyQueries = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['provider-account', providerId, 'monthly-summary'] });
+    queryClient.invalidateQueries({ queryKey: ['provider-account', providerId, 'monthly-payments'] });
+    queryClient.invalidateQueries({ queryKey: ['provider-account', providerId] });
+  }, [queryClient, providerId]);
 
-    setIsSubmittingPayment(true);
+  const handleCreateMonthlyDocument = async () => {
     try {
-      await providerPaymentsService.createProviderInstallment(providerId, paymentForm);
-      openSnackbar({ message: 'تم تسجيل الدفعة بنجاح', variant: 'success' });
-      setIsPaymentModalOpen(false);
-      setPaymentForm({ amount: '', paymentReference: '', notes: '' });
-      // Invalidate ALL provider-account related queries so balances and all transaction tabs update.
-      queryClient.invalidateQueries({ queryKey: ['provider-account', providerId] });
+      const payload = {
+        year: currentYear,
+        month: selectedMonth,
+        documentType: monthlyDocForm.documentType,
+        amount: Number(monthlyDocForm.amount),
+        paymentDate: monthlyDocForm.paymentDate,
+        paymentReference: monthlyDocForm.paymentReference,
+        notes: monthlyDocForm.notes
+      };
+
+      if (!payload.amount || payload.amount <= 0) {
+        openSnackbar({ message: 'قيمة السند مطلوبة', variant: 'warning' });
+        return;
+      }
+
+      if (editingMonthlyDoc?.id) {
+        await providerPaymentsService.updateMonthlyPayment(providerId, editingMonthlyDoc.id, {
+          amount: payload.amount,
+          paymentDate: payload.paymentDate,
+          paymentReference: payload.paymentReference,
+          notes: payload.notes
+        });
+        openSnackbar({ message: 'تم تعديل السند مع قيد تصحيح', variant: 'success' });
+      } else {
+        await providerPaymentsService.createMonthlyPayment(providerId, payload);
+        openSnackbar({ message: 'تم إنشاء السند الشهري', variant: 'success' });
+      }
+
+      setIsMonthlyDocModalOpen(false);
+      setEditingMonthlyDoc(null);
+      setMonthlyDocForm({
+        documentType: 'PAYMENT_VOUCHER',
+        amount: '',
+        paymentDate: new Date().toISOString().slice(0, 10),
+        paymentReference: '',
+        notes: ''
+      });
+      invalidateMonthlyQueries();
     } catch (error) {
-      openSnackbar({ message: error?.message || 'حدث خطأ أثناء تسجيل الدفعة', variant: 'error' });
-    } finally {
-      setIsSubmittingPayment(false);
+      openSnackbar({ message: error?.message || 'تعذر حفظ السند', variant: 'error' });
     }
   };
 
-  const handleTabChange = (_, newValue) => {
-    setActiveTab(newValue);
+  const handleLockOrUnlockMonth = async () => {
+    try {
+      if (!selectedMonthSummary) return;
+
+      if (selectedMonthSummary.locked) {
+        if (!unlockReason.trim()) {
+          openSnackbar({ message: 'سبب فك القفل مطلوب', variant: 'warning' });
+          return;
+        }
+        await providerPaymentsService.unlockMonth(providerId, currentYear, selectedMonth, unlockReason.trim());
+        setUnlockReason('');
+        openSnackbar({ message: 'تم فك قفل الشهر', variant: 'success' });
+      } else {
+        await providerPaymentsService.lockMonth(providerId, currentYear, selectedMonth);
+        openSnackbar({ message: 'تم قفل الشهر بنجاح', variant: 'success' });
+      }
+
+      invalidateMonthlyQueries();
+    } catch (error) {
+      openSnackbar({ message: error?.message || 'تعذر تنفيذ العملية', variant: 'error' });
+    }
+  };
+
+  const renderBrandedPrintDocument = ({ title, subtitle, contentHtml, verificationMeta }) => {
+    const issuedAt = verificationMeta?.issuedAt || new Date().toLocaleString('ar-LY');
+    const logoUrl = `${window.location.origin}${PRINT_BRAND.logoPath}`;
+    const qrValue = verificationMeta?.qrValue || 'WAAD';
+    const qrImageUrl = buildQrCodeImageUrl(qrValue);
+    const docCode = verificationMeta?.docCode || 'DOC-UNSPECIFIED';
+    const providerCode = verificationMeta?.providerId ? `#${verificationMeta.providerId}` : '-';
+
+    return `
+      <html lang="ar" dir="rtl">
+      <head>
+        <meta charset="UTF-8" />
+        <title>${title}</title>
+        <style>
+          :root {
+            --brand-primary: ${PRINT_BRAND.primaryColor};
+            --brand-accent: ${PRINT_BRAND.accentColor};
+            --brand-border: #d8e2e7;
+            --brand-muted: #5f7380;
+            --page-bg: #f6fafb;
+          }
+          * { box-sizing: border-box; }
+          body {
+            margin: 0;
+            padding: 10px;
+            font-family: "Tahoma", "Arial", sans-serif;
+            background: var(--page-bg);
+            color: #1f2933;
+            direction: rtl;
+          }
+          .sheet {
+            position: relative;
+            border: 1px solid var(--brand-border);
+            border-radius: 12px;
+            background: #fff;
+            overflow: hidden;
+          }
+          .watermark {
+            position: absolute;
+            top: 45%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-16deg);
+            font-size: 40px;
+            font-weight: 800;
+            color: rgba(11, 114, 133, 0.05);
+            letter-spacing: 2px;
+            pointer-events: none;
+            user-select: none;
+            white-space: nowrap;
+          }
+          .sheet-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--brand-border);
+            background: linear-gradient(135deg, #edf7f9 0%, #ffffff 60%);
+          }
+          .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+          }
+          .brand img {
+            width: 46px;
+            height: 46px;
+            object-fit: contain;
+            border: 1px solid #d5e6ea;
+            border-radius: 10px;
+            padding: 3px;
+            background: #fff;
+          }
+          .brand-title {
+            margin: 0;
+            font-size: 18px;
+            color: var(--brand-primary);
+            font-weight: 800;
+          }
+          .brand-subtitle {
+            margin: 4px 0 0;
+            font-size: 12px;
+            color: var(--brand-muted);
+          }
+          .doc-title {
+            text-align: left;
+          }
+          .doc-title h2 {
+            margin: 0;
+            font-size: 18px;
+            color: #0f172a;
+            font-weight: 800;
+          }
+          .doc-title p {
+            margin: 4px 0 0;
+            font-size: 12px;
+            color: var(--brand-muted);
+          }
+          .verify-box {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid var(--brand-border);
+            border-radius: 10px;
+            padding: 6px;
+            background: #fff;
+            min-width: 300px;
+          }
+          .verify-box img {
+            width: 96px;
+            height: 96px;
+            border: 1px solid #dbe6eb;
+            border-radius: 8px;
+            background: #fff;
+            flex-shrink: 0;
+          }
+          .verify-meta {
+            font-size: 12px;
+            color: var(--brand-muted);
+            line-height: 1.45;
+          }
+          .verify-meta strong {
+            color: #1f2933;
+            font-size: 12px;
+          }
+          .sheet-body {
+            padding: 10px 12px;
+            position: relative;
+            z-index: 1;
+          }
+          .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(120px, 1fr));
+            gap: 8px;
+            margin: 10px 0 14px;
+          }
+          .summary-item {
+            border: 1px solid var(--brand-border);
+            border-radius: 8px;
+            padding: 6px;
+            background: #fbfdfe;
+          }
+          .summary-label {
+            display: block;
+            font-size: 11px;
+            color: var(--brand-muted);
+            margin-bottom: 4px;
+          }
+          .summary-value {
+            font-size: 14px;
+            font-weight: 700;
+            color: #102a43;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 12px;
+          }
+          th, td {
+            border: 1px solid #d9e3e8;
+            padding: 6px;
+            vertical-align: top;
+          }
+          th {
+            background: #eaf4f6;
+            color: #124559;
+            font-weight: 700;
+          }
+          .sheet-footer {
+            border-top: 1px solid var(--brand-border);
+            padding: 10px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            color: var(--brand-muted);
+            background: #fcfeff;
+          }
+          .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 999px;
+            background: #e9f7ef;
+            color: var(--brand-accent);
+            font-weight: 700;
+            font-size: 11px;
+            border: 1px solid #cdeed9;
+          }
+          @media print {
+            body { background: #fff; padding: 0; }
+            .sheet { border: none; border-radius: 0; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="sheet">
+          <div class="watermark">${PRINT_BRAND.companyName}</div>
+          <div class="sheet-header">
+            <div class="brand">
+              <img src="${logoUrl}" alt="WAAD" />
+              <div>
+                <h1 class="brand-title">${PRINT_BRAND.companyName}</h1>
+                <p class="brand-subtitle">${PRINT_BRAND.systemName}</p>
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div class="doc-title">
+                <h2>${title}</h2>
+                <p>${subtitle || ''}</p>
+              </div>
+              <div class="verify-box">
+                <img src="${qrImageUrl}" alt="QR" />
+                <div class="verify-meta">
+                  <div><strong>رمز المستند:</strong> ${docCode}</div>
+                  <div><strong>مقدم الخدمة:</strong> ${providerCode}</div>
+                  <div><strong>وقت الإصدار:</strong> ${issuedAt}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="sheet-body">
+            ${contentHtml}
+          </div>
+
+          <div class="sheet-footer">
+            <span>${PRINT_BRAND.companyName}</span>
+            <span>تاريخ الإصدار: ${issuedAt}</span>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  };
+
+  const handlePrintReceipt = async (paymentId) => {
+    try {
+      const preview = await providerPaymentsService.previewPaymentReceipt(providerId, paymentId);
+      const doc = preview?.document;
+      const issuedAt = new Date().toLocaleString('ar-LY');
+      const docCode = doc?.receiptNumber || `PAY-${providerId}-${paymentId}`;
+      const verificationMeta = {
+        issuedAt,
+        docCode,
+        providerId,
+        qrValue: buildPrintVerificationPayload({
+          title: preview?.printTitle || 'إيصال',
+          providerName: preview?.providerName || '-',
+          providerId,
+          docCode,
+          amount: doc?.amount,
+          period: doc?.paymentDate,
+          issuedAt
+        })
+      };
+
+      const contentHtml = `
+        <div class="summary-grid">
+          <div class="summary-item"><span class="summary-label">رقم الإيصال</span><span class="summary-value">${doc?.receiptNumber || '-'}</span></div>
+          <div class="summary-item"><span class="summary-label">التاريخ</span><span class="summary-value">${doc?.paymentDate || '-'}</span></div>
+          <div class="summary-item"><span class="summary-label">المرجع</span><span class="summary-value">${doc?.paymentReference || '-'}</span></div>
+          <div class="summary-item"><span class="summary-label">النوع</span><span class="summary-value">${doc?.documentType === 'PAYMENT_VOUCHER' ? 'سند صرف' : 'سند قبض'}</span></div>
+          <div class="summary-item"><span class="summary-label">القيمة</span><span class="summary-value">${formatCurrency(doc?.amount)}</span></div>
+          <div class="summary-item"><span class="summary-label">الحالة</span><span class="summary-value"><span class="badge">معتمد</span></span></div>
+        </div>
+        <table>
+          <thead><tr><th>البيان</th><th>القيمة</th></tr></thead>
+          <tbody>
+            <tr><td>البيان</td><td>${doc?.documentType === 'PAYMENT_VOUCHER' ? 'سند صرف لمقدم الخدمة' : 'سند قبض من مقدم الخدمة'}</td></tr>
+            <tr><td>القيمة</td><td>${formatCurrency(doc?.amount)}</td></tr>
+            <tr><td>مقدم الخدمة</td><td>${preview?.providerName || '-'}</td></tr>
+            <tr><td>الملاحظات</td><td>${doc?.notes || '-'}</td></tr>
+          </tbody>
+        </table>
+      `;
+
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) return;
+      printWindow.document.write(
+        renderBrandedPrintDocument({
+          title: preview?.printTitle || 'إيصال',
+          subtitle: `مقدم الخدمة: ${preview?.providerName || '-'}`,
+          contentHtml,
+          verificationMeta
+        })
+      );
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => printWindow.print(), 250);
+    } catch (error) {
+      openSnackbar({ message: error?.message || 'تعذر معاينة الإيصال', variant: 'error' });
+    }
+  };
+
+  const handlePrintMonthlyStatement = async () => {
+    try {
+      const data = await providerPaymentsService.previewMonthlyStatement(providerId, currentYear, selectedMonth);
+      const rows = Array.isArray(data?.documents)
+        ? data.documents
+            .map(
+              (d) => `<tr><td>${d.receiptNumber || '-'}</td><td>${d.documentType === 'PAYMENT_VOUCHER' ? 'صرف' : 'قبض'}</td><td>${d.paymentDate || '-'}</td><td>${formatCurrency(d.amount)}</td><td>${d.paymentReference || '-'}</td></tr>`
+            )
+            .join('')
+        : '';
+      const issuedAt = new Date().toLocaleString('ar-LY');
+      const docCode = `MST-${providerId}-${currentYear}${String(selectedMonth).padStart(2, '0')}`;
+      const verificationMeta = {
+        issuedAt,
+        docCode,
+        providerId,
+        qrValue: buildPrintVerificationPayload({
+          title: 'كشف شهر مقدم الخدمة',
+          providerName: data?.providerName || '-',
+          providerId,
+          docCode,
+          amount: data?.summary?.remainingAmount,
+          period: `${selectedMonth}/${currentYear}`,
+          issuedAt
+        })
+      };
+
+      const contentHtml = `
+        <div class="summary-grid">
+          <div class="summary-item"><span class="summary-label">مقدم الخدمة</span><span class="summary-value">${data?.providerName || '-'}</span></div>
+          <div class="summary-item"><span class="summary-label">المعتمد</span><span class="summary-value">${formatCurrency(data?.summary?.approvedAmount)}</span></div>
+          <div class="summary-item"><span class="summary-label">المدفوع</span><span class="summary-value">${formatCurrency(data?.summary?.paidAmount)}</span></div>
+          <div class="summary-item"><span class="summary-label">المتبقي</span><span class="summary-value">${formatCurrency(data?.summary?.remainingAmount)}</span></div>
+          <div class="summary-item"><span class="summary-label">عدد السندات</span><span class="summary-value">${Array.isArray(data?.documents) ? data.documents.length : 0}</span></div>
+          <div class="summary-item"><span class="summary-label">الحالة</span><span class="summary-value"><span class="badge">كشف شهري</span></span></div>
+        </div>
+        <table>
+          <thead><tr><th>الإيصال</th><th>النوع</th><th>التاريخ</th><th>القيمة</th><th>المرجع</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      `;
+
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) return;
+      printWindow.document.write(
+        renderBrandedPrintDocument({
+          title: 'كشف شهر مقدم الخدمة',
+          subtitle: `الفترة: ${selectedMonth}/${currentYear}`,
+          contentHtml,
+          verificationMeta
+        })
+      );
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => printWindow.print(), 250);
+    } catch (error) {
+      openSnackbar({ message: error?.message || 'تعذر طباعة كشف الشهر', variant: 'error' });
+    }
+  };
+
+  const handlePrintYearlyStatement = async () => {
+    try {
+      const data = await providerPaymentsService.previewYearlyStatement(providerId, currentYear);
+      const rows = Array.isArray(data?.months)
+        ? data.months
+            .map(
+              (m) => `<tr><td>${m.month}</td><td>${formatCurrency(m.approvedAmount)}</td><td>${formatCurrency(m.paidAmount)}</td><td>${formatCurrency(m.remainingAmount)}</td><td>${m.locked ? 'مقفل' : 'مفتوح'}</td></tr>`
+            )
+            .join('')
+        : '';
+      const issuedAt = new Date().toLocaleString('ar-LY');
+      const docCode = `YST-${providerId}-${currentYear}`;
+      const verificationMeta = {
+        issuedAt,
+        docCode,
+        providerId,
+        qrValue: buildPrintVerificationPayload({
+          title: 'الملخص السنوي لمقدم الخدمة',
+          providerName: data?.providerName || '-',
+          providerId,
+          docCode,
+          amount: data?.totals?.remainingTotal,
+          period: String(currentYear),
+          issuedAt
+        })
+      };
+
+      const contentHtml = `
+        <div class="summary-grid">
+          <div class="summary-item"><span class="summary-label">مقدم الخدمة</span><span class="summary-value">${data?.providerName || '-'}</span></div>
+          <div class="summary-item"><span class="summary-label">إجمالي المعتمد</span><span class="summary-value">${formatCurrency(data?.totals?.approvedTotal)}</span></div>
+          <div class="summary-item"><span class="summary-label">إجمالي المدفوع</span><span class="summary-value">${formatCurrency(data?.totals?.paidTotal)}</span></div>
+          <div class="summary-item"><span class="summary-label">إجمالي المتبقي</span><span class="summary-value">${formatCurrency(data?.totals?.remainingTotal)}</span></div>
+          <div class="summary-item"><span class="summary-label">عدد الأشهر</span><span class="summary-value">${Array.isArray(data?.months) ? data.months.length : 0}</span></div>
+          <div class="summary-item"><span class="summary-label">الحالة</span><span class="summary-value"><span class="badge">ملخص سنوي</span></span></div>
+        </div>
+        <table>
+          <thead><tr><th>الشهر</th><th>المعتمد</th><th>المدفوع</th><th>المتبقي</th><th>الحالة</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      `;
+
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) return;
+      printWindow.document.write(
+        renderBrandedPrintDocument({
+          title: 'الملخص السنوي لمقدم الخدمة',
+          subtitle: `السنة: ${currentYear}`,
+          contentHtml,
+          verificationMeta
+        })
+      );
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => printWindow.print(), 250);
+    } catch (error) {
+      openSnackbar({ message: error?.message || 'تعذر طباعة الملخص السنوي', variant: 'error' });
+    }
   };
 
   const buildPrintableRows = useCallback((rows) => {
@@ -594,29 +1120,35 @@ const ProviderAccountView = () => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
-    const html = `
-      <!DOCTYPE html>
-      <html lang="ar" dir="rtl">
-      <head>
-        <meta charset="UTF-8" />
-        <title>طباعة حركات الحساب</title>
-        <style>
-          body { font-family: Arial, sans-serif; margin: 16px; direction: rtl; }
-          h2, p { margin: 0 0 10px 0; }
-          table { width: '6.25rem'%; border-collapse: collapse; table-layout: fixed; }
-          th, td { border: 1px solid #cbd5e1; padding: 6px 8px; font-size: 12px; vertical-align: top; }
-          th { background: #e6f4f1; }
-          td.desc { white-space: normal; word-break: break-word; }
-          tfoot td { font-weight: 700; background: #f8fafc; }
-          .center { text-align: center; }
-          .right { text-align: right; }
-          .credit { color: #15803d; font-weight: 700; }
-          .debit { color: #dc2626; font-weight: 700; }
-        </style>
-      </head>
-      <body>
-        <h2>تفاصيل حساب مقدم الخدمة</h2>
-        <p>${providerName} - ${title}</p>
+    const issuedAt = new Date().toLocaleString('ar-LY');
+    const docCode = `TRX-${providerId}-${Date.now()}`;
+    const html = renderBrandedPrintDocument({
+      title: 'تفاصيل حساب مقدم الخدمة',
+      subtitle: `${providerName} - ${title}`,
+      verificationMeta: {
+        issuedAt,
+        docCode,
+        providerId,
+        qrValue: buildPrintVerificationPayload({
+          title: 'تفاصيل حساب مقدم الخدمة',
+          providerName,
+          providerId,
+          docCode,
+          amount: totals?.netMovement,
+          period: title,
+          issuedAt
+        })
+      },
+      contentHtml: `
+        <div class="summary-grid">
+          <div class="summary-item"><span class="summary-label">مقدم الخدمة</span><span class="summary-value">${providerName}</span></div>
+          <div class="summary-item"><span class="summary-label">إجمالي الدائن</span><span class="summary-value">${formatCurrency(totals.totalCredit)}</span></div>
+          <div class="summary-item"><span class="summary-label">إجمالي المدين</span><span class="summary-value">${formatCurrency(totals.totalDebit)}</span></div>
+          <div class="summary-item"><span class="summary-label">صافي الحركة</span><span class="summary-value">${formatCurrency(totals.netMovement)}</span></div>
+          <div class="summary-item"><span class="summary-label">عدد الحركات</span><span class="summary-value">${Array.isArray(rows) ? rows.length : 0}</span></div>
+          <div class="summary-item"><span class="summary-label">نوع التقرير</span><span class="summary-value"><span class="badge">${title}</span></span></div>
+        </div>
+
         <table>
           <thead>
             <tr>
@@ -636,17 +1168,16 @@ const ProviderAccountView = () => {
             <tr>
               <td></td>
               <td></td>
-              <td class="right credit">${formatCurrency(totals.totalCredit)}</td>
-              <td class="right debit">${formatCurrency(totals.totalDebit)}</td>
-              <td class="right ${totals.netMovement >= 0 ? 'credit' : 'debit'}">${formatCurrency(totals.netMovement)}</td>
+              <td>${formatCurrency(totals.totalCredit)}</td>
+              <td>${formatCurrency(totals.totalDebit)}</td>
+              <td>${formatCurrency(totals.netMovement)}</td>
               <td></td>
               <td></td>
             </tr>
           </tfoot>
         </table>
-      </body>
-      </html>
-    `;
+      `
+    });
 
     printWindow.document.write(html);
     printWindow.document.close();
@@ -839,17 +1370,6 @@ const ProviderAccountView = () => {
 
   const pageActions = (
     <Stack direction="row" spacing={1}>
-      <Tooltip title="دفع دفعة مالية">
-        <Button 
-          variant="contained" 
-          color="success" 
-          startIcon={<PaymentIcon />} 
-          onClick={() => setIsPaymentModalOpen(true)}
-          disabled={!accountData || Number(accountData.runningBalance) <= 0}
-        >
-          دفع دفعة للرصيد المستحق
-        </Button>
-      </Tooltip>
       <Tooltip title="التحقق من الرصيد">
         <Button variant="outlined" color="info" startIcon={<VerifiedIcon />} onClick={handleVerifyBalance} disabled={!accountData}>
           التحقق من الرصيد
@@ -939,6 +1459,136 @@ const ProviderAccountView = () => {
         {/* Account Summary */}
         <AccountSummaryCard account={accountData} isLoading={isLoadingAccount} />
 
+        {/* Yearly Monthly Summary (Phase 1 implementation) */}
+        <MainCard sx={{ mb: '1.5rem' }}>
+          <Stack spacing={1.5}>
+            <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={1}>
+              <Typography variant="h6" fontWeight={700}>ملخص الأشهر - {currentYear}</Typography>
+              <Typography variant="caption" color="text.secondary">المعتمد | المدفوع | المتبقي | حالة القفل</Typography>
+            </Stack>
+
+            <Grid container spacing={1.25}>
+              {isLoadingMonthlySummary &&
+                Array.from({ length: 12 }).map((_, idx) => (
+                  <Grid key={`summary-skeleton-${idx}`} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
+                    <Skeleton variant="rectangular" height={120} sx={{ borderRadius: 1 }} />
+                  </Grid>
+                ))}
+
+              {!isLoadingMonthlySummary && monthlySummary.map((monthRow) => (
+                <Grid key={`summary-month-${monthRow.month}`} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      p: '0.75rem',
+                      borderRadius: 1,
+                      border: '1px solid',
+                      borderColor: monthRow.locked ? 'success.main' : 'divider',
+                      bgcolor: monthRow.locked ? 'success.lighter' : 'background.paper'
+                    }}
+                  >
+                    <Stack spacing={0.75}>
+                      <Stack direction="row" justifyContent="space-between" alignItems="center">
+                        <Typography variant="subtitle2" fontWeight={700}>{monthRow.monthLabel}</Typography>
+                        <Chip
+                          label={monthRow.locked ? 'مقفل' : 'مفتوح'}
+                          size="small"
+                          color={monthRow.locked ? 'success' : 'default'}
+                        />
+                      </Stack>
+                      <Typography variant="caption" color="text.secondary">المعتمد: {formatCurrency(monthRow.approvedAmount)}</Typography>
+                      <Typography variant="caption" color="text.secondary">المدفوع: {formatCurrency(monthRow.paidAmount)}</Typography>
+                      <Typography variant="caption" sx={{ color: Number(monthRow.remainingAmount) > 0 ? 'error.main' : 'success.main', fontWeight: 700 }}>
+                        المتبقي: {formatCurrency(monthRow.remainingAmount)}
+                      </Typography>
+                    </Stack>
+                  </Paper>
+                </Grid>
+              ))}
+            </Grid>
+          </Stack>
+        </MainCard>
+
+        {/* Monthly payments management */}
+        <MainCard sx={{ mb: '1.5rem' }}>
+          <Stack spacing={1.5}>
+            <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="center">
+              <TextField select size="small" label="الشهر" value={selectedMonth} onChange={(e) => setSelectedMonth(Number(e.target.value))} sx={{ minWidth: 140 }}>
+                {AR_MONTH_LABELS.map((label, idx) => (
+                  <MenuItem key={label} value={idx + 1}>{label}</MenuItem>
+                ))}
+              </TextField>
+              <Button variant="contained" onClick={() => setIsMonthlyDocModalOpen(true)} disabled={selectedMonthSummary?.locked}>إضافة سند شهري</Button>
+              <Button variant={selectedMonthSummary?.locked ? 'outlined' : 'contained'} color={selectedMonthSummary?.locked ? 'warning' : 'success'} onClick={handleLockOrUnlockMonth}>
+                {selectedMonthSummary?.locked ? 'فك قفل الشهر' : 'قفل الشهر'}
+              </Button>
+              {selectedMonthSummary?.locked && (
+                <TextField size="small" label="سبب فك القفل" value={unlockReason} onChange={(e) => setUnlockReason(e.target.value)} sx={{ minWidth: 220 }} />
+              )}
+              <Button variant="outlined" onClick={handlePrintMonthlyStatement}>طباعة كشف الشهر</Button>
+              <Button variant="outlined" onClick={handlePrintYearlyStatement}>طباعة الملخص السنوي</Button>
+            </Stack>
+
+            {isLoadingMonthlyPayments ? (
+              <Skeleton variant="rectangular" height={120} />
+            ) : (
+              <Box sx={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr>
+                      <th style={{ border: '1px solid #ddd', padding: 8 }}>الإيصال</th>
+                      <th style={{ border: '1px solid #ddd', padding: 8 }}>النوع</th>
+                      <th style={{ border: '1px solid #ddd', padding: 8 }}>التاريخ</th>
+                      <th style={{ border: '1px solid #ddd', padding: 8 }}>القيمة</th>
+                      <th style={{ border: '1px solid #ddd', padding: 8 }}>المرجع</th>
+                      <th style={{ border: '1px solid #ddd', padding: 8 }}>إجراءات</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {monthlyPayments.map((doc) => (
+                      <tr key={doc.id}>
+                        <td style={{ border: '1px solid #ddd', padding: 8 }}>{doc.receiptNumber}</td>
+                        <td style={{ border: '1px solid #ddd', padding: 8 }}>{doc.documentType === 'PAYMENT_VOUCHER' ? 'صرف' : 'قبض'}</td>
+                        <td style={{ border: '1px solid #ddd', padding: 8 }}>{doc.paymentDate}</td>
+                        <td style={{ border: '1px solid #ddd', padding: 8 }}>{formatCurrency(doc.amount)}</td>
+                        <td style={{ border: '1px solid #ddd', padding: 8 }}>{doc.paymentReference || '-'}</td>
+                        <td style={{ border: '1px solid #ddd', padding: 8 }}>
+                          <Stack direction="row" spacing={0.5}>
+                            <Button size="small" variant="outlined" onClick={() => handlePrintReceipt(doc.id)}>طباعة</Button>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              disabled={selectedMonthSummary?.locked}
+                              onClick={() => {
+                                setEditingMonthlyDoc(doc);
+                                setMonthlyDocForm({
+                                  documentType: doc.documentType,
+                                  amount: doc.amount,
+                                  paymentDate: doc.paymentDate,
+                                  paymentReference: doc.paymentReference || '',
+                                  notes: doc.notes || ''
+                                });
+                                setIsMonthlyDocModalOpen(true);
+                              }}
+                            >
+                              تعديل
+                            </Button>
+                          </Stack>
+                        </td>
+                      </tr>
+                    ))}
+                    {!monthlyPayments.length && (
+                      <tr>
+                        <td colSpan={6} style={{ border: '1px solid #ddd', padding: 12, textAlign: 'center' }}>لا توجد سندات لهذا الشهر</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </Box>
+            )}
+          </Stack>
+        </MainCard>
+
         {/* Tabs */}
         <MainCard>
           <Tabs value={activeTab} onChange={handleTabChange} sx={{ borderBottom: 1, borderColor: 'divider' }}>
@@ -987,46 +1637,26 @@ const ProviderAccountView = () => {
           </TabPanel>
         </MainCard>
 
-        {/* Modal for Payment Submission */}
-        <Dialog open={isPaymentModalOpen} onClose={() => setIsPaymentModalOpen(false)} maxWidth="sm" fullWidth>
-          <DialogTitle>تسجيل دفعة لمقدم الخدمة</DialogTitle>
+        {/* Monthly payment document modal */}
+        <Dialog open={isMonthlyDocModalOpen} onClose={() => setIsMonthlyDocModalOpen(false)} maxWidth="sm" fullWidth>
+          <DialogTitle>{editingMonthlyDoc ? 'تعديل سند شهري' : 'إضافة سند شهري'}</DialogTitle>
           <DialogContent>
             <Stack spacing={2} sx={{ mt: '1.0rem' }}>
-              <Typography variant="body2" color="text.secondary">
-                الرصيد المستحق: <strong>{formatCurrency(accountData?.runningBalance)}</strong>
-              </Typography>
-              <TextField 
-                label="المبلغ" 
-                type="number" 
-                fullWidth 
-                required 
-                value={paymentForm.amount}
-                onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })}
-                error={Number(paymentForm.amount) > Number(accountData?.runningBalance)}
-                helperText={Number(paymentForm.amount) > Number(accountData?.runningBalance) ? 'المبلغ أكبر من الرصيد المستحق' : ''}
-              />
-              <TextField 
-                label="المرجع (إيصال، حوالة...)" 
-                fullWidth 
-                required 
-                value={paymentForm.paymentReference}
-                onChange={(e) => setPaymentForm({ ...paymentForm, paymentReference: e.target.value })}
-              />
-              <TextField 
-                label="ملاحظات" 
-                fullWidth 
-                multiline 
-                rows={3} 
-                value={paymentForm.notes}
-                onChange={(e) => setPaymentForm({ ...paymentForm, notes: e.target.value })}
-              />
+              {!editingMonthlyDoc && (
+                <TextField select label="نوع السند" fullWidth value={monthlyDocForm.documentType} onChange={(e) => setMonthlyDocForm((prev) => ({ ...prev, documentType: e.target.value }))}>
+                  <MenuItem value="PAYMENT_VOUCHER">إيصال صرف (PAY)</MenuItem>
+                  <MenuItem value="RECEIPT_VOUCHER">إيصال قبض (RCV)</MenuItem>
+                </TextField>
+              )}
+              <TextField label="القيمة" type="number" fullWidth value={monthlyDocForm.amount} onChange={(e) => setMonthlyDocForm((prev) => ({ ...prev, amount: e.target.value }))} />
+              <TextField label="التاريخ" type="date" fullWidth value={monthlyDocForm.paymentDate} onChange={(e) => setMonthlyDocForm((prev) => ({ ...prev, paymentDate: e.target.value }))} InputLabelProps={{ shrink: true }} />
+              <TextField label="مرجع الدفع" fullWidth value={monthlyDocForm.paymentReference} onChange={(e) => setMonthlyDocForm((prev) => ({ ...prev, paymentReference: e.target.value }))} />
+              <TextField label="ملاحظات" fullWidth multiline rows={3} value={monthlyDocForm.notes} onChange={(e) => setMonthlyDocForm((prev) => ({ ...prev, notes: e.target.value }))} />
             </Stack>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setIsPaymentModalOpen(false)} color="inherit" disabled={isSubmittingPayment}>إلغاء</Button>
-            <Button onClick={handlePaymentSubmit} variant="contained" color="primary" disabled={isSubmittingPayment}>
-              {isSubmittingPayment ? 'جاري التسجيل...' : 'تسجيل الدفعة'}
-            </Button>
+            <Button onClick={() => setIsMonthlyDocModalOpen(false)} color="inherit">إلغاء</Button>
+            <Button onClick={handleCreateMonthlyDocument} variant="contained">{editingMonthlyDoc ? 'حفظ التعديل' : 'إنشاء السند'}</Button>
           </DialogActions>
         </Dialog>
 

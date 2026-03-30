@@ -30,7 +30,7 @@ import { providersService } from 'services/api';
 import { getActiveContractByProvider } from 'services/api/provider-contracts.service';
 
 // Utils
-import { exportToExcel } from 'utils/exportUtils';
+import { exportToExcel, exportToPDF } from 'utils/exportUtils';
 
 const STATUS_OPTIONS = [
   { value: 'ALL', label: 'الكل' },
@@ -281,7 +281,25 @@ export default function ProviderAccountsList() {
   };
 
   const handlePrint = () => {
-    window.print();
+    if (!claims.length) return;
+
+    const columns = ['رقم المطالبة', 'تاريخ الخدمة', 'مقدم الخدمة', 'إجمالي قبل', 'المرفوض', 'القيمة المستحقة', 'حصة الشركة', 'نصيب المرفق', 'الحالة'];
+    const rows = claims.map((item) => [
+      item.claimNumber || `CLM-${item.id}`,
+      item.visitDate || item.serviceDate || '-',
+      item.providerName || '-',
+      formatCurrency(item.requestedAmount),
+      formatCurrency(getRefusedAmount(item)),
+      formatCurrency(getPayableAmount(item)),
+      formatCurrency(getCompanyShareAmount(item)),
+      formatCurrency(getFacilityShareAmount(item)),
+      STATUS_LABELS[item.status] || item.status || '-'
+    ]);
+
+    exportToPDF(columns, rows, 'مطالبات مقدمي الخدمة - التسويات', `provider_claims_${dayjs().format('YYYY-MM-DD')}`, {
+      companyName: 'وعد لإدارة النفقات الطبية',
+      primaryColor: '#0b7285'
+    });
   };
 
   const columns = useMemo(

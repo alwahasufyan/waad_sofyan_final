@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import useEmployerScope from 'hooks/useEmployerScope';
 import useClaimsReport, { DEFAULT_FILTERS, CLAIM_STATUS_LABELS } from 'hooks/useClaimsReport';
 import { formatNumber } from 'utils/formatters';
@@ -14,6 +15,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import WarningIcon from '@mui/icons-material/Warning';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import AssignmentIcon from '@mui/icons-material/Assignment';
+import PrintIcon from '@mui/icons-material/Print';
 
 // Components
 import MainCard from 'components/MainCard';
@@ -27,6 +29,7 @@ import { ClaimsFilters, ClaimsTable } from 'components/reports/claims';
  */
 const ClaimsReport = () => {
   const { companyName } = useCompanySettings();
+  const navigate = useNavigate();
 
   const [selectedEmployerId, setSelectedEmployerId] = useState(null);
   const { canSelectEmployer, effectiveEmployerId, employers, isEmployerLocked, userEmployerId } = useEmployerScope(selectedEmployerId);
@@ -107,6 +110,16 @@ const ClaimsReport = () => {
     }
   };
 
+  const handleCentralPrint = () => {
+    const claimIds = claims
+      .map((claim) => claim?._raw?.id || claim?.id)
+      .filter(Boolean)
+      .join(',');
+
+    if (!claimIds) return;
+    navigate(`/reports/claims/statement-preview?ids=${claimIds}`);
+  };
+
   return (
     <MainCard>
       <ModernPageHeader
@@ -126,6 +139,18 @@ const ClaimsReport = () => {
                 startIcon={<FileDownloadIcon />}
               >
                 Excel
+              </Button>
+            </Tooltip>
+            <Tooltip title="طباعة بالقالب المركزي">
+              <Button
+                variant="contained"
+                size="small"
+                color="primary"
+                onClick={handleCentralPrint}
+                disabled={loading || totalCount === 0}
+                startIcon={<PrintIcon />}
+              >
+                طباعة مركزي
               </Button>
             </Tooltip>
             <Tooltip title="تحديث البيانات">

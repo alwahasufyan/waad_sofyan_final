@@ -158,6 +158,30 @@ public class ProviderAccount {
     }
 
     /**
+     * Reverse part of paid amount (e.g., receipt from provider or payment reversal).
+     * Increases running balance and decreases total paid while keeping
+     * total approved unchanged.
+     */
+    public void reversePaid(BigDecimal amount) {
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Reverse amount must be positive");
+        }
+        if (status != AccountStatus.ACTIVE) {
+            throw new IllegalStateException("Cannot reverse paid amount for account with status: " + status);
+        }
+        if (this.totalPaid.compareTo(amount) < 0) {
+            throw new IllegalStateException(
+                String.format("Invalid reverse amount. Total paid: %s, Requested reverse: %s",
+                    this.totalPaid, amount)
+            );
+        }
+
+        this.runningBalance = this.runningBalance.add(amount);
+        this.totalPaid = this.totalPaid.subtract(amount);
+        this.lastTransactionAt = LocalDateTime.now();
+    }
+
+    /**
      * Suspend the account (temporary hold)
      */
     public void suspend() {

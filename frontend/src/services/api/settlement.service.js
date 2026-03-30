@@ -439,6 +439,104 @@ export const providerPaymentsService = {
     } catch (error) {
       throw handleSettlementErrors(error);
     }
+  },
+
+  getProviderMonthlySummary: async (providerId, year) => {
+    try {
+      if (!providerId) throw new Error('معرف مقدم الخدمة مطلوب');
+
+      const queryParams = new URLSearchParams();
+      if (year) queryParams.append('year', String(year));
+
+      const url = `/provider-payments/${providerId}/monthly-summary${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+      const response = await axiosClient.get(url);
+      return unwrap(response);
+    } catch (error) {
+      throw handleSettlementErrors(error);
+    }
+  },
+
+  listMonthlyPayments: async (providerId, year, month) => {
+    try {
+      if (!providerId) throw new Error('معرف مقدم الخدمة مطلوب');
+      if (!year || !month) throw new Error('السنة والشهر مطلوبان');
+
+      const response = await axiosClient.get(`/provider-payments/${providerId}/monthly-payments?year=${year}&month=${month}`);
+      return unwrap(response);
+    } catch (error) {
+      throw handleSettlementErrors(error);
+    }
+  },
+
+  createMonthlyPayment: async (providerId, data = {}) => {
+    try {
+      if (!providerId) throw new Error('معرف مقدم الخدمة مطلوب');
+      const response = await axiosClient.post(`/provider-payments/${providerId}/monthly-payments`, data);
+      return unwrap(response);
+    } catch (error) {
+      throw handleSettlementErrors(error);
+    }
+  },
+
+  updateMonthlyPayment: async (providerId, paymentId, data = {}) => {
+    try {
+      if (!providerId) throw new Error('معرف مقدم الخدمة مطلوب');
+      if (!paymentId) throw new Error('معرف السند مطلوب');
+      const response = await axiosClient.post(`/provider-payments/${providerId}/monthly-payments/${paymentId}/update`, data);
+      return unwrap(response);
+    } catch (error) {
+      throw handleSettlementErrors(error);
+    }
+  },
+
+  lockMonth: async (providerId, year, month) => {
+    try {
+      if (!providerId) throw new Error('معرف مقدم الخدمة مطلوب');
+      const response = await axiosClient.post(`/provider-payments/${providerId}/months/${year}/${month}/lock`);
+      return unwrap(response);
+    } catch (error) {
+      throw handleSettlementErrors(error);
+    }
+  },
+
+  unlockMonth: async (providerId, year, month, reason) => {
+    try {
+      if (!providerId) throw new Error('معرف مقدم الخدمة مطلوب');
+      const response = await axiosClient.post(`/provider-payments/${providerId}/months/${year}/${month}/unlock`, { reason });
+      return unwrap(response);
+    } catch (error) {
+      throw handleSettlementErrors(error);
+    }
+  },
+
+  previewPaymentReceipt: async (providerId, paymentId) => {
+    try {
+      if (!providerId || !paymentId) throw new Error('بيانات السند غير مكتملة');
+      const response = await axiosClient.get(`/provider-payments/${providerId}/monthly-payments/${paymentId}/preview`);
+      return unwrap(response);
+    } catch (error) {
+      throw handleSettlementErrors(error);
+    }
+  },
+
+  previewMonthlyStatement: async (providerId, year, month) => {
+    try {
+      if (!providerId) throw new Error('معرف مقدم الخدمة مطلوب');
+      const response = await axiosClient.get(`/provider-payments/${providerId}/monthly-statement?year=${year}&month=${month}`);
+      return unwrap(response);
+    } catch (error) {
+      throw handleSettlementErrors(error);
+    }
+  },
+
+  previewYearlyStatement: async (providerId, year) => {
+    try {
+      if (!providerId) throw new Error('معرف مقدم الخدمة مطلوب');
+      const response = await axiosClient.get(`/provider-payments/${providerId}/yearly-statement?year=${year}`);
+      return unwrap(response);
+    } catch (error) {
+      throw handleSettlementErrors(error);
+    }
   }
 };
 

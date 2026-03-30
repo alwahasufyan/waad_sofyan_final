@@ -1350,4 +1350,22 @@ public interface ClaimRepository extends JpaRepository<Claim, Long> {
                         @Param("providerIds") List<Long> providerIds,
                         @Param("statuses") List<com.waad.tba.modules.claim.entity.ClaimStatus> statuses,
                         Pageable pageable);
+
+                                /**
+                                 * Aggregate provider approved totals per month for a given year.
+                                 * Includes APPROVED, BATCHED, and SETTLED statuses.
+                                 */
+                                @Query(value = """
+                                                                                                SELECT
+                                                                                                                EXTRACT(MONTH FROM c.service_date)::int AS month_no,
+                                                                                                                COALESCE(SUM(COALESCE(c.net_provider_amount, c.approved_amount, 0)), 0) AS total_approved
+                                                                                                FROM claims c
+                                                                                                WHERE c.active = true
+                                                                                                        AND c.provider_id = :providerId
+                                                                                                        AND EXTRACT(YEAR FROM c.service_date)::int = :year
+                                                                                                        AND c.status IN ('APPROVED', 'BATCHED', 'SETTLED')
+                                                                                                GROUP BY EXTRACT(MONTH FROM c.service_date)::int
+                                                                                                """, nativeQuery = true)
+                                List<Object[]> getApprovedTotalsByProviderAndYear(@Param("providerId") Long providerId,
+                                                                                                @Param("year") Integer year);
 }
