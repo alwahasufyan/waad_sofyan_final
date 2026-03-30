@@ -198,7 +198,7 @@ const MainRoutes = {
         {
           path: '',
           element: (
-            <PermissionGuard isRouteGuard>
+            <PermissionGuard resource="members" action="view" isRouteGuard>
               <UnifiedMembersList />
             </PermissionGuard>
           )
@@ -206,7 +206,7 @@ const MainRoutes = {
         {
           path: 'add',
           element: (
-            <PermissionGuard isRouteGuard>
+            <PermissionGuard resource="members" action="manage" isRouteGuard>
               <UnifiedMemberCreate />
             </PermissionGuard>
           )
@@ -214,7 +214,7 @@ const MainRoutes = {
         {
           path: ':id',
           element: (
-            <PermissionGuard isRouteGuard>
+            <PermissionGuard resource="members" action="view" isRouteGuard>
               <UnifiedMemberView />
             </PermissionGuard>
           )
@@ -222,7 +222,7 @@ const MainRoutes = {
         {
           path: ':id/edit',
           element: (
-            <PermissionGuard isRouteGuard>
+            <PermissionGuard resource="members" action="manage" isRouteGuard>
               <UnifiedMemberEdit />
             </PermissionGuard>
           )
@@ -230,7 +230,7 @@ const MainRoutes = {
         {
           path: ':id/add-dependent',
           element: (
-            <PermissionGuard isRouteGuard>
+            <PermissionGuard resource="members" action="manage" isRouteGuard>
               <AddDependent />
             </PermissionGuard>
           )
@@ -314,7 +314,7 @@ const MainRoutes = {
         {
           path: ':id/medical-review',
           element: (
-            <PermissionGuard isRouteGuard>
+            <PermissionGuard resource="claims" action="view" isRouteGuard>
               <ClaimViewMedicalReview />
             </PermissionGuard>
           )
@@ -322,7 +322,7 @@ const MainRoutes = {
         {
           path: 'batches',
           element: (
-            <PermissionGuard isRouteGuard>
+            <PermissionGuard resource="claims" action="view" isRouteGuard>
               <ClaimBatchManagement />
             </PermissionGuard>
           )
@@ -330,7 +330,7 @@ const MainRoutes = {
         {
           path: 'batches/entry',
           element: (
-            <PermissionGuard isRouteGuard>
+            <PermissionGuard resource="claims" action="manage" isRouteGuard>
               <ClaimBatchEntry />
             </PermissionGuard>
           )
@@ -338,7 +338,7 @@ const MainRoutes = {
         {
           path: 'batches/detail',
           element: (
-            <PermissionGuard isRouteGuard>
+            <PermissionGuard resource="claims" action="view" isRouteGuard>
               <ClaimBatchDetail />
             </PermissionGuard>
           )
@@ -466,7 +466,7 @@ const MainRoutes = {
         {
           path: '',
           element: (
-            <PermissionGuard isRouteGuard>
+            <PermissionGuard resource="visits" action="view" isRouteGuard>
               <VisitsList />
             </PermissionGuard>
           )
@@ -474,7 +474,7 @@ const MainRoutes = {
         {
           path: 'add',
           element: (
-            <PermissionGuard isRouteGuard>
+            <PermissionGuard resource="visits" action="manage" isRouteGuard>
               <VisitCreate />
             </PermissionGuard>
           )
@@ -482,7 +482,7 @@ const MainRoutes = {
         {
           path: 'edit/:id',
           element: (
-            <PermissionGuard isRouteGuard>
+            <PermissionGuard resource="visits" action="manage" isRouteGuard>
               <VisitEdit />
             </PermissionGuard>
           )
@@ -490,7 +490,7 @@ const MainRoutes = {
         {
           path: ':id',
           element: (
-            <PermissionGuard isRouteGuard>
+            <PermissionGuard resource="visits" action="view" isRouteGuard>
               <VisitView />
             </PermissionGuard>
           )
@@ -643,7 +643,7 @@ const MainRoutes = {
         {
           path: '',
           element: (
-            <PermissionGuard isRouteGuard>
+            <PermissionGuard resource="benefit_policies" action="view" isRouteGuard>
               <BenefitPoliciesList />
             </PermissionGuard>
           )
@@ -651,7 +651,7 @@ const MainRoutes = {
         {
           path: 'create',
           element: (
-            <PermissionGuard isRouteGuard>
+            <PermissionGuard resource="benefit_policies" action="manage" isRouteGuard>
               <BenefitPolicyCreate />
             </PermissionGuard>
           )
@@ -659,7 +659,7 @@ const MainRoutes = {
         {
           path: 'edit/:id',
           element: (
-            <PermissionGuard isRouteGuard>
+            <PermissionGuard resource="benefit_policies" action="manage" isRouteGuard>
               <BenefitPolicyEdit />
             </PermissionGuard>
           )
@@ -667,7 +667,7 @@ const MainRoutes = {
         {
           path: ':id',
           element: (
-            <PermissionGuard isRouteGuard>
+            <PermissionGuard resource="benefit_policies" action="view" isRouteGuard>
               <BenefitPolicyView />
             </PermissionGuard>
           )
@@ -885,7 +885,7 @@ const MainRoutes = {
         {
           path: 'claims',
           element: (
-            <PermissionGuard resource="claims" action="view" isRouteGuard>
+            <PermissionGuard resource="report_claims" action="view" isRouteGuard>
               <ClaimsReport />
             </PermissionGuard>
           )
@@ -893,7 +893,7 @@ const MainRoutes = {
         {
           path: 'claims/statement-preview',
           element: (
-            <PermissionGuard resource="claims" action="view" isRouteGuard>
+            <PermissionGuard resource="report_claims" action="view" isRouteGuard>
               <ClaimStatementPreview />
             </PermissionGuard>
           )
@@ -938,7 +938,7 @@ const MainRoutes = {
       // Documents
       path: 'documents',
       element: (
-        <PermissionGuard isRouteGuard>
+        <PermissionGuard resource="documents" action="view" isRouteGuard>
           <TableRefreshProvider>
             <DocumentsLibrary />
           </TableRefreshProvider>

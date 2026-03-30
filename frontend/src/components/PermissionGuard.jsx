@@ -1,6 +1,7 @@
 import useAuth from 'hooks/useAuth';
 import { Navigate } from 'react-router-dom';
 import { getDefaultRouteForRole } from 'utils/roleRoutes';
+import { ROLE_RESOURCE_ACCESS } from 'config/roleAccessMap';
 
 /**
  * Get user's primary role from user object
@@ -17,7 +18,72 @@ const getUserRole = (user) => {
 
 const isSuperAdminUser = (user) => getUserRole(user) === 'SUPER_ADMIN';
 
-const isProviderUser = (role) => role === 'PROVIDER_STAFF';
+const hasResourceByRole = (role, resource) => {
+  if (!resource) return true;
+  const allowedResources = ROLE_RESOURCE_ACCESS[role] || [];
+  return allowedResources.includes('*') || allowedResources.includes(resource);
+};
+
+const canEmployerAdminAccessByToggle = (user, resource, action) => {
+  if (!resource) return true;
+
+  const canViewClaims = user?.canViewClaims !== false;
+  const canViewVisits = user?.canViewVisits !== false;
+  const canViewReports = user?.canViewReports !== false;
+  const canViewMembers = user?.canViewMembers !== false;
+  const canViewBenefitPolicies = user?.canViewBenefitPolicies !== false;
+
+  if (resource === 'claims') {
+    // Employer admin can view claim data/reporting only, never manage claim operations.
+    return action === 'view' ? canViewClaims : false;
+  }
+
+  if (resource === 'visits') {
+    // Visits for employer admin are read-only scope.
+    return action === 'view' ? canViewVisits : false;
+  }
+
+  if (resource === 'members') {
+    return canViewMembers;
+  }
+
+  if (resource === 'benefit_policies') {
+    return canViewBenefitPolicies;
+  }
+
+  if (resource === 'documents') {
+    return canViewBenefitPolicies || canViewClaims;
+  }
+
+  if (resource === 'report_claims') {
+    return canViewReports && canViewClaims;
+  }
+
+  if (resource === 'report_beneficiaries') {
+    return canViewReports && canViewMembers;
+  }
+
+  if (resource.startsWith('report_')) {
+    return canViewReports;
+  }
+
+  return true;
+};
+
+const canAccessResource = (user, role, resource, action) => {
+  if (!resource) return true;
+  if (isSuperAdminUser(user)) return true;
+
+  if (!hasResourceByRole(role, resource)) {
+    return false;
+  }
+
+  if (role === 'EMPLOYER_ADMIN') {
+    return canEmployerAdminAccessByToggle(user, resource, action);
+  }
+
+  return true;
+};
 
 /**
  * RoleGuard — Phase 5 Static Role-Based Authorization
@@ -45,6 +111,8 @@ const isProviderUser = (role) => role === 'PROVIDER_STAFF';
  */
 const RoleGuard = ({
   allowedRoles,
+  resource,
+  action = 'view',
   isRouteGuard = false,
   children,
   fallback = null
@@ -64,12 +132,14 @@ const RoleGuard = ({
 
   // If no specific roles required → any authenticated user can access
   if (!allowedRoles || allowedRoles.length === 0) {
-    return children;
+    return canAccessResource(user, userRole, resource, action) ? children : isRouteGuard ? <Navigate to={getDefaultRouteForRole(userRole)} replace /> : fallback;
   }
 
   // Check if user's role is in the allowed list
   if (allowedRoles.includes(userRole)) {
-    return children;
+    if (canAccessResource(user, userRole, resource, action)) {
+      return children;
+    }
   }
 
   // Unauthorized

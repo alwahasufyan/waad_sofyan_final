@@ -261,6 +261,7 @@ public class ClaimService {
 
         // Get current user for audit
         User currentUser = authorizationService.getCurrentUser();
+        assertClaimOperationAllowed(currentUser, "create");
 
         // ═══════════════════════════════════════════════════════════════════════════
         // STEP 1.1: Standard Validation & Security
@@ -548,6 +549,7 @@ public class ClaimService {
                 .orElseThrow(() -> new ResourceNotFoundException("Claim", "id", id));
 
         User currentUser = authorizationService.getCurrentUser();
+        assertClaimOperationAllowed(currentUser, "update-data");
 
         // PART 2 — CLAIM SAFETY: Protect Claim Modification After Submission
         if (claim.getStatus() != ClaimStatus.DRAFT &&
@@ -693,6 +695,7 @@ public class ClaimService {
                 .orElseThrow(() -> new ResourceNotFoundException("Claim", "id", id));
 
         User currentUser = authorizationService.getCurrentUser();
+        assertClaimOperationAllowed(currentUser, "submit");
 
         // Validate current status allows submission
         if (claim.getStatus() != ClaimStatus.DRAFT && claim.getStatus() != ClaimStatus.NEEDS_CORRECTION) {
@@ -795,6 +798,13 @@ public class ClaimService {
         log.info("✅ Claim {} transitioned to {}", id, targetStatus);
 
         return claimMapper.toViewDto(updatedClaim);
+    }
+
+    private void assertClaimOperationAllowed(User currentUser, String operation) {
+        String role = currentUser != null ? currentUser.getUserType() : null;
+        if ("EMPLOYER_ADMIN".equals(role)) {
+            throw new AccessDeniedException("EMPLOYER_ADMIN cannot " + operation + " claims");
+        }
     }
 
     /**

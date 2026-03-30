@@ -1,14 +1,26 @@
 package com.waad.tba.modules.rbac.mapper;
 
 import com.waad.tba.modules.rbac.dto.*;
+import com.waad.tba.modules.employer.repository.EmployerRepository;
 import com.waad.tba.modules.rbac.entity.User;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class UserMapper {
+
+    private final EmployerRepository employerRepository;
 
     public UserResponseDto toResponseDto(User user) {
         if (user == null) return null;
+
+        String employerName = null;
+        if (user.getEmployerId() != null) {
+            employerName = employerRepository.findById(user.getEmployerId())
+                    .map(e -> e.getName())
+                    .orElse(null);
+        }
         
         return UserResponseDto.builder()
                 .id(user.getId())
@@ -18,6 +30,14 @@ public class UserMapper {
                 .phone(user.getPhone())
                 .active(user.getActive())
                 .role(user.getUserType() != null ? user.getUserType() : "DATA_ENTRY")
+                .employerId(user.getEmployerId())
+                .employerName(employerName)
+                .providerId(user.getProviderId())
+                .canViewClaims(user.getCanViewClaims())
+                .canViewVisits(user.getCanViewVisits())
+                .canViewReports(user.getCanViewReports())
+                .canViewMembers(user.getCanViewMembers())
+                .canViewBenefitPolicies(user.getCanViewBenefitPolicies())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .build();
@@ -60,6 +80,22 @@ public class UserMapper {
         }
         if (dto.getProviderId() != null) {
             user.setProviderId(dto.getProviderId());
+        }
+
+        if (dto.getCanViewClaims() != null) {
+            user.setCanViewClaims(dto.getCanViewClaims());
+        }
+        if (dto.getCanViewVisits() != null) {
+            user.setCanViewVisits(dto.getCanViewVisits());
+        }
+        if (dto.getCanViewReports() != null) {
+            user.setCanViewReports(dto.getCanViewReports());
+        }
+        if (dto.getCanViewMembers() != null) {
+            user.setCanViewMembers(dto.getCanViewMembers());
+        }
+        if (dto.getCanViewBenefitPolicies() != null) {
+            user.setCanViewBenefitPolicies(dto.getCanViewBenefitPolicies());
         }
     }
 }

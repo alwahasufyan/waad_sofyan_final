@@ -5,7 +5,7 @@
  * No assign-roles step. Redirect to /admin/users on success.
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 // MUI
@@ -140,7 +140,7 @@ const UserCreate = () => {
   // ========================================
   // INITIAL DATA
   // ========================================
-  useState(() => {
+  useEffect(() => {
     const fetchEmployers = async () => {
       try {
         const data = await employersService.getEmployerSelectors();

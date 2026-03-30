@@ -19,6 +19,8 @@ import com.waad.tba.core.email.EmailService;
 import com.waad.tba.modules.auth.dto.LoginRequest;
 import com.waad.tba.modules.auth.dto.LoginResponse;
 import com.waad.tba.modules.auth.dto.RegisterRequest;
+import com.waad.tba.modules.employer.entity.Employer;
+import com.waad.tba.modules.employer.repository.EmployerRepository;
 import com.waad.tba.modules.rbac.entity.PasswordResetToken;
 import com.waad.tba.modules.rbac.repository.PasswordResetTokenRepository;
 import com.waad.tba.modules.provider.entity.Provider;
@@ -42,6 +44,7 @@ public class AuthService {
         private final EmailService emailService;
         private final PasswordResetTokenRepository passwordResetTokenRepository;
         private final ProviderRepository providerRepository;
+        private final EmployerRepository employerRepository;
         private final SystemSettingsService systemSettingsService;
         private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
@@ -104,6 +107,13 @@ public class AuthService {
                                         .orElse(null);
                 }
 
+                String employerName = null;
+                if (user.getEmployerId() != null) {
+                        employerName = employerRepository.findById(user.getEmployerId())
+                                        .map(Employer::getName)
+                                        .orElse(null);
+                }
+
                 log.info("Login successful for user: {}", user.getUsername());
 
                 return LoginResponse.builder()
@@ -116,8 +126,14 @@ public class AuthService {
                                                 .roles(roles)
                                                 .permissions(permissions)
                                                 .employerId(user.getEmployerId())
+                                                .employerName(employerName)
                                                 .providerId(user.getProviderId())
                                                 .providerName(providerName)
+                                                .canViewClaims(user.getCanViewClaims())
+                                                .canViewVisits(user.getCanViewVisits())
+                                                .canViewReports(user.getCanViewReports())
+                                                .canViewMembers(user.getCanViewMembers())
+                                                .canViewBenefitPolicies(user.getCanViewBenefitPolicies())
                                                 .build())
                                 .build();
         }
@@ -255,6 +271,20 @@ public class AuthService {
                 // needed
                 List<String> permissions = List.of();
 
+                String providerName = null;
+                if (user.getProviderId() != null) {
+                        providerName = providerRepository.findById(user.getProviderId())
+                                        .map(Provider::getName)
+                                        .orElse(null);
+                }
+
+                String employerName = null;
+                if (user.getEmployerId() != null) {
+                        employerName = employerRepository.findById(user.getEmployerId())
+                                        .map(Employer::getName)
+                                        .orElse(null);
+                }
+
                 return LoginResponse.UserInfo.builder()
                                 .id(user.getId())
                                 .username(user.getUsername())
@@ -263,7 +293,14 @@ public class AuthService {
                                 .roles(roles)
                                 .permissions(permissions)
                                 .employerId(user.getEmployerId())
+                                .employerName(employerName)
                                 .providerId(user.getProviderId())
+                                .providerName(providerName)
+                                .canViewClaims(user.getCanViewClaims())
+                                .canViewVisits(user.getCanViewVisits())
+                                .canViewReports(user.getCanViewReports())
+                                .canViewMembers(user.getCanViewMembers())
+                                .canViewBenefitPolicies(user.getCanViewBenefitPolicies())
                                 .build();
         }
 
@@ -297,6 +334,13 @@ public class AuthService {
                                         .orElse(null);
                 }
 
+                String employerName = null;
+                if (user.getEmployerId() != null) {
+                        employerName = employerRepository.findById(user.getEmployerId())
+                                        .map(Employer::getName)
+                                        .orElse(null);
+                }
+
                 return LoginResponse.UserInfo.builder()
                                 .id(user.getId())
                                 .username(user.getUsername())
@@ -305,8 +349,14 @@ public class AuthService {
                                 .roles(roles)
                                 .permissions(permissions)
                                 .employerId(user.getEmployerId())
+                                .employerName(employerName)
                                 .providerId(user.getProviderId())
                                 .providerName(providerName)
+                                .canViewClaims(user.getCanViewClaims())
+                                .canViewVisits(user.getCanViewVisits())
+                                .canViewReports(user.getCanViewReports())
+                                .canViewMembers(user.getCanViewMembers())
+                                .canViewBenefitPolicies(user.getCanViewBenefitPolicies())
                                 .build();
         }
 
@@ -458,6 +508,13 @@ public class AuthService {
                                         .orElse(null);
                 }
 
+                String employerName = null;
+                if (user.getEmployerId() != null) {
+                        employerName = employerRepository.findById(user.getEmployerId())
+                                        .map(Employer::getName)
+                                        .orElse(null);
+                }
+
                 log.info("✅ Token refreshed successfully for user: {} (roles: {}, permissions: {})",
                                 user.getUsername(), roles.size(), permissions.size());
 
@@ -471,8 +528,14 @@ public class AuthService {
                                                 .roles(roles)
                                                 .permissions(permissions)
                                                 .employerId(user.getEmployerId())
+                                                .employerName(employerName)
                                                 .providerId(user.getProviderId())
                                                 .providerName(providerName)
+                                                .canViewClaims(user.getCanViewClaims())
+                                                .canViewVisits(user.getCanViewVisits())
+                                                .canViewReports(user.getCanViewReports())
+                                                .canViewMembers(user.getCanViewMembers())
+                                                .canViewBenefitPolicies(user.getCanViewBenefitPolicies())
                                                 .build())
                                 .build();
         }

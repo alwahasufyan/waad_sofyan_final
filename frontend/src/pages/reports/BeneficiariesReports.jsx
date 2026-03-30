@@ -356,13 +356,19 @@ const BeneficiariesReports = () => {
 
       // Map Filters
       if (activeFilters.employerId) {
-        params.organizationId = activeFilters.employerId;
+        params.employerId = activeFilters.employerId;
       }
       if (activeFilters.cardStatus && activeFilters.cardStatus !== 'ALL') {
         params.status = activeFilters.cardStatus;
       }
       if (activeFilters.memberType && activeFilters.memberType !== 'ALL') {
         params.type = activeFilters.memberType;
+      }
+      if (activeFilters.startDate) {
+        params.startDate = activeFilters.startDate;
+      }
+      if (activeFilters.endDate) {
+        params.endDate = activeFilters.endDate;
       }
       if (liveSearch && liveSearch.trim()) {
         params.fullName = liveSearch.trim();

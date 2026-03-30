@@ -273,7 +273,7 @@ export default function Dashboard() {
   }, [refreshSummary, refreshClaims]);
 
   const shortcutEntries = useMemo(() => {
-    const filteredMenu = filterMenuItemsByRole(menuItem, effectiveRole);
+    const filteredMenu = filterMenuItemsByRole(menuItem, effectiveRole, user);
     const collected = [];
 
     const walk = (items, trail = []) => {
@@ -300,7 +300,7 @@ export default function Dashboard() {
 
     walk(filteredMenu);
     return collected;
-  }, [effectiveRole]);
+  }, [effectiveRole, user]);
 
   const filteredShortcutEntries = useMemo(() => {
     const config = shortcutConfig[activeShortcutKey] || shortcutConfig.overview;

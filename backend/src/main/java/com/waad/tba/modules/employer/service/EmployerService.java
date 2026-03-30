@@ -118,6 +118,14 @@ public class EmployerService {
         if (principal instanceof com.waad.tba.modules.rbac.entity.User user) {
             String role = user.getUserType();
             Long providerId = user.getProviderId();
+            Long employerId = user.getEmployerId();
+
+            if ("EMPLOYER_ADMIN".equals(role) && employerId != null) {
+                return employerRepository.findById(employerId)
+                        .filter(Employer::getActive)
+                        .map(employer -> List.of(mapper.toSelector(employer)))
+                        .orElse(List.of());
+            }
 
             if ("PROVIDER_STAFF".equals(role) && providerId != null) {
                 log.debug("[EmployerService] Filtering selectors for PROVIDER_STAFF user: {}, Provider: {}",

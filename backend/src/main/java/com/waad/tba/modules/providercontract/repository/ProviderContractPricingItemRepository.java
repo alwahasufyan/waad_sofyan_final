@@ -353,37 +353,37 @@ public interface ProviderContractPricingItemRepository extends JpaRepository<Pro
        // ═══════════════════════════════════════════════════════════════════════════
 
        /**
-        * Get distinct categories available in active contracts for a provider
+        * Get distinct categories available in ACTIVE contracts for a provider.
+        *
+        * Note: We intentionally do not constrain by CURRENT_DATE here. Claim/preauth
+        * entry needs to show services from the provider's active contract lifecycle
+        * state, while effective-date enforcement is handled at pricing resolution time.
         */
        @Query("SELECT DISTINCT p.medicalCategory FROM ProviderContractPricingItem p " +
                      "WHERE p.contract.provider.id = :providerId " +
                      "AND p.active = true " +
                      "AND p.contract.active = true " +
                      "AND p.contract.status = 'ACTIVE' " +
-                     "AND p.medicalCategory IS NOT NULL " +
-                     "AND p.contract.startDate <= CURRENT_DATE " +
-                     "AND (p.contract.endDate IS NULL OR p.contract.endDate >= CURRENT_DATE)")
+                        "AND p.medicalCategory IS NOT NULL")
        List<com.waad.tba.modules.medicaltaxonomy.entity.MedicalCategory> findDistinctCategoriesByProvider(
                      @Param("providerId") Long providerId);
 
        /**
-        * Get services available in active contracts for a provider filtered by
-        * category
+        * Get services available in ACTIVE contracts for a provider filtered by
+        * category.
         */
        @Query("SELECT p FROM ProviderContractPricingItem p " +
                      "WHERE p.contract.provider.id = :providerId " +
                      "AND p.active = true " +
                      "AND p.contract.active = true " +
                      "AND p.contract.status = 'ACTIVE' " +
-                     "AND p.medicalCategory.id = :categoryId " +
-                     "AND p.contract.startDate <= CURRENT_DATE " +
-                     "AND (p.contract.endDate IS NULL OR p.contract.endDate >= CURRENT_DATE)")
+                        "AND p.medicalCategory.id = :categoryId")
        List<ProviderContractPricingItem> findServicesByProviderAndCategory(
                      @Param("providerId") Long providerId,
                      @Param("categoryId") Long categoryId);
 
        /**
-        * Get ALL pricing items (mapped AND unmapped) in active contracts for a
+        * Get ALL pricing items (mapped AND unmapped) in ACTIVE contracts for a
         * provider.
         * This is used for the service dropdown in claim/preauth entry.
         */
@@ -391,9 +391,7 @@ public interface ProviderContractPricingItemRepository extends JpaRepository<Pro
                      "WHERE p.contract.provider.id = :providerId " +
                      "AND p.active = true " +
                      "AND p.contract.active = true " +
-                     "AND p.contract.status = 'ACTIVE' " +
-                     "AND p.contract.startDate <= CURRENT_DATE " +
-                     "AND (p.contract.endDate IS NULL OR p.contract.endDate >= CURRENT_DATE)")
+                        "AND p.contract.status = 'ACTIVE'")
        List<ProviderContractPricingItem> findAllServicesByProvider(
                      @Param("providerId") Long providerId);
 }

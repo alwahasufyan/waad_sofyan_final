@@ -17,6 +17,7 @@ export const ROLE_RESOURCE_ACCESS = Object.freeze({
 
   MEDICAL_REVIEWER: [
     'claims',
+    'visits',
     'pre_auth',
     'approvals_dashboard',
     'documents',
@@ -38,8 +39,12 @@ export const ROLE_RESOURCE_ACCESS = Object.freeze({
 
   EMPLOYER_ADMIN: [
     'members',
+    'visits',
     'benefit_policies',
     'documents',
+    'report_claims',
+    'report_financial',
+    'report_provider_settlement',
     'report_employers',
     'report_beneficiaries',
     'report_benefit_policy'
@@ -47,6 +52,7 @@ export const ROLE_RESOURCE_ACCESS = Object.freeze({
 
   DATA_ENTRY: [
     'members',
+    'visits',
     'employers',
     'providers',
     'claims',

@@ -77,6 +77,12 @@ const normalizePositiveInteger = (value) => {
     return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
 };
 
+const normalizeDecimal = (value) => {
+    if (value === null || value === undefined || value === '') return null;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+};
+
 const isPopulatedClaimLine = (line) => Boolean(
     line?.service?.medicalServiceId ||
     line?.service?.pricingItemId ||
@@ -385,7 +391,17 @@ export default function ClaimBatchEntry() {
 
     useEffect(() => {
         if (financialSummary) {
-            setMemberFinancialSummary(financialSummary);
+            setMemberFinancialSummary({
+                ...financialSummary,
+                annualLimit: normalizeDecimal(financialSummary.annualLimit),
+                totalClaimed: normalizeDecimal(financialSummary.totalClaimed),
+                totalApproved: normalizeDecimal(financialSummary.totalApproved),
+                totalPaid: normalizeDecimal(financialSummary.totalPaid),
+                totalPatientCoPay: normalizeDecimal(financialSummary.totalPatientCoPay),
+                totalDeductibleApplied: normalizeDecimal(financialSummary.totalDeductibleApplied),
+                remainingCoverage: normalizeDecimal(financialSummary.remainingCoverage),
+                utilizationPercent: normalizeDecimal(financialSummary.utilizationPercent)
+            });
         }
     }, [financialSummary]);
 

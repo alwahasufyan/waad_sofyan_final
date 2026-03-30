@@ -32,7 +32,13 @@ public class LoginResponse {
         private List<String> roles;      // User's roles (typically ONE role)
         private List<String> permissions; // User's permissions (for frontend permission checks)
         private Long employerId;         // For EMPLOYER_ADMIN role
+        private String employerName;     // Employer name for display (EMPLOYER_ADMIN role)
         private Long providerId;         // For PROVIDER role
         private String providerName;     // Provider name for display (PROVIDER role)
+        private Boolean canViewClaims;
+        private Boolean canViewVisits;
+        private Boolean canViewReports;
+        private Boolean canViewMembers;
+        private Boolean canViewBenefitPolicies;
     }
 }

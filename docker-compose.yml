@@ -6,6 +6,8 @@ services:
     environment:
       POSTGRES_DB: tba_waad_system
       POSTGRES_USER: postgres
+      TZ: Africa/Tripoli
+      PGTZ: Africa/Tripoli
       # Keep this aligned with backend DB_PASSWORD below.
       # Changing it after DB volume init requires ALTER USER or volume reset.
       POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
@@ -28,6 +30,8 @@ services:
       db:
         condition: service_healthy
     environment:
+      TZ: Africa/Tripoli
+      JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--Duser.timezone=Africa/Tripoli}
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
       SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:-jdbc:postgresql://db:5432/tba_waad_system}
       SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-postgres}
@@ -64,6 +68,8 @@ services:
         NGINX_CONFIG: ${NGINX_CONFIG:-nginx.local.conf}
     container_name: waadapp-frontend
     restart: unless-stopped
+    environment:
+      TZ: Africa/Tripoli
     ports:
       - "3000:80" # محلياً استخدم 3000 بدل 80
     depends_on:

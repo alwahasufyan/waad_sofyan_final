@@ -44,7 +44,26 @@ import { ROLE_RESOURCE_ACCESS } from 'config/roleAccessMap';
  * @param {string} role - User's canonical role (e.g. 'SUPER_ADMIN')
  * @returns {Array} Filtered menu items visible to specified role
  */
-export const filterMenuItemsByRole = (items, role) => {
+const canEmployerAdminAccessByToggle = (user, resource) => {
+  if (!resource) return true;
+
+  const canViewClaims = user?.canViewClaims !== false;
+  const canViewVisits = user?.canViewVisits !== false;
+  const canViewReports = user?.canViewReports !== false;
+  const canViewMembers = user?.canViewMembers !== false;
+  const canViewBenefitPolicies = user?.canViewBenefitPolicies !== false;
+
+  if (resource === 'claims') return canViewClaims;
+  if (resource === 'visits') return canViewVisits;
+  if (resource === 'members') return canViewMembers;
+  if (resource === 'benefit_policies') return canViewBenefitPolicies;
+  if (resource === 'documents') return canViewBenefitPolicies || canViewClaims;
+  if (resource.startsWith('report_')) return canViewReports;
+
+  return true;
+};
+
+export const filterMenuItemsByRole = (items, role, user = null) => {
   const allowedResources = ROLE_RESOURCE_ACCESS[role] || [];
   const providerPortalEnabled = (() => {
     try {
@@ -62,7 +81,11 @@ export const filterMenuItemsByRole = (items, role) => {
     if (resource === 'provider_portal' && !providerPortalEnabled) return false;
     if (resource.startsWith('__hidden_')) return false; // Explicitly hidden items
     if (allowedResources.includes('*')) return true; // SUPER_ADMIN wildcard
-    return allowedResources.includes(resource);
+    if (!allowedResources.includes(resource)) return false;
+    if (role === 'EMPLOYER_ADMIN') {
+      return canEmployerAdminAccessByToggle(user, resource);
+    }
+    return true;
   };
 
   return items
@@ -70,7 +93,7 @@ export const filterMenuItemsByRole = (items, role) => {
     .map((item) => ({
       ...item,
       children: item.children
-        ? filterMenuItemsByRole(item.children, role)
+        ? filterMenuItemsByRole(item.children, role, user)
         : undefined
     }))
     .filter((item) => {
@@ -432,11 +455,26 @@ const menuItem = [
             type: 'item',
             url: '/reports/claims',
             icon: AssessmentIcon,
-            resource: 'claims',
+            resource: 'report_claims',
             action: 'view',
             chip: {
               label: 'تقرير',
               color: 'info',
+              size: 'small'
+            }
+          },
+          {
+            id: 'visits-list',
+            title: 'إدارة الزيارات',
+            titleEn: 'Visits Management',
+            type: 'item',
+            url: '/visits',
+            icon: AssignmentIcon,
+            resource: 'visits',
+            action: 'view',
+            chip: {
+              label: '✅',
+              color: 'success',
               size: 'small'
             }
           }
