@@ -83,6 +83,12 @@ const normalizeDecimal = (value) => {
     return Number.isFinite(parsed) ? parsed : null;
 };
 
+const normalizePositiveLong = (value) => {
+    if (value === null || value === undefined || value === '') return null;
+    const parsed = Number(value);
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+};
+
 const isPopulatedClaimLine = (line) => Boolean(
     line?.service?.medicalServiceId ||
     line?.service?.pricingItemId ||
@@ -506,14 +512,14 @@ export default function ClaimBatchEntry() {
             return {
                 ...s,
                 label: `${code ? '[' + code + '] ' : ''}${name}`,
-                medicalServiceId: s.medicalServiceId ?? null,
+                medicalServiceId: normalizePositiveLong(s.medicalServiceId),
                 serviceName: name,
                 serviceCode: code,
-                categoryId: s.categoryId ?? s.medicalCategoryId ?? null,
+                categoryId: normalizePositiveLong(s.categoryId ?? s.medicalCategoryId),
                 categoryName,
                 subCategoryName,
                 filterCategoryKey,
-                pricingItemId: s.pricingItemId,
+                pricingItemId: normalizePositiveLong(s.pricingItemId),
                 contractPrice: s.contractPrice || 0
             };
         }).sort((left, right) => {
@@ -723,6 +729,14 @@ export default function ClaimBatchEntry() {
         }
         if (isSavingRef.current) return;
         if (!member) { enqueueSnackbar(t('claimEntry.validationMember'), { variant: 'error' }); return; }
+
+        const memberEmployerId = normalizePositiveLong(member?.employerId || member?.organizationId || member?.employer?.id);
+        const batchEmployerId = normalizePositiveLong(employerId);
+        if (memberEmployerId && batchEmployerId && memberEmployerId !== batchEmployerId) {
+            enqueueSnackbar('العضو المحدد لا يتبع جهة العمل الخاصة بهذه الدفعة. اختر عضواً من نفس الجهة.', { variant: 'error' });
+            return;
+        }
+
         if (lines.some(l => !l.service && !l.serviceName)) { enqueueSnackbar(t('claimEntry.validationService'), { variant: 'error' }); return; }
         if (!isClaimRejected && lines.some(l => !l.rejected && (parseFloat(l.unitPrice) || 0) <= 0)) {
             enqueueSnackbar('يجب أن يكون سعر الوحدة أكبر من صفر لكل بند غير مرفوض', { variant: 'error' }); return;
@@ -749,7 +763,11 @@ export default function ClaimBatchEntry() {
                 return;
             }
 
-            const unresolvedLine = activeLines.find((line) => !line.service?.pricingItemId && !line.service?.medicalServiceId);
+            const unresolvedLine = activeLines.find((line) => {
+                const pricingItemId = normalizePositiveLong(line?.service?.pricingItemId);
+                const medicalServiceId = normalizePositiveLong(line?.service?.medicalServiceId);
+                return pricingItemId == null && medicalServiceId == null;
+            });
             if (unresolvedLine) {
                 enqueueSnackbar('اختر الخدمة من قائمة العقد قبل الحفظ', { variant: 'error' });
                 setSaving(false);
@@ -801,9 +819,9 @@ export default function ClaimBatchEntry() {
                 // Always send context category so backend can set appliedCategoryId on unmapped services
                 primaryCategoryCode: primaryCategoryCode,
                 lines: activeLines.map(l => ({
-                    medicalServiceId: l.service?.medicalServiceId || null,
-                    pricingItemId: l.service?.pricingItemId || null,
-                    serviceCategoryId: l.service?.categoryId || null,
+                    medicalServiceId: normalizePositiveLong(l.service?.medicalServiceId),
+                    pricingItemId: normalizePositiveLong(l.service?.pricingItemId),
+                    serviceCategoryId: normalizePositiveLong(l.service?.categoryId),
                     serviceCategoryName: l.service?.categoryName || null,
                     serviceName: l.serviceName || l.service?.serviceName || '',
                     serviceCode: l.serviceCode || l.service?.serviceCode || '',

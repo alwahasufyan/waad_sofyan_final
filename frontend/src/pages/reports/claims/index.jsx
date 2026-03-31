@@ -141,7 +141,7 @@ const ClaimsReport = () => {
                 Excel
               </Button>
             </Tooltip>
-            <Tooltip title="طباعة بالقالب المركزي">
+            <Tooltip title="طباعة">
               <Button
                 variant="contained"
                 size="small"
@@ -150,7 +150,7 @@ const ClaimsReport = () => {
                 disabled={loading || totalCount === 0}
                 startIcon={<PrintIcon />}
               >
-                طباعة مركزي
+                طباعة
               </Button>
             </Tooltip>
             <Tooltip title="تحديث البيانات">

@@ -486,19 +486,41 @@ const ProviderAccountView = () => {
   });
 
   const currentYear = new Date().getFullYear();
-  const { data: monthlySummaryRaw, isLoading: isLoadingMonthlySummary } = useQuery({
+  const {
+    data: monthlySummaryRaw,
+    isLoading: isLoadingMonthlySummary,
+    isError: isMonthlySummaryError,
+    error: monthlySummaryError
+  } = useQuery({
     queryKey: ['provider-account', providerId, 'monthly-summary', currentYear],
     queryFn: () => providerPaymentsService.getProviderMonthlySummary(providerId, currentYear),
     enabled: isValidProvider,
     staleTime: 1000 * 60 * 2
   });
 
-  const { data: monthlyPaymentsRaw, isLoading: isLoadingMonthlyPayments } = useQuery({
+  const {
+    data: monthlyPaymentsRaw,
+    isLoading: isLoadingMonthlyPayments,
+    isError: isMonthlyPaymentsError,
+    error: monthlyPaymentsError
+  } = useQuery({
     queryKey: ['provider-account', providerId, 'monthly-payments', currentYear, selectedMonth],
     queryFn: () => providerPaymentsService.listMonthlyPayments(providerId, currentYear, selectedMonth),
     enabled: isValidProvider,
     staleTime: 1000 * 60 * 2
   });
+
+  useEffect(() => {
+    if (isMonthlySummaryError) {
+      openSnackbar({ message: monthlySummaryError?.message || 'تعذر تحميل ملخص الأشهر', variant: 'error' });
+    }
+  }, [isMonthlySummaryError, monthlySummaryError]);
+
+  useEffect(() => {
+    if (isMonthlyPaymentsError) {
+      openSnackbar({ message: monthlyPaymentsError?.message || 'تعذر تحميل السندات الشهرية', variant: 'error' });
+    }
+  }, [isMonthlyPaymentsError, monthlyPaymentsError]);
 
   // ========================================
   // PROCESS TRANSACTIONS DATA
@@ -540,19 +562,49 @@ const ProviderAccountView = () => {
 
   const totalTransactions = transactionsData?.total || transactionsData?.totalElements || allTransactions.length;
   const monthlySummary = useMemo(() => {
-    const list = Array.isArray(monthlySummaryRaw) ? monthlySummaryRaw : [];
-    if (!list.length) return [];
+    const listCandidate =
+      (Array.isArray(monthlySummaryRaw) && monthlySummaryRaw) ||
+      (Array.isArray(monthlySummaryRaw?.months) && monthlySummaryRaw.months) ||
+      (Array.isArray(monthlySummaryRaw?.content) && monthlySummaryRaw.content) ||
+      (Array.isArray(monthlySummaryRaw?.items) && monthlySummaryRaw.items) ||
+      [];
 
-    return [...list]
-      .sort((a, b) => Number(a.month || 0) - Number(b.month || 0))
-      .map((row) => ({
-        ...row,
-        monthLabel: AR_MONTH_LABELS[Math.max(0, Math.min(11, Number(row.month || 1) - 1))] || `شهر ${row.month}`
-      }));
-  }, [monthlySummaryRaw]);
+    const byMonth = new Map();
+    listCandidate.forEach((row) => {
+      const monthNumber = Number(row?.month);
+      if (Number.isInteger(monthNumber) && monthNumber >= 1 && monthNumber <= 12) {
+        byMonth.set(monthNumber, row || {});
+      }
+    });
+
+    return Array.from({ length: 12 }, (_, index) => {
+      const month = index + 1;
+      const row = byMonth.get(month) || {};
+      return {
+        providerId: row.providerId ?? Number(providerId),
+        year: row.year ?? currentYear,
+        month,
+        approvedAmount: Number(row.approvedAmount) || 0,
+        paidAmount: Number(row.paidAmount) || 0,
+        remainingAmount: Number(row.remainingAmount) || 0,
+        locked: Boolean(row.locked),
+        monthLabel: AR_MONTH_LABELS[index] || `شهر ${month}`
+      };
+    });
+  }, [monthlySummaryRaw, providerId, currentYear]);
   const selectedMonthSummary = useMemo(
-    () => monthlySummary.find((row) => Number(row.month) === Number(selectedMonth)) || null,
-    [monthlySummary, selectedMonth]
+    () =>
+      monthlySummary.find((row) => Number(row.month) === Number(selectedMonth)) || {
+        providerId: Number(providerId),
+        year: currentYear,
+        month: Number(selectedMonth),
+        approvedAmount: 0,
+        paidAmount: 0,
+        remainingAmount: 0,
+        locked: false,
+        monthLabel: AR_MONTH_LABELS[Math.max(0, Math.min(11, Number(selectedMonth || 1) - 1))] || `شهر ${selectedMonth}`
+      },
+    [monthlySummary, selectedMonth, providerId, currentYear]
   );
   const monthlyPayments = useMemo(() => (Array.isArray(monthlyPaymentsRaw) ? monthlyPaymentsRaw : []), [monthlyPaymentsRaw]);
   const recentTotals = useMemo(() => calculateTransactionTotals(recentTransactions), [recentTransactions]);
@@ -655,9 +707,9 @@ const ProviderAccountView = () => {
 
   const handleLockOrUnlockMonth = async () => {
     try {
-      if (!selectedMonthSummary) return;
+      const isLocked = Boolean(selectedMonthSummary?.locked);
 
-      if (selectedMonthSummary.locked) {
+      if (isLocked) {
         if (!unlockReason.trim()) {
           openSnackbar({ message: 'سبب فك القفل مطلوب', variant: 'warning' });
           return;
@@ -913,6 +965,12 @@ const ProviderAccountView = () => {
   };
 
   const handlePrintReceipt = async (paymentId) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      openSnackbar({ message: 'تعذر فتح نافذة الطباعة. يرجى السماح بالنوافذ المنبثقة', variant: 'warning' });
+      return;
+    }
+
     try {
       const preview = await providerPaymentsService.previewPaymentReceipt(providerId, paymentId);
       const doc = preview?.document;
@@ -953,8 +1011,6 @@ const ProviderAccountView = () => {
         </table>
       `;
 
-      const printWindow = window.open('', '_blank');
-      if (!printWindow) return;
       printWindow.document.write(
         renderBrandedPrintDocument({
           title: preview?.printTitle || 'إيصال',
@@ -967,11 +1023,18 @@ const ProviderAccountView = () => {
       printWindow.focus();
       setTimeout(() => printWindow.print(), 250);
     } catch (error) {
+      printWindow.close();
       openSnackbar({ message: error?.message || 'تعذر معاينة الإيصال', variant: 'error' });
     }
   };
 
   const handlePrintMonthlyStatement = async () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      openSnackbar({ message: 'تعذر فتح نافذة الطباعة. يرجى السماح بالنوافذ المنبثقة', variant: 'warning' });
+      return;
+    }
+
     try {
       const data = await providerPaymentsService.previewMonthlyStatement(providerId, currentYear, selectedMonth);
       const rows = Array.isArray(data?.documents)
@@ -1013,8 +1076,6 @@ const ProviderAccountView = () => {
         </table>
       `;
 
-      const printWindow = window.open('', '_blank');
-      if (!printWindow) return;
       printWindow.document.write(
         renderBrandedPrintDocument({
           title: 'كشف شهر مقدم الخدمة',
@@ -1027,11 +1088,18 @@ const ProviderAccountView = () => {
       printWindow.focus();
       setTimeout(() => printWindow.print(), 250);
     } catch (error) {
+      printWindow.close();
       openSnackbar({ message: error?.message || 'تعذر طباعة كشف الشهر', variant: 'error' });
     }
   };
 
   const handlePrintYearlyStatement = async () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      openSnackbar({ message: 'تعذر فتح نافذة الطباعة. يرجى السماح بالنوافذ المنبثقة', variant: 'warning' });
+      return;
+    }
+
     try {
       const data = await providerPaymentsService.previewYearlyStatement(providerId, currentYear);
       const rows = Array.isArray(data?.months)
@@ -1073,8 +1141,6 @@ const ProviderAccountView = () => {
         </table>
       `;
 
-      const printWindow = window.open('', '_blank');
-      if (!printWindow) return;
       printWindow.document.write(
         renderBrandedPrintDocument({
           title: 'الملخص السنوي لمقدم الخدمة',
@@ -1087,6 +1153,7 @@ const ProviderAccountView = () => {
       printWindow.focus();
       setTimeout(() => printWindow.print(), 250);
     } catch (error) {
+      printWindow.close();
       openSnackbar({ message: error?.message || 'تعذر طباعة الملخص السنوي', variant: 'error' });
     }
   };

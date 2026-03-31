@@ -141,7 +141,7 @@ const ClaimStatementPreview = () => {
             disabled={loading}
             sx={{ bgcolor: '#0b7285', '&:hover': { bgcolor: '#095f6f' } }}
           >
-            طباعة بالقالب المركزي
+            طباعة
           </Button>
         </Stack>
       </Box>

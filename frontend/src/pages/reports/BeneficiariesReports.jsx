@@ -705,13 +705,7 @@ const BeneficiariesReports = () => {
                     {liveSearch && <strong style={{ color: totalFiltered === 0 ? 'red' : 'green' }}>{totalFiltered}</strong>}
                   </Typography>
 
-                  <Tooltip title="معاينة الطباعة">
-                    <IconButton color="primary" onClick={handleShowPrintPreview}>
-                      <PreviewIcon />
-                    </IconButton>
-                  </Tooltip>
-
-                  <Tooltip title="إنشاء PDF">
+                  <Tooltip title="طباعة">
                     <IconButton color="primary" onClick={handlePrintTable}>
                       <PrintIcon />
                     </IconButton>

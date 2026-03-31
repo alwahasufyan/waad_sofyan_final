@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Box, Stack, Typography, Button, Divider, CircularProgress, Chip } from '@mui/material';
 import { Print as PrintIcon, ArrowBack as ArrowBackIcon, People as PeopleIcon } from '@mui/icons-material';
@@ -11,12 +11,12 @@ const BeneficiariesStatementPreview = () => {
   const { enqueueSnackbar } = useSnackbar();
 
   const iframeRef = useRef(null);
+  const hasAutoOpenedCentralPrintRef = useRef(false);
   const [loading, setLoading] = useState(true);
 
   const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const previewNonce = useMemo(() => Date.now().toString(), []);
   const memberId = queryParams.get('memberId');
-  const autoPrint = queryParams.get('autoPrint') === '1';
 
   const reportQuery = new URLSearchParams(queryParams);
   reportQuery.delete('memberId');
@@ -27,7 +27,7 @@ const BeneficiariesStatementPreview = () => {
     ? `/api/v1/unified-members/${memberId}/html?previewAt=${previewNonce}`
     : `/api/v1/unified-members/html/report${reportQuery.toString() ? `?${reportQuery.toString()}` : ''}`;
 
-  const handleCentralPrint = () => {
+  const handleCentralPrint = useCallback(() => {
     const iframeDoc = iframeRef.current?.contentDocument || iframeRef.current?.contentWindow?.document;
     if (!iframeDoc?.body) {
       enqueueSnackbar('تعذر تجهيز المعاينة للطباعة بالقالب المركزي', { variant: 'warning' });
@@ -35,7 +35,14 @@ const BeneficiariesStatementPreview = () => {
     }
 
     const embeddedStyles = Array.from(iframeDoc.querySelectorAll('style')).map((s) => s.outerHTML).join('\n');
-    const embeddedBody = iframeDoc.body.innerHTML;
+    const clonedBody = iframeDoc.body.cloneNode(true);
+
+    // Remove legacy report chrome (old company/title/footer) and keep central layout only.
+    clonedBody
+      .querySelectorAll('.header, .top-band, .footer, .report-title, #screen-header, #page-running-header')
+      .forEach((node) => node.remove());
+
+    const embeddedBody = clonedBody.innerHTML;
     const title = memberId ? 'تقرير تفاصيل المنتفعين' : 'تقرير المنتفعين';
     const subtitle = memberId ? `منتفع رقم #${memberId}` : 'تقرير المنتفعين العام';
 
@@ -53,15 +60,16 @@ const BeneficiariesStatementPreview = () => {
         <div class="embedded-beneficiaries-report">${embeddedBody}</div>
       `
     });
-  };
+  }, [enqueueSnackbar, memberId]);
 
   useEffect(() => {
-    if (autoPrint && !loading) {
-      const timer = setTimeout(() => handlePrint(), 250);
-      return () => clearTimeout(timer);
+    if (!loading && !hasAutoOpenedCentralPrintRef.current) {
+      hasAutoOpenedCentralPrintRef.current = true;
+      const timer = setTimeout(() => handleCentralPrint(), 150);
+      return () => window.clearTimeout(timer);
     }
     return undefined;
-  }, [autoPrint, loading]);
+  }, [loading, handleCentralPrint]);
 
   return (
     <Box
@@ -131,20 +139,6 @@ const BeneficiariesStatementPreview = () => {
             onClick={handleCentralPrint}
             disabled={loading}
             sx={{ bgcolor: '#0b7285', '&:hover': { bgcolor: '#095f6f' } }}
-          >
-            طباعة بالقالب المركزي
-          </Button>
-          <Button
-            variant="outlined"
-            size="small"
-            startIcon={<PrintIcon />}
-            onClick={handlePrint}
-            disabled={loading}
-            sx={{
-              color: 'rgba(255,255,255,0.8)',
-              borderColor: 'rgba(255,255,255,0.22)',
-              '&:hover': { borderColor: '#fff', bgcolor: 'rgba(255,255,255,0.07)', color: '#fff' }
-            }}
           >
             طباعة
           </Button>

@@ -22,9 +22,11 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import DownloadIcon from '@mui/icons-material/Download';
 import SearchIcon from '@mui/icons-material/Search';
 import CloseIcon from '@mui/icons-material/Close';
+import PrintIcon from '@mui/icons-material/Print';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 
 import axiosClient from 'utils/axios';
+import { openWaadPrintWindow } from 'utils/printLayout';
 import MainCard from 'components/MainCard';
 import { ModernPageHeader } from 'components/tba';
 import { getFinancialRegister, exportFinancialRegisterExcel } from 'services/api/unified-members.service';
@@ -100,6 +102,78 @@ export default function MemberFinancialRegister() {
     link.parentNode.removeChild(link);
   };
 
+  const handlePrint = () => {
+    const safeRows = Array.isArray(rows) ? rows : [];
+
+    const tableRows = safeRows
+      .map((row, index) => `
+        <tr>
+          <td>${page * rowsPerPage + index + 1}</td>
+          <td>${row.fullName || '-'}</td>
+          <td>${row.cardNumber || '-'}</td>
+          <td>${row.employerName || '-'}</td>
+          <td class="mono">${formatMoney(row.annualLimit)}</td>
+          <td class="mono">${formatMoney(row.usedAmount)}</td>
+          <td class="mono">${formatMoney(row.remainingAmount)}</td>
+        </tr>
+      `)
+      .join('');
+
+    const activeFilters = [
+      employerId ? `جهة العمل: ${employers.find((e) => String(e.id) === String(employerId))?.label || employerId}` : null,
+      fromDate ? `من: ${fromDate}` : null,
+      toDate ? `إلى: ${toDate}` : null,
+      search ? `بحث: ${search}` : null
+    ]
+      .filter(Boolean)
+      .join(' | ');
+
+    openWaadPrintWindow({
+      title: 'الملخص المالي للمستفيدين',
+      subtitle: `عدد السجلات: ${totalCount}`,
+      verificationMeta: {
+        docCode: `FIN-REG-${Date.now()}`,
+        providerCode: 'BENEFICIARIES',
+        qrValue: JSON.stringify({
+          title: 'members-financial-register',
+          rows: safeRows.length,
+          printedAt: new Date().toISOString()
+        }),
+        qrSize: 170
+      },
+      contentHtml: `
+        <style>
+          .financial-register-report { direction: rtl; }
+          .financial-register-report .meta { margin-bottom: 12px; color: #4b5563; font-size: 12px; }
+          .financial-register-report table { width: 100%; border-collapse: collapse; font-size: 12px; }
+          .financial-register-report th, .financial-register-report td { border: 1px solid #e5e7eb; padding: 8px; text-align: right; }
+          .financial-register-report th { background: #f3f8f6; font-weight: 700; }
+          .financial-register-report tr:nth-child(even) { background: #fafafa; }
+          .financial-register-report .mono { direction: ltr; unicode-bidi: plaintext; font-family: Consolas, monospace; white-space: nowrap; }
+        </style>
+        <div class="financial-register-report">
+          <div class="meta">${activeFilters || 'الفلاتر: الكل'}</div>
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>الاسم</th>
+                <th>رقم البطاقة</th>
+                <th>جهة العمل</th>
+                <th>الحد السنوي</th>
+                <th>المستخدم</th>
+                <th>المتبقي</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${tableRows || '<tr><td colspan="7" style="text-align:center">لا توجد بيانات</td></tr>'}
+            </tbody>
+          </table>
+        </div>
+      `
+    });
+  };
+
   return (
     <Box sx={{ p: 1 }}>
       <ModernPageHeader
@@ -109,6 +183,9 @@ export default function MemberFinancialRegister() {
         breadcrumbs={[{ label: 'الرئيسية', href: '/' }, { label: 'المستفيدين', href: '/members' }, { label: 'السجل المالي' }]}
         actions={
           <Stack direction="row" spacing={1}>
+            <Button variant="contained" color="primary" startIcon={<PrintIcon />} onClick={handlePrint}>
+              طباعة
+            </Button>
             <Button variant="outlined" startIcon={<DownloadIcon />} onClick={handleExport}>
               تصدير إكسل
             </Button>

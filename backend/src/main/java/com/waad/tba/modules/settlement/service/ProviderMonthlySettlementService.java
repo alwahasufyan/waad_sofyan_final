@@ -87,9 +87,36 @@ public class ProviderMonthlySettlementService {
             if (row == null || row.length < 2) {
                 continue;
             }
-            Integer month = ((Number) row[0]).intValue();
-            BigDecimal amount = row[1] == null ? BigDecimal.ZERO : (BigDecimal) row[1];
-            map.put(month, amount);
+            try {
+                Object rawMonth = row[0];
+                Object rawAmount = row[1];
+
+                if (!(rawMonth instanceof Number monthNumber)) {
+                    log.warn("Skipping monthly summary row with invalid month type: {}", rawMonth);
+                    continue;
+                }
+
+                Integer month = monthNumber.intValue();
+                if (month < 1 || month > 12) {
+                    log.warn("Skipping monthly summary row with out-of-range month: {}", month);
+                    continue;
+                }
+
+                BigDecimal amount;
+                if (rawAmount == null) {
+                    amount = BigDecimal.ZERO;
+                } else if (rawAmount instanceof BigDecimal bd) {
+                    amount = bd;
+                } else if (rawAmount instanceof Number n) {
+                    amount = new BigDecimal(n.toString());
+                } else {
+                    amount = new BigDecimal(rawAmount.toString());
+                }
+
+                map.put(month, amount);
+            } catch (Exception ex) {
+                log.warn("Skipping malformed monthly summary row due to parse error", ex);
+            }
         }
 
         return map;
