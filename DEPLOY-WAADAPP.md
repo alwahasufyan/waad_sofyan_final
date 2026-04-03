@@ -66,3 +66,39 @@ If you see errors such as Docker `500`, `EOF`, or daemon/API failures during ima
 docker compose --env-file .env build frontend
 docker compose --env-file .env up -d
 ```
+
+## 6. If Frontend Shows Unhealthy On Server
+
+If the server output shows names like `waadapp_frontend` or `waadapp_db_1` instead of the current Compose-managed names, the server is still running an older compose file or older clone.
+
+Check the deployed files first:
+
+```bash
+git pull --ff-only origin main
+grep -n "NGINX_CONFIG\|BUILD_NODE_OPTIONS\|FRONTEND_PORT" docker-compose.yml
+grep -n "healthcheck" docker-compose.yml
+```
+
+Expected with the current repo:
+
+- `frontend` has no healthcheck.
+- `NGINX_CONFIG` defaults to `nginx.local.conf`.
+- `BUILD_NODE_OPTIONS` is present.
+- fixed `container_name` values are removed.
+
+Then recreate the stack cleanly:
+
+```bash
+docker compose --env-file .env down --remove-orphans
+docker compose --env-file .env build --no-cache frontend backend
+docker compose --env-file .env up -d
+docker compose --env-file .env ps
+docker compose --env-file .env logs --tail=100 frontend backend
+```
+
+If `frontend` still fails, check the two most likely causes:
+
+1. `NGINX_CONFIG=nginx.conf` was used without mounting real SSL cert files.
+	Fix: set `NGINX_CONFIG=nginx.local.conf` in `.env`.
+2. The server is still using an old compose file with a frontend healthcheck or old container names.
+	Fix: ensure `git pull` actually updated the repo, then run `docker compose down --remove-orphans` before `up -d`.
