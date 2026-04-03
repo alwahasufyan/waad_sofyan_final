@@ -13,18 +13,18 @@ WORKDIR /app
 # Install curl for healthcheck
 RUN apk add --no-cache curl
 
-# Create non-root user
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+# Create deterministic non-root runtime identity
+RUN addgroup -g 10001 -S appgroup && adduser -u 10001 -S appuser -G appgroup
 
 # Create uploads directory and set permissions
 RUN mkdir -p /app/uploads /app/logs \
-    && chown -R appuser:appgroup /app/uploads /app/logs
+    && chown -R 10001:10001 /app/uploads /app/logs
 
 # Copy JAR from builder
-COPY --from=builder --chown=appuser:appgroup /app/target/*.jar app.jar
+COPY --from=builder --chown=10001:10001 /app/target/*.jar app.jar
 
 # Switch to non-root user
-USER appuser
+USER 10001:10001
 
 EXPOSE 8080
 

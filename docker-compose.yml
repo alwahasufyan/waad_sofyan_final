@@ -1,7 +1,6 @@
 services:
   db:
     image: postgres:16
-    container_name: waadapp-db
     restart: unless-stopped
     environment:
       POSTGRES_DB: tba_waad_system
@@ -24,7 +23,6 @@ services:
   backend:
     build:
       context: ./backend
-    container_name: waadapp-backend
     restart: unless-stopped
     depends_on:
       db:
@@ -66,12 +64,12 @@ services:
       args:
         VITE_API_URL: ${VITE_API_URL:-/api/v1}
         NGINX_CONFIG: ${NGINX_CONFIG:-nginx.local.conf}
-    container_name: waadapp-frontend
+        BUILD_NODE_OPTIONS: ${BUILD_NODE_OPTIONS:---max-old-space-size=4096}
     restart: unless-stopped
     environment:
       TZ: Africa/Tripoli
     ports:
-      - "3000:80" # محلياً استخدم 3000 بدل 80
+      - "${FRONTEND_PORT:-3000}:80" # محلياً 3000، وعلى السيرفر غيّرها إلى 80 أو مررها عبر reverse proxy
     depends_on:
       backend:
         condition: service_healthy

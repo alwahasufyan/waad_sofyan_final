@@ -158,8 +158,9 @@ export default function ClaimBatchDetail() {
     const { data: claimsResponse, isLoading } = useQuery({
         queryKey: ['batch-claims-detail', employerId, providerId, month, year],
         queryFn: async () => {
+            const lastDay = new Date(year, month, 0).getDate();
             const dateFrom = `${year}-${String(month).padStart(2, '0')}-01`;
-            const dateTo = `${year}-${String(month).padStart(2, '0')}-31`;
+            const dateTo = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
             return await claimsService.list({
                 employerId,
                 providerId,

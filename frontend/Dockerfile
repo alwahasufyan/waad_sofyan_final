@@ -4,7 +4,7 @@ WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
-RUN npm ci
+RUN npm ci --no-audit --no-fund
 
 # Copy source
 COPY . .
@@ -12,6 +12,10 @@ COPY . .
 # Inject API URL during build (as specified in constraints)
 ARG VITE_API_URL
 ENV VITE_API_URL=$VITE_API_URL
+
+# Increase Node heap for large Vite production builds on small servers.
+ARG BUILD_NODE_OPTIONS=--max-old-space-size=4096
+ENV NODE_OPTIONS=$BUILD_NODE_OPTIONS
 
 # Allow Docker builds to choose the nginx configuration.
 ARG NGINX_CONFIG=nginx.conf
