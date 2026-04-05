@@ -189,7 +189,7 @@ public class PreAuthEmailNotificationService {
                 </div>
                 
                 <div class="footer">
-                    Waad Care - Benghazi, Libya - support@alwahacare.com - +218 XX XXX XXXX
+                    Waad App - Benghazi, Libya - info@waadapp.ly - +218 XX XXX XXXX
                 </div>
             </body>
             </html>

@@ -8,7 +8,7 @@ package com.waad.tba.common.email;
  * - staging: Send to test inbox
  * - prod: Real send
  * 
- * All emails sent FROM: support@alwahacare.com
+ * All emails sent FROM the configured email.from address.
  */
 public interface EmailService {
     

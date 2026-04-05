@@ -23,10 +23,12 @@ FRONTEND_PORT=80
 NGINX_CONFIG=nginx.local.conf
 BUILD_NODE_OPTIONS=--max-old-space-size=4096
 EMAIL_ENABLED=false
-EMAIL_USERNAME=info@alwahacare.com
+EMAIL_HOST=smtp.lsbox.email
+EMAIL_PORT=587
+EMAIL_USERNAME=info@waadapp.ly
 EMAIL_PASSWORD=your_app_password
-EMAIL_FROM=info@alwahacare.com
-EMAIL_FROM_NAME=WaadCare
+EMAIL_FROM=info@waadapp.ly
+EMAIL_FROM_NAME=شركة وعد لإدارة النفقات الطبية
 ADMIN_DEFAULT_PASSWORD=Admin@123
 ```
 
@@ -57,6 +59,9 @@ docker compose ps
 - `nginx.local.conf` is the correct default when TLS is terminated outside the container.
 - Only switch to `nginx.conf` if you mount real certificate files inside the frontend container.
 - `BUILD_NODE_OPTIONS=--max-old-space-size=4096` is kept specifically to reduce frontend build failures on smaller servers.
+- For the new `waadapp.ly` mailbox, keep DNS records as configured for MX, SPF, DKIM, and DMARC, and use the mailbox login itself as both `EMAIL_USERNAME` and `EMAIL_FROM`.
+- Recommended SMTP values for this setup are `EMAIL_HOST=smtp.lsbox.email` and `EMAIL_PORT=587` with STARTTLS.
+- Existing databases will pick up the new mailbox defaults through Flyway migration `V20`, but `EMAIL_PASSWORD` still must be set manually on the server or saved from the admin email settings screen.
 
 ## 5. If Docker Itself Fails During Build
 

@@ -21,6 +21,12 @@ public class EmailService {
 
     private final JavaMailSender mailSender;
 
+    @org.springframework.beans.factory.annotation.Value("${email.from:info@waadapp.ly}")
+    private String fromEmail;
+
+    @org.springframework.beans.factory.annotation.Value("${email.from-name:شركة وعد لإدارة النفقات الطبية}")
+    private String fromName;
+
     @org.springframework.beans.factory.annotation.Value("${app.frontend.url:http://localhost:3000}")
     private String portalUrl;
 
@@ -29,7 +35,7 @@ public class EmailService {
         try {
             SimpleMailMessage msg = new SimpleMailMessage();
             msg.setTo(to);
-            msg.setFrom("شركة وعد لإدارة النفقات الطبية <support@alwahacare.com>");
+            msg.setFrom(formatFromAddress());
             msg.setSubject(subject);
             msg.setText(body);
 
@@ -55,7 +61,7 @@ public class EmailService {
                             StandardCharsets.UTF_8.name());
 
             helper.setTo(to);
-            helper.setFrom("شركة وعد لإدارة النفقات الطبية <support@alwahacare.com>");
+                helper.setFrom(fromEmail, fromName);
             helper.setSubject(subject);
             helper.setText(html, true);
 
@@ -225,5 +231,9 @@ public class EmailService {
             log.error("❌ Failed to send claim rejected email: {}", ex.getMessage());
             throw new RuntimeException("Claim rejected email sending failed");
         }
+    }
+
+    private String formatFromAddress() {
+        return String.format("%s <%s>", fromName, fromEmail);
     }
 }

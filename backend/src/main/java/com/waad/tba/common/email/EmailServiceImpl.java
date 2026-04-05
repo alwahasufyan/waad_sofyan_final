@@ -24,7 +24,7 @@ public class EmailServiceImpl implements EmailService {
 
     private final JavaMailSender mailSender;
 
-    @Value("${email.from:support@alwahacare.com}")
+    @Value("${email.from:info@waadapp.ly}")
     private String fromEmail;
 
     @Value("${email.from-name:شركة وعد لإدارة النفقات الطبية}")
@@ -41,21 +41,21 @@ public class EmailServiceImpl implements EmailService {
 
     @Override
     public void sendEmailVerification(EmailVerificationData data) {
-        String subject = "Verify Your Email - AlwahaCare System";
+        String subject = "Verify Your Email - Waad App";
         String body = buildVerificationEmail(data);
         sendEmail(data.recipientEmail(), subject, body);
     }
 
     @Override
     public void sendPasswordReset(PasswordResetData data) {
-        String subject = "Password Reset Request - AlwahaCare System";
+        String subject = "Password Reset Request - Waad App";
         String body = buildPasswordResetEmail(data);
         sendEmail(data.recipientEmail(), subject, body);
     }
 
     @Override
     public void sendAccountLocked(AccountLockedData data) {
-        String subject = "Account Locked - AlwahaCare System";
+        String subject = "Account Locked - Waad App";
         String body = buildAccountLockedEmail(data);
         sendEmail(data.recipientEmail(), subject, body);
     }
@@ -136,7 +136,7 @@ public class EmailServiceImpl implements EmailService {
         return """
                 Dear %s,
 
-                Thank you for registering with AlwahaCare System.
+                Thank you for registering with Waad App.
 
                 Please verify your email address by clicking the link below:
 
@@ -149,10 +149,10 @@ public class EmailServiceImpl implements EmailService {
                 If you did not create this account, please ignore this email.
 
                 Best regards,
-                AlwahaCare Security Team
+                Waad App Security Team
 
                 ---
-                This is an automated message from support@alwahacare.com
+                This is an automated message from info@waadapp.ly
                 Please do not reply to this email.
                 """.formatted(
                 data.recipientName(),
@@ -164,7 +164,7 @@ public class EmailServiceImpl implements EmailService {
         return """
                 Dear %s,
 
-                We received a request to reset your password for your AlwahaCare account.
+                We received a request to reset your password for your Waad App account.
 
                 Click the link below to reset your password:
 
@@ -177,10 +177,10 @@ public class EmailServiceImpl implements EmailService {
                 If you did not request a password reset, please ignore this email or contact support if you have concerns.
 
                 Best regards,
-                AlwahaCare Security Team
+                Waad App Security Team
 
                 ---
-                This is an automated message from support@alwahacare.com
+                This is an automated message from info@waadapp.ly
                 Please do not reply to this email.
                 """
                 .formatted(
@@ -193,19 +193,19 @@ public class EmailServiceImpl implements EmailService {
         return """
                 Dear %s,
 
-                Your AlwahaCare account has been locked due to %d failed login attempts.
+                Your Waad App account has been locked due to %d failed login attempts.
 
                 Your account will automatically unlock at: %s
 
-                If you did not attempt to login, please contact support immediately at support@alwahacare.com
+                If you did not attempt to login, please contact support immediately at info@waadapp.ly
 
                 To unlock your account sooner, please contact your system administrator.
 
                 Best regards,
-                AlwahaCare Security Team
+                Waad App Security Team
 
                 ---
-                This is an automated message from support@alwahacare.com
+                This is an automated message from info@waadapp.ly
                 Please do not reply to this email.
                 """.formatted(
                 data.recipientName(),

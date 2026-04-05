@@ -24,7 +24,7 @@ spring:
     allow-circular-references: false
 
   mail:
-    host: ${EMAIL_HOST:smtp.hostinger.com}
+    host: ${EMAIL_HOST:smtp.lsbox.email}
     port: ${EMAIL_PORT:587}
     username: ${EMAIL_USERNAME:}
     password: ${EMAIL_PASSWORD:}
@@ -110,7 +110,7 @@ security:
   max-failed-login-attempts: ${MAX_FAILED_LOGIN_ATTEMPTS:5}
 
 email:
-  from: ${EMAIL_FROM:support@alwahacare.com}
+  from: ${EMAIL_FROM:info@waadapp.ly}
   from-name: ${EMAIL_FROM_NAME:شركة وعد لإدارة النفقات الطبية}
   enabled: ${EMAIL_ENABLED:false}
 

@@ -165,7 +165,7 @@ const EmailSettingsPage = () => {
                   name="emailAddress"
                   value={settings.emailAddress}
                   onChange={handleChange}
-                  placeholder="preauth@alwahacare.com"
+                  placeholder="info@waadapp.ly"
                 />
                 <TextField
                   fullWidth
@@ -256,7 +256,7 @@ const EmailSettingsPage = () => {
                   name="smtpHost"
                   value={settings.smtpHost}
                   onChange={handleChange}
-                  placeholder="smtp.hostinger.com"
+                  placeholder="smtp.lsbox.email"
                 />
                 <TextField
                   fullWidth

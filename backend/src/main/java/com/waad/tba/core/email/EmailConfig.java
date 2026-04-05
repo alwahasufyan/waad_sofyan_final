@@ -11,7 +11,7 @@ import java.util.Properties;
 @Configuration
 public class EmailConfig {
  
-    @Value("${spring.mail.host:smtp.hostinger.com}")
+    @Value("${spring.mail.host:smtp.lsbox.email}")
     private String host;
  
     @Value("${spring.mail.port:587}")

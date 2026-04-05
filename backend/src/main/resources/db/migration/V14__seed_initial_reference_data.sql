@@ -150,7 +150,7 @@ BEGIN
 		WHERE table_schema = 'public' AND table_name = 'email_settings'
 	) THEN
 		INSERT INTO email_settings (email_address, display_name, smtp_host, smtp_port, encryption_type, listener_enabled)
-		SELECT 'preauth@alwahacare.com', 'Alwahacare Pre-Auth', 'smtp.hostinger.com', 587, 'TLS', FALSE
+		SELECT 'info@waadapp.ly', 'Waad App', 'smtp.lsbox.email', 587, 'TLS', FALSE
 		WHERE NOT EXISTS (SELECT 1 FROM email_settings);
 	END IF;
 END $$;

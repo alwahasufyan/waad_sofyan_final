@@ -16,8 +16,8 @@ import org.springframework.stereotype.Component;
  * - app.security.account-lockout-duration-minutes (default: 30)
  * - app.security.max-failed-login-attempts (default: 5)
  * - app.frontend.url (default: http://localhost:3000)
- * - app.email.from (default: support@alwahacare.com)
- * - app.email.from-name (default: AlWaha Care Support)
+ * - app.email.from (default: info@waadapp.ly)
+ * - app.email.from-name (default: شركة وعد لإدارة النفقات الطبية)
  * 
  * @author TBA WAAD System
  * @version 1.0
@@ -74,11 +74,11 @@ public class SecurityConfigurationProperties {
         /**
          * Email from address
          */
-        private String from = "support@alwahacare.com";
+        private String from = "info@waadapp.ly";
 
         /**
          * Email from name
          */
-        private String fromName = "AlWaha Care Support";
+        private String fromName = "شركة وعد لإدارة النفقات الطبية";
     }
 }

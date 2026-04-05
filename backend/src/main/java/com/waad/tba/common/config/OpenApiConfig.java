@@ -19,11 +19,11 @@ import org.springframework.context.annotation.Configuration;
                 description = "Third Party Administrator - Health Insurance Platform API",
                 contact = @Contact(
                         name = "TBA-WAAD Support",
-                        email = "support@alwahacare.com"
+                        email = "info@waadapp.ly"
                 ),
                 license = @License(
                         name = "Proprietary",
-                        url = "https://alwahacare.com"
+                        url = "https://waadapp.ly"
                 )
         ),
         servers = {
