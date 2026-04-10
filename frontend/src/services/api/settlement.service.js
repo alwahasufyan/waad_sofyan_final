@@ -1,4 +1,4 @@
-import axiosClient from 'utils/axios';
+import api from 'lib/api';
 import { createErrorHandler } from 'utils/api-error-handler';
 import { normalizePaginatedResponse } from 'utils/api-response-normalizer';
 
@@ -43,7 +43,7 @@ export const providerAccountsService = {
       if (params.hasBalance !== undefined) queryParams.append('hasBalance', String(!!params.hasBalance));
 
       const url = queryParams.toString() ? `${PROVIDER_ACCOUNTS_URL}?${queryParams.toString()}` : PROVIDER_ACCOUNTS_URL;
-      const response = await axiosClient.get(url);
+      const response = await api.get(url);
       return unwrap(response);
     } catch (error) {
       throw handleSettlementErrors(error);
@@ -58,7 +58,7 @@ export const providerAccountsService = {
   getByProviderId: async (providerId) => {
     try {
       if (!providerId) throw new Error('معرف مقدم الخدمة مطلوب');
-      const response = await axiosClient.get(`${PROVIDER_ACCOUNTS_URL}/by-provider/${providerId}`);
+      const response = await api.get(`${PROVIDER_ACCOUNTS_URL}/by-provider/${providerId}`);
       return unwrap(response);
     } catch (error) {
       throw handleSettlementErrors(error);
@@ -73,7 +73,7 @@ export const providerAccountsService = {
   getById: async (accountId) => {
     try {
       if (!accountId) throw new Error('معرف الحساب مطلوب');
-      const response = await axiosClient.get(`${PROVIDER_ACCOUNTS_URL}/${accountId}`);
+      const response = await api.get(`${PROVIDER_ACCOUNTS_URL}/${accountId}`);
       return unwrap(response);
     } catch (error) {
       throw handleSettlementErrors(error);
@@ -96,7 +96,7 @@ export const providerAccountsService = {
       if (params.endDate) queryParams.append('endDate', params.endDate);
 
       const url = `${PROVIDER_ACCOUNTS_URL}/by-provider/${providerId}/transactions${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
-      const response = await axiosClient.get(url);
+      const response = await api.get(url);
       return normalizePaginatedResponse(response);
     } catch (error) {
       throw handleSettlementErrors(error);
@@ -111,7 +111,7 @@ export const providerAccountsService = {
   getRecentTransactions: async (providerId) => {
     try {
       if (!providerId) throw new Error('معرف مقدم الخدمة مطلوب');
-      const response = await axiosClient.get(`${PROVIDER_ACCOUNTS_URL}/by-provider/${providerId}/transactions/recent`);
+      const response = await api.get(`${PROVIDER_ACCOUNTS_URL}/by-provider/${providerId}/transactions/recent`);
       return unwrap(response);
     } catch (error) {
       throw handleSettlementErrors(error);
@@ -124,7 +124,7 @@ export const providerAccountsService = {
    */
   getTotalOutstanding: async () => {
     try {
-      const response = await axiosClient.get(`${PROVIDER_ACCOUNTS_URL}/summary/total-outstanding`);
+      const response = await api.get(`${PROVIDER_ACCOUNTS_URL}/summary/total-outstanding`);
       return unwrap(response);
     } catch (error) {
       throw handleSettlementErrors(error);
@@ -139,7 +139,7 @@ export const providerAccountsService = {
   verifyBalance: async (accountId) => {
     try {
       if (!accountId) throw new Error('معرف الحساب مطلوب');
-      const response = await axiosClient.get(`${PROVIDER_ACCOUNTS_URL}/${accountId}/verify-balance`);
+      const response = await api.get(`${PROVIDER_ACCOUNTS_URL}/${accountId}/verify-balance`);
       return unwrap(response);
     } catch (error) {
       throw handleSettlementErrors(error);
@@ -154,7 +154,7 @@ export const providerAccountsService = {
   settleRemainingBalance: async (providerId, reason) => {
     try {
       if (!providerId) throw new Error('معرف مقدم الخدمة مطلوب');
-      const response = await axiosClient.post(`${PROVIDER_ACCOUNTS_URL}/by-provider/${providerId}/settle-remaining`, {
+      const response = await api.post(`${PROVIDER_ACCOUNTS_URL}/by-provider/${providerId}/settle-remaining`, {
         reason: reason || 'Manual settlement from provider account details page'
       });
       return unwrap(response);
@@ -193,7 +193,7 @@ export const settlementBatchesService = {
       };
 
       // SAFETY: Strip any unknown/calculated fields (totals, amounts, etc.)
-      const response = await axiosClient.post(SETTLEMENT_BATCHES_URL, contractRequest);
+      const response = await api.post(SETTLEMENT_BATCHES_URL, contractRequest);
       return unwrap(response);
     } catch (error) {
       throw handleSettlementErrors(error);
@@ -208,7 +208,7 @@ export const settlementBatchesService = {
   getById: async (batchId) => {
     try {
       if (!batchId) throw new Error('معرف الدفعة مطلوب');
-      const response = await axiosClient.get(`${SETTLEMENT_BATCHES_URL}/${batchId}`);
+      const response = await api.get(`${SETTLEMENT_BATCHES_URL}/${batchId}`);
       return unwrap(response);
     } catch (error) {
       throw handleSettlementErrors(error);
@@ -228,7 +228,7 @@ export const settlementBatchesService = {
       if (params.size) queryParams.append('size', params.size);
 
       const url = `${SETTLEMENT_BATCHES_URL}${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
-      const response = await axiosClient.get(url);
+      const response = await api.get(url);
       return normalizePaginatedResponse(response);
     } catch (error) {
       throw handleSettlementErrors(error);
@@ -243,7 +243,7 @@ export const settlementBatchesService = {
   getItems: async (batchId) => {
     try {
       if (!batchId) throw new Error('معرف الدفعة مطلوب');
-      const response = await axiosClient.get(`${SETTLEMENT_BATCHES_URL}/${batchId}/items`);
+      const response = await api.get(`${SETTLEMENT_BATCHES_URL}/${batchId}/items`);
       return unwrap(response);
     } catch (error) {
       throw handleSettlementErrors(error);
@@ -258,7 +258,7 @@ export const settlementBatchesService = {
   getAvailableClaims: async (providerId) => {
     try {
       if (!providerId) throw new Error('معرف مقدم الخدمة مطلوب');
-      const response = await axiosClient.get(`${SETTLEMENT_BATCHES_URL}/available-claims/${providerId}`);
+      const response = await api.get(`${SETTLEMENT_BATCHES_URL}/available-claims/${providerId}`);
       return unwrap(response);
     } catch (error) {
       throw handleSettlementErrors(error);
@@ -286,7 +286,7 @@ export const settlementBatchesService = {
       // Strict contract - only claimIds
       const contractRequest = { claimIds };
 
-      const response = await axiosClient.put(`${SETTLEMENT_BATCHES_URL}/${batchId}/claims`, contractRequest);
+      const response = await api.put(`${SETTLEMENT_BATCHES_URL}/${batchId}/claims`, contractRequest);
       return unwrap(response);
     } catch (error) {
       throw handleSettlementErrors(error);
@@ -314,7 +314,7 @@ export const settlementBatchesService = {
       // Strict contract - only claimIds
       const contractRequest = { claimIds };
 
-      const response = await axiosClient.delete(`${SETTLEMENT_BATCHES_URL}/${batchId}/claims`, {
+      const response = await api.delete(`${SETTLEMENT_BATCHES_URL}/${batchId}/claims`, {
         data: contractRequest
       });
       return unwrap(response);
@@ -348,7 +348,7 @@ export const settlementBatchesService = {
       // Empty body or optional note - NO amounts
       const contractRequest = {};
 
-      const response = await axiosClient.post(`${SETTLEMENT_BATCHES_URL}/${batchId}/confirm`, contractRequest);
+      const response = await api.post(`${SETTLEMENT_BATCHES_URL}/${batchId}/confirm`, contractRequest);
       return unwrap(response);
     } catch (error) {
       throw handleSettlementErrors(error);
@@ -364,7 +364,7 @@ export const settlementBatchesService = {
     try {
       if (!batchId) throw new Error('معرف الدفعة مطلوب');
 
-      const response = await axiosClient.get(`/settlement/reports/${batchId}/official-pdf`, {
+      const response = await api.get(`/settlement/reports/${batchId}/official-pdf`, {
         responseType: 'blob'
       });
 
@@ -392,7 +392,7 @@ export const providerPaymentsService = {
       if (params.size) queryParams.append('size', params.size);
 
       const url = `${PROVIDER_PAYMENTS_URL}/confirmed-batches${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
-      const response = await axiosClient.get(url);
+      const response = await api.get(url);
       return normalizePaginatedResponse(response);
     } catch (error) {
       throw handleSettlementErrors(error);
@@ -413,7 +413,7 @@ export const providerPaymentsService = {
         ...(data.notes && { notes: String(data.notes) })
       };
 
-      const response = await axiosClient.post(`${PROVIDER_PAYMENTS_URL}/batches/${batchId}`, contractRequest);
+      const response = await api.post(`${PROVIDER_PAYMENTS_URL}/batches/${batchId}`, contractRequest);
       return unwrap(response);
     } catch (error) {
       throw handleSettlementErrors(error);
@@ -434,7 +434,7 @@ export const providerPaymentsService = {
         ...(data.notes && { notes: String(data.notes) })
       };
 
-      const response = await axiosClient.post(`${PROVIDER_PAYMENTS_URL}/provider/${providerId}`, contractRequest);
+      const response = await api.post(`${PROVIDER_PAYMENTS_URL}/provider/${providerId}`, contractRequest);
       return unwrap(response);
     } catch (error) {
       throw handleSettlementErrors(error);
@@ -449,7 +449,7 @@ export const providerPaymentsService = {
       if (year) queryParams.append('year', String(year));
 
       const url = `/provider-payments/${providerId}/monthly-summary${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-      const response = await axiosClient.get(url);
+      const response = await api.get(url);
       return unwrap(response);
     } catch (error) {
       throw handleSettlementErrors(error);
@@ -461,7 +461,7 @@ export const providerPaymentsService = {
       if (!providerId) throw new Error('معرف مقدم الخدمة مطلوب');
       if (!year || !month) throw new Error('السنة والشهر مطلوبان');
 
-      const response = await axiosClient.get(`/provider-payments/${providerId}/monthly-payments?year=${year}&month=${month}`);
+      const response = await api.get(`/provider-payments/${providerId}/monthly-payments?year=${year}&month=${month}`);
       return unwrap(response);
     } catch (error) {
       throw handleSettlementErrors(error);
@@ -471,7 +471,7 @@ export const providerPaymentsService = {
   createMonthlyPayment: async (providerId, data = {}) => {
     try {
       if (!providerId) throw new Error('معرف مقدم الخدمة مطلوب');
-      const response = await axiosClient.post(`/provider-payments/${providerId}/monthly-payments`, data);
+      const response = await api.post(`/provider-payments/${providerId}/monthly-payments`, data);
       return unwrap(response);
     } catch (error) {
       throw handleSettlementErrors(error);
@@ -482,7 +482,7 @@ export const providerPaymentsService = {
     try {
       if (!providerId) throw new Error('معرف مقدم الخدمة مطلوب');
       if (!paymentId) throw new Error('معرف السند مطلوب');
-      const response = await axiosClient.post(`/provider-payments/${providerId}/monthly-payments/${paymentId}/update`, data);
+      const response = await api.post(`/provider-payments/${providerId}/monthly-payments/${paymentId}/update`, data);
       return unwrap(response);
     } catch (error) {
       throw handleSettlementErrors(error);
@@ -492,7 +492,7 @@ export const providerPaymentsService = {
   lockMonth: async (providerId, year, month) => {
     try {
       if (!providerId) throw new Error('معرف مقدم الخدمة مطلوب');
-      const response = await axiosClient.post(`/provider-payments/${providerId}/months/${year}/${month}/lock`);
+      const response = await api.post(`/provider-payments/${providerId}/months/${year}/${month}/lock`);
       return unwrap(response);
     } catch (error) {
       throw handleSettlementErrors(error);
@@ -502,7 +502,7 @@ export const providerPaymentsService = {
   unlockMonth: async (providerId, year, month, reason) => {
     try {
       if (!providerId) throw new Error('معرف مقدم الخدمة مطلوب');
-      const response = await axiosClient.post(`/provider-payments/${providerId}/months/${year}/${month}/unlock`, { reason });
+      const response = await api.post(`/provider-payments/${providerId}/months/${year}/${month}/unlock`, { reason });
       return unwrap(response);
     } catch (error) {
       throw handleSettlementErrors(error);
@@ -512,7 +512,7 @@ export const providerPaymentsService = {
   previewPaymentReceipt: async (providerId, paymentId) => {
     try {
       if (!providerId || !paymentId) throw new Error('بيانات السند غير مكتملة');
-      const response = await axiosClient.get(`/provider-payments/${providerId}/monthly-payments/${paymentId}/preview`);
+      const response = await api.get(`/provider-payments/${providerId}/monthly-payments/${paymentId}/preview`);
       return unwrap(response);
     } catch (error) {
       throw handleSettlementErrors(error);
@@ -522,7 +522,7 @@ export const providerPaymentsService = {
   previewMonthlyStatement: async (providerId, year, month) => {
     try {
       if (!providerId) throw new Error('معرف مقدم الخدمة مطلوب');
-      const response = await axiosClient.get(`/provider-payments/${providerId}/monthly-statement?year=${year}&month=${month}`);
+      const response = await api.get(`/provider-payments/${providerId}/monthly-statement?year=${year}&month=${month}`);
       return unwrap(response);
     } catch (error) {
       throw handleSettlementErrors(error);
@@ -532,7 +532,7 @@ export const providerPaymentsService = {
   previewYearlyStatement: async (providerId, year) => {
     try {
       if (!providerId) throw new Error('معرف مقدم الخدمة مطلوب');
-      const response = await axiosClient.get(`/provider-payments/${providerId}/yearly-statement?year=${year}`);
+      const response = await api.get(`/provider-payments/${providerId}/yearly-statement?year=${year}`);
       return unwrap(response);
     } catch (error) {
       throw handleSettlementErrors(error);

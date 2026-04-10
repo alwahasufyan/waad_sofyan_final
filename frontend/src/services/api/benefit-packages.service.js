@@ -1,4 +1,4 @@
-import axiosClient from 'utils/axios';
+import api from 'lib/api';
 import { normalizePaginatedResponse } from 'utils/api-response-normalizer';
 
 /**
@@ -18,7 +18,7 @@ const unwrap = (response) => response.data?.data || response.data;
  * @returns {Promise<Object>} Paginated response
  */
 export const getBenefitPackages = async (params = {}) => {
-  const response = await axiosClient.get(BASE_URL, { params });
+  const response = await api.get(BASE_URL, { params });
   return normalizePaginatedResponse(response);
 };
 
@@ -28,7 +28,7 @@ export const getBenefitPackages = async (params = {}) => {
  * @returns {Promise<Object>} Package details
  */
 export const getBenefitPackageById = async (id) => {
-  const response = await axiosClient.get(`${BASE_URL}/${id}`);
+  const response = await api.get(`${BASE_URL}/${id}`);
   return unwrap(response);
 };
 
@@ -38,7 +38,7 @@ export const getBenefitPackageById = async (id) => {
  * @returns {Promise<Object>} Created package
  */
 export const createBenefitPackage = async (payload) => {
-  const response = await axiosClient.post(BASE_URL, payload);
+  const response = await api.post(BASE_URL, payload);
   return unwrap(response);
 };
 
@@ -49,7 +49,7 @@ export const createBenefitPackage = async (payload) => {
  * @returns {Promise<Object>} Updated package
  */
 export const updateBenefitPackage = async (id, payload) => {
-  const response = await axiosClient.put(`${BASE_URL}/${id}`, payload);
+  const response = await api.put(`${BASE_URL}/${id}`, payload);
   return unwrap(response);
 };
 
@@ -59,7 +59,7 @@ export const updateBenefitPackage = async (id, payload) => {
  * @returns {Promise<void>}
  */
 export const deleteBenefitPackage = async (id) => {
-  const response = await axiosClient.delete(`${BASE_URL}/${id}`);
+  const response = await api.delete(`${BASE_URL}/${id}`);
   return unwrap(response);
 };
 
@@ -68,6 +68,6 @@ export const deleteBenefitPackage = async (id) => {
  * @returns {Promise<Array>} All packages
  */
 export const getAllBenefitPackages = async () => {
-  const response = await axiosClient.get(`${BASE_URL}/all`);
+  const response = await api.get(`${BASE_URL}/all`);
   return unwrap(response);
 };

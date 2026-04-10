@@ -7,7 +7,7 @@
  * For user account management (status, password, roles), use userManagement.service.js
  */
 
-import axiosServices from '../../utils/axios';
+import api from 'lib/api';
 
 const BASE_URL = '/admin/users';
 
@@ -17,7 +17,7 @@ export const usersService = {
    * GET /api/admin/users
    */
   getAllUsers: async () => {
-    const response = await axiosServices.get(BASE_URL);
+    const response = await api.get(BASE_URL);
     return response?.data?.data || response?.data || [];
   },
 
@@ -26,7 +26,7 @@ export const usersService = {
    * GET /api/admin/users/{id}
    */
   getUserById: (id) => {
-    return axiosServices.get(`${BASE_URL}/${id}`);
+    return api.get(`${BASE_URL}/${id}`);
   },
 
   /**
@@ -34,7 +34,7 @@ export const usersService = {
    * POST /api/admin/users
    */
   createUser: (userData) => {
-    return axiosServices.post(BASE_URL, userData);
+    return api.post(BASE_URL, userData);
   },
 
   /**
@@ -42,7 +42,7 @@ export const usersService = {
    * PUT /api/admin/users/{id}
    */
   updateUser: (id, userData) => {
-    return axiosServices.put(`${BASE_URL}/${id}`, userData);
+    return api.put(`${BASE_URL}/${id}`, userData);
   },
 
   /**
@@ -50,7 +50,7 @@ export const usersService = {
    * DELETE /api/admin/users/{id}
    */
   deleteUser: (id) => {
-    return axiosServices.delete(`${BASE_URL}/${id}`);
+    return api.delete(`${BASE_URL}/${id}`);
   },
 
   /**
@@ -58,7 +58,7 @@ export const usersService = {
    * PATCH /api/admin/users/{id}/toggle-status
    */
   toggleUserStatus: async (id) => {
-    const response = await axiosServices.patch(`${BASE_URL}/${id}/toggle-status`);
+    const response = await api.patch(`${BASE_URL}/${id}/toggle-status`);
     return response?.data;
   },
 
@@ -67,7 +67,7 @@ export const usersService = {
    * PUT /api/admin/user-management/{id}/reset-password
    */
   resetPassword: async (id, newPassword) => {
-    const response = await axiosServices.put(`/admin/user-management/${id}/reset-password`, { newPassword });
+    const response = await api.put(`/admin/user-management/${id}/reset-password`, { newPassword });
     return response?.data;
   },
 
@@ -76,7 +76,7 @@ export const usersService = {
    * GET /api/admin/users/search?query={query}
    */
   searchUsers: (query) => {
-    return axiosServices.get(`${BASE_URL}/search`, {
+    return api.get(`${BASE_URL}/search`, {
       params: { query }
     });
   },
@@ -86,7 +86,7 @@ export const usersService = {
    * GET /api/admin/users/paginate?page={page}&size={size}
    */
   getUsersPaginated: (page = 0, size = 10) => {
-    return axiosServices.get(`${BASE_URL}/paginate`, {
+    return api.get(`${BASE_URL}/paginate`, {
       params: { page, size }
     });
   },
@@ -101,7 +101,7 @@ export const usersService = {
   getUsersTable: async (params) => {
     const { page = 1, size = 20, sortBy = 'id', sortDir = 'asc', search = '' } = params || {};
     // Backend paginate uses 0-based page, frontend sends 1-based
-    const response = await axiosServices.get(`${BASE_URL}/paginate`, {
+    const response = await api.get(`${BASE_URL}/paginate`, {
       params: { page: Math.max(0, page - 1), size, sortBy, sortDir, search }
     });
     // Unwrap ApiResponse and transform Spring Page to TbaDataTable format
@@ -119,7 +119,7 @@ export const usersService = {
    * GET /api/admin/users/unassigned-providers
    */
   getUnassignedProviders: async () => {
-    const response = await axiosServices.get(`${BASE_URL}/unassigned-providers`);
+    const response = await api.get(`${BASE_URL}/unassigned-providers`);
     return response?.data?.data || response?.data || [];
   },
 
@@ -128,7 +128,7 @@ export const usersService = {
    * GET /api/admin/users/provider/{providerId}
    */
   getUsersByProvider: async (providerId) => {
-    const response = await axiosServices.get(`${BASE_URL}/provider/${providerId}`);
+    const response = await api.get(`${BASE_URL}/provider/${providerId}`);
     return response?.data?.data || response?.data || [];
   }
 };

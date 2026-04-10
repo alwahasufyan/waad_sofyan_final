@@ -25,7 +25,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import PrintIcon from '@mui/icons-material/Print';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 
-import axiosClient from 'utils/axios';
+import api from 'lib/api';
 import { openWaadPrintWindow } from 'utils/printLayout';
 import MainCard from 'components/MainCard';
 import { ModernPageHeader } from 'components/tba';
@@ -47,7 +47,7 @@ export default function MemberFinancialRegister() {
 
   const fetchEmployers = async () => {
     try {
-      const response = await axiosClient.get('/employers/selectors');
+      const response = await api.get('/employers/selectors');
       setEmployers(response.data?.data || []);
     } catch {
       setEmployers([]);

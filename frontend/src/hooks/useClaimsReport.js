@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import axiosClient from 'utils/axios';
+import api from 'lib/api';
 
 /**
  * Claim Status Constants
@@ -104,7 +104,7 @@ export const useClaimsReport = ({ employerId, providerId, filters = DEFAULT_FILT
 
       // Provider filtering is done client-side for better compatibility
       // ⚠️ FIXED: Use /v1/claims to match Backend API
-      const response = await axiosClient.get('/claims', { params });
+      const response = await api.get('/claims', { params });
       const data = unwrap(response);
 
       // Handle different response formats

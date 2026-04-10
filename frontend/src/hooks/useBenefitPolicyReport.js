@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import axiosClient from 'utils/axios';
+import api from 'lib/api';
 
 /**
  * Helper to unwrap API response
@@ -85,10 +85,10 @@ export const useBenefitPolicyReport = ({ employerId, filters = DEFAULT_FILTERS }
       // ⚠️ FIXED: Use /v1/claims to match Backend API
       const [policiesResponse, membersResponse, claimsResponse] = await Promise.all([
         employerId
-          ? axiosClient.get(`/benefit-policies/employer/${employerId}`)
-          : axiosClient.get('/benefit-policies', { params: policyParams }),
-        axiosClient.get('/unified-members', { params: memberParams }),
-        axiosClient.get('/claims', { params: claimsParams })
+          ? api.get(`/benefit-policies/employer/${employerId}`)
+          : api.get('/benefit-policies', { params: policyParams }),
+        api.get('/unified-members', { params: memberParams }),
+        api.get('/claims', { params: claimsParams })
       ]);
 
       // Unwrap policies

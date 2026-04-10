@@ -1,6 +1,6 @@
 import PropTypes from 'prop-types';
-import { useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
+import { Box, CircularProgress } from '@mui/material';
 
 // project imports
 import useAuth from 'hooks/useAuth';
@@ -11,23 +11,20 @@ import { getDefaultRouteForRole } from 'utils/roleRoutes';
 
 export default function GuestGuard({ children }) {
   const { authStatus, user } = useAuth();
-  const navigate = useNavigate();
   const location = useLocation();
 
-  useEffect(() => {
-    // CRITICAL: Only redirect when we KNOW user is authenticated
-    // Do NOT redirect during INITIALIZING
-    if (authStatus === AUTH_STATUS.AUTHENTICATED) {
-      navigate(location?.state?.from ? location?.state?.from : getDefaultRouteForRole(user?.role), {
-        state: {
-          from: ''
-        },
-        replace: true
-      });
-    }
-  }, [authStatus, navigate, location, user?.role]);
+  if (authStatus === AUTH_STATUS.INITIALIZING) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+        <CircularProgress size={60} />
+      </Box>
+    );
+  }
 
-  // Always render children (login form) during INITIALIZING and UNAUTHENTICATED
+  if (authStatus === AUTH_STATUS.AUTHENTICATED) {
+    return <Navigate to={location?.state?.from ? location.state.from : getDefaultRouteForRole(user?.role)} replace />;
+  }
+
   return children;
 }
 

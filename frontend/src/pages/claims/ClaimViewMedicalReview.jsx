@@ -66,6 +66,7 @@ import { alpha } from '@mui/material/styles';
 // Components
 import { ModernPageHeader } from 'components/tba';
 import { UnifiedAttachmentViewer, MedicalReviewLayout } from 'components/medical-review';
+import useAuth from 'hooks/useAuth';
 
 // Services
 import { claimsService } from 'services/api';
@@ -186,6 +187,7 @@ const ClaimViewMedicalReview = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { enqueueSnackbar } = useSnackbar();
+  const { user: authenticatedUser } = useAuth();
 
   // State
   const [claim, setClaim] = useState(null);
@@ -203,27 +205,7 @@ const ClaimViewMedicalReview = () => {
   const draftStorageKey = useMemo(() => `claim-review-draft-${id}`, [id]);
   const chatStorageKey = useMemo(() => `claim-review-chat-${id}`, [id]);
 
-  const currentUser = useMemo(() => {
-    try {
-      const localUser = localStorage.getItem('user_details');
-      if (localUser) {
-        return JSON.parse(localUser);
-      }
-    } catch (error) {
-      console.warn('Unable to parse user_details from localStorage:', error);
-    }
-
-    try {
-      const sessionUser = sessionStorage.getItem('user');
-      if (sessionUser) {
-        return JSON.parse(sessionUser);
-      }
-    } catch (error) {
-      console.warn('Unable to parse user from sessionStorage:', error);
-    }
-
-    return {};
-  }, []);
+  const currentUser = useMemo(() => authenticatedUser || {}, [authenticatedUser]);
 
   const currentUserName = currentUser?.fullName || currentUser?.name || currentUser?.username || 'المراجع الطبي';
   const currentUserRole = currentUser?.role || (Array.isArray(currentUser?.roles) ? currentUser.roles[0] : null) || 'MEDICAL_REVIEWER';
@@ -656,7 +638,6 @@ const ClaimViewMedicalReview = () => {
         setSubmitting(false);
       }
     },
-    [id, ensureClaimUnderReview, draftStorageKey, navigate, enqueueSnackbar]
     [id, reviewLock, ensureClaimUnderReview, draftStorageKey, navigate, enqueueSnackbar]
   );
 

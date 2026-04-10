@@ -19,7 +19,7 @@ import {
   InputLabel
 } from '@mui/material';
 import { MailOutlined, SettingOutlined, CheckCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
-import axios from 'utils/axios';
+import api from 'lib/api';
 import ModernPageHeader from 'components/tba/ModernPageHeader';
 import { openSnackbar } from 'store/reducers/snackbar';
 import { useDispatch } from 'react-redux';
@@ -52,7 +52,7 @@ const EmailSettingsPage = () => {
   const fetchSettings = async () => {
     setLoading(true);
     try {
-      const response = await axios.get('/api/admin/settings/email');
+      const response = await api.get('/admin/settings/email');
       if (response.data && response.data.id) {
         setSettings({ ...response.data, smtpPassword: '', imapPassword: '' });
       }
@@ -74,7 +74,7 @@ const EmailSettingsPage = () => {
   const handleSave = async () => {
     setLoading(true);
     try {
-      await axios.post('/api/admin/settings/email', settings);
+      await api.post('/admin/settings/email', settings);
       dispatch(
         openSnackbar({
           open: true,
@@ -103,8 +103,8 @@ const EmailSettingsPage = () => {
   const handleTestConnection = async (type) => {
     setTesting(true);
     try {
-      const endpoint = type === 'imap' ? '/api/admin/settings/email/test-imap' : '/api/admin/settings/email/test-smtp';
-      const response = await axios.post(endpoint, settings);
+      const endpoint = type === 'imap' ? '/admin/settings/email/test-imap' : '/admin/settings/email/test-smtp';
+      const response = await api.post(endpoint, settings);
       if (response.data) {
         dispatch(
           openSnackbar({

@@ -30,9 +30,6 @@ export default function Login() {
   const { companyName, getLogoSrc, hasLogo } = useCompanySettings();
 
   const [searchParams] = useSearchParams();
-  const auth = searchParams.get('auth');
-  console.log(auth);
-
   return (
     <AuthWrapper>
       <Grid container spacing={3}>

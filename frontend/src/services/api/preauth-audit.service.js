@@ -1,4 +1,4 @@
-import axiosClient from 'utils/axios';
+import api from 'lib/api';
 
 /**
  * PreAuthorization Audit Trail Service
@@ -8,7 +8,7 @@ const preAuthAuditService = {
    * Get audit history for a specific PreAuth
    */
   getAuditHistory: async (preAuthId, page = 0, size = 20) => {
-    const response = await axiosClient.get(`/pre-authorizations/${preAuthId}/history`, {
+    const response = await api.get(`/pre-authorizations/${preAuthId}/history`, {
       params: { page, size }
     });
     return response.data;
@@ -18,7 +18,7 @@ const preAuthAuditService = {
    * Get full audit history (non-paginated)
    */
   getFullAuditHistory: async (preAuthId) => {
-    const response = await axiosClient.get(`/pre-authorizations/${preAuthId}/history/full`);
+    const response = await api.get(`/pre-authorizations/${preAuthId}/history/full`);
     return response.data;
   },
 
@@ -26,7 +26,7 @@ const preAuthAuditService = {
    * Get audits by user
    */
   getAuditsByUser: async (username, page = 0, size = 20) => {
-    const response = await axiosClient.get(`/pre-authorizations/audits/user/${username}`, {
+    const response = await api.get(`/pre-authorizations/audits/user/${username}`, {
       params: { page, size }
     });
     return response.data;
@@ -36,7 +36,7 @@ const preAuthAuditService = {
    * Get audits by action type
    */
   getAuditsByAction: async (action, page = 0, size = 20) => {
-    const response = await axiosClient.get(`/pre-authorizations/audits/action/${action}`, {
+    const response = await api.get(`/pre-authorizations/audits/action/${action}`, {
       params: { page, size }
     });
     return response.data;
@@ -46,7 +46,7 @@ const preAuthAuditService = {
    * Get recent audits (last N days)
    */
   getRecentAudits: async (days = 7, page = 0, size = 20) => {
-    const response = await axiosClient.get('/pre-authorizations/audits/recent', {
+    const response = await api.get('/pre-authorizations/audits/recent', {
       params: { days, page, size }
     });
     return response.data;
@@ -56,7 +56,7 @@ const preAuthAuditService = {
    * Search audit trail
    */
   searchAudits: async (query, page = 0, size = 20) => {
-    const response = await axiosClient.get('/pre-authorizations/audits/search', {
+    const response = await api.get('/pre-authorizations/audits/search', {
       params: { query, page, size }
     });
     return response.data;
@@ -66,7 +66,7 @@ const preAuthAuditService = {
    * Get audit statistics
    */
   getStatistics: async () => {
-    const response = await axiosClient.get('/pre-authorizations/audits/statistics');
+    const response = await api.get('/pre-authorizations/audits/statistics');
     return response.data;
   }
 };

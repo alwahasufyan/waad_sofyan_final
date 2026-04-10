@@ -1,4 +1,4 @@
-import axiosClient from 'utils/axios';
+import api from 'lib/api';
 
 const BASE = '/claim-batches';
 
@@ -9,7 +9,7 @@ const claimBatchesService = {
      */
     getCurrentBatch: async (providerId, employerId, year, month) => {
         try {
-            const response = await axiosClient.get(`${BASE}/current`, {
+            const response = await api.get(`${BASE}/current`, {
                 params: { providerId, employerId, year, month }
             });
             return response.data || null;
@@ -25,7 +25,7 @@ const claimBatchesService = {
      * Call this when the user intentionally wants to open a batch (e.g., first save).
      */
     openOrGetBatch: async (providerId, employerId, year, month) => {
-        const response = await axiosClient.post(`${BASE}/current`, null, {
+        const response = await api.post(`${BASE}/current`, null, {
             params: { providerId, employerId, year, month }
         });
         return response.data;
@@ -35,7 +35,7 @@ const claimBatchesService = {
      * Search batches by employer and period.
      */
     list: async (params) => {
-        const response = await axiosClient.get(BASE, { params });
+        const response = await api.get(BASE, { params });
         return response.data;
     }
 };

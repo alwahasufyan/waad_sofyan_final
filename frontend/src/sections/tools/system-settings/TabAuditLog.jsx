@@ -24,7 +24,7 @@ import { useQuery } from '@tanstack/react-query';
 import MainCard from 'components/MainCard';
 import ScrollX from 'components/ScrollX';
 import { CSVExport } from 'components/third-party/react-table';
-import axiosClient from 'utils/axios';
+import api from 'lib/api';
 
 // icons
 import { FileTextOutlined, SafetyOutlined, UserOutlined, DatabaseOutlined, CaretUpOutlined, CaretDownOutlined } from '@ant-design/icons';
@@ -57,7 +57,7 @@ export default function TabAuditLog() {
   const { data: rawData, isLoading, isError } = useQuery({
     queryKey: ['admin-audit-log'],
     queryFn: async () => {
-      const response = await axiosClient.get('/admin/audit', { params: { size: 200 } });
+      const response = await api.get('/admin/audit', { params: { size: 200 } });
       const payload = response.data?.data || response.data;
       // Backend may return paginated {content:[...]} or a plain array
       if (Array.isArray(payload?.content)) return payload.content;

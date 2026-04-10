@@ -45,10 +45,10 @@ import MainCard from 'components/MainCard';
 import ModernPageHeader from 'components/tba/ModernPageHeader';
 import { useProviderDetails } from 'hooks/useProviders';
 import { providersService } from 'services/api';
-import axiosClient from 'utils/axios';
+import api from 'lib/api';
 
 const fetchProviderServices = async (providerId) => {
-  const res = await axiosClient.get(`/api/v1/providers/${providerId}/services`);
+  const res = await api.get(`/api/v1/providers/${providerId}/services`);
   return res.data?.data ?? [];
 };
 
@@ -156,7 +156,7 @@ const ProviderView = () => {
         setLoadingContracts(true);
         try {
           // Fetch contracts for this provider
-          const response = await axiosClient.get(`/provider-contracts/provider/${id}`);
+          const response = await api.get(`/provider-contracts/provider/${id}`);
           // Handle paginated response (Page object) or array
           const data = response.data?.data?.content || response.data?.data || response.data?.content || [];
           setContracts(Array.isArray(data) ? data : [data]);

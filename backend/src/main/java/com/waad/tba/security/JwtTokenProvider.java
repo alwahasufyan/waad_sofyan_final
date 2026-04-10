@@ -1,7 +1,9 @@
 package com.waad.tba.security;
 
+import com.waad.tba.common.exception.UnauthorizedException;
 import com.waad.tba.modules.rbac.entity.User;
 import io.jsonwebtoken.*;
+import io.jsonwebtoken.security.SignatureException;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -66,29 +68,27 @@ public class JwtTokenProvider {
     }
 
     public String getUsernameFromToken(String token) {
-        Claims claims = Jwts.parser()
-                .verifyWith(key)
-                .build()
-                .parseSignedClaims(token)
-                .getPayload();
-        return claims.getSubject();
+        return parseClaims(token).getSubject();
     }
 
     public boolean validateToken(String token) {
+        parseClaims(token);
+        return true;
+    }
+
+    private Claims parseClaims(String token) {
         try {
-            Jwts.parser().verifyWith(key).build().parseSignedClaims(token);
-            return true;
-        } catch (SecurityException ex) {
-            log.error("Invalid JWT signature");
-        } catch (MalformedJwtException ex) {
-            log.error("Invalid JWT token");
-        } catch (ExpiredJwtException ex) {
-            log.error("Expired JWT token");
-        } catch (UnsupportedJwtException ex) {
-            log.error("Unsupported JWT token");
+            return Jwts.parser()
+                    .verifyWith(key)
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+        } catch (ExpiredJwtException | MalformedJwtException | SignatureException | UnsupportedJwtException ex) {
+            log.warn("Rejected JWT token: {}", ex.getClass().getSimpleName());
+            throw new UnauthorizedException("Invalid or expired token");
         } catch (IllegalArgumentException ex) {
-            log.error("JWT claims string is empty");
+            log.warn("Rejected JWT token: empty or invalid token payload");
+            throw new UnauthorizedException("Invalid or expired token");
         }
-        return false;
     }
 }

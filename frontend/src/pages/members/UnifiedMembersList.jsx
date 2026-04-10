@@ -86,7 +86,7 @@ import {
   MEMBER_TYPES,
   MEMBER_STATUSES
 } from 'services/api/unified-members.service';
-import axiosClient from 'utils/axios';
+import api from 'lib/api';
 import { RELATIONSHIP_CONFIG } from 'components/insurance/MemberTypeIndicator';
 
 /**
@@ -172,7 +172,7 @@ const UnifiedMembersList = () => {
 
   const fetchEmployers = async () => {
     try {
-      const response = await axiosClient.get('/employers/selectors');
+      const response = await api.get('/employers/selectors');
       setEmployers(response.data?.data || []);
     } catch (error) {
       console.error('Error fetching employers:', error);

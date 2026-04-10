@@ -4,7 +4,7 @@ import ReactApexChart from 'react-apexcharts';
 import { useTheme } from '@mui/material/styles';
 import { Box, Typography, Stack, Skeleton } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
-import axios from 'utils/axios';
+import api from 'lib/api';
 
 // ==============================|| MEMBERS BY EMPLOYER CHART ||============================== //
 
@@ -14,7 +14,7 @@ export default function MembersByEmployerChart({ height = 365 }) {
   const { data: chartData, isLoading } = useQuery({
     queryKey: ['membersByEmployer'],
     queryFn: async () => {
-      const response = await axios.get('/dashboard/members-by-employer');
+      const response = await api.get('/dashboard/members-by-employer');
       return response.data;
     },
     initialData: {

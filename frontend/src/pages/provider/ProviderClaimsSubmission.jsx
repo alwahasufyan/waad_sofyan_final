@@ -79,7 +79,7 @@ import MainCard from 'components/MainCard';
 import ModernPageHeader from 'components/tba/ModernPageHeader';
 import SuccessDialog from 'components/SuccessDialog';
 import { useAuth } from 'contexts/AuthContext';
-import axiosClient from 'utils/axios';
+import api from 'lib/api';
 import { MEDICAL_COLORS } from 'themes/provider-theme';
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -608,7 +608,7 @@ export default function ProviderClaimsSubmission() {
     if (!draftClaimId) return;
 
     try {
-      const response = await axiosClient.get(`/claims/${draftClaimId}`);
+      const response = await api.get(`/claims/${draftClaimId}`);
       const claim = response.data?.data || response.data;
 
       if (!claim) {
@@ -710,7 +710,7 @@ export default function ProviderClaimsSubmission() {
   const fetchMedicalCategories = async () => {
     setLoadingCategories(true);
     try {
-      const response = await axiosClient.get('/provider/medical-categories');
+      const response = await api.get('/provider/medical-categories');
       const categories = response.data?.data || response.data || [];
       setMedicalCategories(
         categories.map((category) => ({
@@ -731,7 +731,7 @@ export default function ProviderClaimsSubmission() {
   const fetchVisitDetails = async () => {
     if (!linkedVisitId) return;
     try {
-      const response = await axiosClient.get(`/visits/${linkedVisitId}`);
+      const response = await api.get(`/visits/${linkedVisitId}`);
       setVisitDetails(response.data?.data || response.data);
     } catch (err) {
       console.error('Failed to fetch visit:', err);
@@ -741,7 +741,7 @@ export default function ProviderClaimsSubmission() {
   const fetchAvailableServices = async () => {
     setLoadingServices(true);
     try {
-      const response = await axiosClient.get('/provider/my-contract/services', {
+      const response = await api.get('/provider/my-contract/services', {
         params: { size: 2000 }
       });
 
@@ -781,7 +781,7 @@ export default function ProviderClaimsSubmission() {
       console.error('Failed to fetch services:', err);
 
       try {
-        const response = await axiosClient.get('/provider/my-services');
+        const response = await api.get('/provider/my-services');
         const services = response.data?.data || response.data || [];
         setAvailableServices(
           services.map((s) => ({
@@ -812,7 +812,7 @@ export default function ProviderClaimsSubmission() {
   const fetchMemberLimit = async () => {
     if (!linkedMemberId) return;
     try {
-      const response = await axiosClient.get(`/members/${linkedMemberId}/remaining-limit`);
+      const response = await api.get(`/members/${linkedMemberId}/remaining-limit`);
       setMemberLimit(response.data?.data || response.data);
     } catch (err) {
       console.error('Failed to fetch member limit:', err);
@@ -828,7 +828,7 @@ export default function ProviderClaimsSubmission() {
     if (!linkedMemberId) return;
     setLoadingPreAuths(true);
     try {
-      const response = await axiosClient.get(`/pre-authorizations/member/${linkedMemberId}`);
+      const response = await api.get(`/pre-authorizations/member/${linkedMemberId}`);
       const payload = response.data?.data ?? response.data ?? [];
       const preAuths = Array.isArray(payload)
         ? payload
@@ -878,7 +878,7 @@ export default function ProviderClaimsSubmission() {
       setClaimLines((prev) => prev.map((line) => (line.id === lineId ? { ...line, loadingPrice: true, priceError: null } : line)));
 
       try {
-        const response = await axiosClient.get(`/provider/my-services/${serviceCode}/price`);
+        const response = await api.get(`/provider/my-services/${serviceCode}/price`);
         const priceData = response.data?.data || response.data;
 
         if (priceData.hasContract && priceData.contractPrice != null) {
@@ -1136,7 +1136,7 @@ export default function ProviderClaimsSubmission() {
     if (!claimId) return;
 
     try {
-      const response = await axiosClient.get(`/claims/${claimId}/attachments`);
+      const response = await api.get(`/claims/${claimId}/attachments`);
       const payload = response.data?.data ?? response.data ?? [];
       const attachments = Array.isArray(payload) ? payload : [];
 
@@ -1160,7 +1160,7 @@ export default function ProviderClaimsSubmission() {
     if (!activeClaimId || !attachmentId) return;
 
     try {
-      await axiosClient.delete(`/claims/${activeClaimId}/attachments/${attachmentId}`);
+      await api.delete(`/claims/${activeClaimId}/attachments/${attachmentId}`);
       setExistingAttachments((prev) => prev.filter((att) => att.id !== attachmentId));
     } catch (err) {
       console.error('Failed to delete attachment:', err);
@@ -1180,7 +1180,7 @@ export default function ProviderClaimsSubmission() {
         formData.append('file', file);
         formData.append('attachmentType', type);
 
-        await axiosClient.post(`/claims/${claimId}/attachments`, formData, {
+        await api.post(`/claims/${claimId}/attachments`, formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
         uploaded++;
@@ -1274,8 +1274,8 @@ export default function ProviderClaimsSubmission() {
       };
 
       const response = activeClaimId
-        ? await axiosClient.put(`/claims/${activeClaimId}/data`, payload)
-        : await axiosClient.post('/claims', payload);
+        ? await api.put(`/claims/${activeClaimId}/data`, payload)
+        : await api.post('/claims', payload);
       const result = response.data?.data || response.data;
       const claimId = result.id || activeClaimId;
       setActiveClaimId(claimId);
@@ -1285,7 +1285,7 @@ export default function ProviderClaimsSubmission() {
       }
 
       if (finalSubmit) {
-        await axiosClient.post(`/claims/${claimId}/submit`);
+        await api.post(`/claims/${claimId}/submit`);
       }
 
       localStorage.removeItem(localDraftStorageKey);

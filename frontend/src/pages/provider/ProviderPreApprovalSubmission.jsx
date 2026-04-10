@@ -71,7 +71,7 @@ import MainCard from 'components/MainCard';
 import ModernPageHeader from 'components/tba/ModernPageHeader';
 import SuccessDialog from 'components/SuccessDialog';
 import { useAuth } from 'contexts/AuthContext';
-import axiosClient from 'utils/axios';
+import api from 'lib/api';
 import { MEDICAL_COLORS } from 'themes/provider-theme';
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -385,13 +385,13 @@ const ProviderPreApprovalSubmission = () => {
 
         console.log('[PRE-AUTH] Loading contract and categories...');
 
-        const contractRes = await axiosClient.get('/provider/my-contract');
+        const contractRes = await api.get('/provider/my-contract');
         if (contractRes.data?.data) {
           setContract(contractRes.data.data);
           console.log('[PRE-AUTH] Contract loaded:', contractRes.data.data);
         }
 
-        const categoriesRes = await axiosClient.get('/provider/medical-categories');
+        const categoriesRes = await api.get('/provider/medical-categories');
         if (categoriesRes.data?.data) {
           const normalizedCategories = categoriesRes.data.data.map((category) => ({
             ...category,
@@ -428,7 +428,7 @@ const ProviderPreApprovalSubmission = () => {
         console.log('[PRE-AUTH] Loading services...');
 
         // Get contract services
-        const res = await axiosClient.get('/provider/my-contract/services', {
+        const res = await api.get('/provider/my-contract/services', {
           params: { page: 0, size: 500 }
         });
 
@@ -621,7 +621,7 @@ const ProviderPreApprovalSubmission = () => {
           currency: 'LYD'
         };
 
-        const response = await axiosClient.post('/pre-authorizations', payload);
+        const response = await api.post('/pre-authorizations', payload);
         const preAuthId = response.data?.data?.id;
 
         if (!preAuthId) continue;
@@ -633,14 +633,14 @@ const ProviderPreApprovalSubmission = () => {
             formData.append('file', file);
             formData.append('attachmentType', 'MEDICAL_REPORT');
 
-            await axiosClient.post(`/pre-authorizations/${preAuthId}/attachments`, formData, {
+            await api.post(`/pre-authorizations/${preAuthId}/attachments`, formData, {
               headers: { 'Content-Type': 'multipart/form-data' }
             });
           }
         }
 
         if (finalSubmit) {
-          await axiosClient.post(`/pre-authorizations/${preAuthId}/submit`);
+          await api.post(`/pre-authorizations/${preAuthId}/submit`);
         }
       }
 

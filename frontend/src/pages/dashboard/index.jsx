@@ -202,8 +202,7 @@ export default function Dashboard() {
 
   const getCurrentUserRoles = useCallback(() => {
     try {
-      const localUser = JSON.parse(localStorage.getItem('user') || '{}');
-      const currentUser = user || localUser;
+      const currentUser = user || {};
       const roles = [];
 
       if (Array.isArray(currentUser?.roles)) {

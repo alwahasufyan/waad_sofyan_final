@@ -1,5 +1,4 @@
-import axios from 'axios';
-import api from '../../utils/axios';
+import api from 'lib/api';
 
 /**
  * Files Service
@@ -88,22 +87,11 @@ const resolveFileRequestUrl = (fileUrl) => {
   return fileUrl.startsWith('/') ? fileUrl : `/${fileUrl}`;
 };
 
-const buildFileRequestConfig = () => {
-  const token = localStorage.getItem('serviceToken');
-
-  return {
-    responseType: 'blob',
-    withCredentials: true,
-    headers: token
-      ? {
-          Authorization: `Bearer ${token}`
-        }
-      : undefined
-  };
-};
-
 export const fetchFileBlobByUrl = async (fileUrl) => {
-  const response = await axios.get(resolveFileRequestUrl(fileUrl), buildFileRequestConfig());
+  const absoluteUrl = new URL(resolveFileRequestUrl(fileUrl), window.location.origin).toString();
+  const response = await api.get(absoluteUrl, {
+    responseType: 'blob'
+  });
   return response.data;
 };
 

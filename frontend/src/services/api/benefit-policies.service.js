@@ -1,4 +1,4 @@
-import axiosClient from 'utils/axios';
+import api from 'lib/api';
 
 /**
  * Benefit Policies API Service
@@ -29,7 +29,7 @@ const unwrap = (response) => response.data?.data || response.data;
  * @returns {Promise<Object>} Paginated response with content, totalElements, totalPages
  */
 export const getBenefitPolicies = async (params = {}) => {
-  const response = await axiosClient.get(BASE_URL, { params });
+  const response = await api.get(BASE_URL, { params });
   return unwrap(response);
 };
 
@@ -40,7 +40,7 @@ export const getBenefitPolicies = async (params = {}) => {
  * @returns {Promise<Object>} Policy details
  */
 export const getBenefitPolicyById = async (id) => {
-  const response = await axiosClient.get(`${BASE_URL}/${id}`);
+  const response = await api.get(`${BASE_URL}/${id}`);
   return unwrap(response);
 };
 
@@ -51,7 +51,7 @@ export const getBenefitPolicyById = async (id) => {
  * @returns {Promise<Object>} Policy details
  */
 export const getBenefitPolicyByCode = async (code) => {
-  const response = await axiosClient.get(`${BASE_URL}/code/${code}`);
+  const response = await api.get(`${BASE_URL}/code/${code}`);
   return unwrap(response);
 };
 
@@ -62,7 +62,7 @@ export const getBenefitPolicyByCode = async (code) => {
  * @returns {Promise<Array>} List of policies
  */
 export const getBenefitPoliciesByEmployer = async (employerOrgId) => {
-  const response = await axiosClient.get(`${BASE_URL}/employer/${employerOrgId}`);
+  const response = await api.get(`${BASE_URL}/employer/${employerOrgId}`);
   return unwrap(response);
 };
 
@@ -74,7 +74,7 @@ export const getBenefitPoliciesByEmployer = async (employerOrgId) => {
  * @returns {Promise<Object>} Paginated response
  */
 export const getBenefitPoliciesByEmployerPaged = async (employerOrgId, params = {}) => {
-  const response = await axiosClient.get(`${BASE_URL}/employer/${employerOrgId}/paged`, { params });
+  const response = await api.get(`${BASE_URL}/employer/${employerOrgId}/paged`, { params });
   return unwrap(response);
 };
 
@@ -85,7 +85,7 @@ export const getBenefitPoliciesByEmployerPaged = async (employerOrgId, params = 
  * @returns {Promise<Array>} List of policies
  */
 export const getBenefitPoliciesByStatus = async (status) => {
-  const response = await axiosClient.get(`${BASE_URL}/status/${status}`);
+  const response = await api.get(`${BASE_URL}/status/${status}`);
   return unwrap(response);
 };
 
@@ -99,7 +99,7 @@ export const getBenefitPoliciesByStatus = async (status) => {
 export const getEffectiveBenefitPolicy = async (employerOrgId, date = null) => {
   const params = { employerOrgId };
   if (date) params.date = date;
-  const response = await axiosClient.get(`${BASE_URL}/effective`, { params });
+  const response = await api.get(`${BASE_URL}/effective`, { params });
   return unwrap(response);
 };
 
@@ -111,7 +111,7 @@ export const getEffectiveBenefitPolicy = async (employerOrgId, date = null) => {
  * @returns {Promise<Object>} Paginated search results
  */
 export const searchBenefitPolicies = async (query, params = {}) => {
-  const response = await axiosClient.get(`${BASE_URL}/search`, { params: { q: query, ...params } });
+  const response = await api.get(`${BASE_URL}/search`, { params: { q: query, ...params } });
   return unwrap(response);
 };
 
@@ -121,7 +121,7 @@ export const searchBenefitPolicies = async (query, params = {}) => {
  * @returns {Promise<Array>} Selector options
  */
 export const getBenefitPoliciesSelector = async () => {
-  const response = await axiosClient.get(`${BASE_URL}/selector`);
+  const response = await api.get(`${BASE_URL}/selector`);
   return unwrap(response);
 };
 
@@ -132,7 +132,7 @@ export const getBenefitPoliciesSelector = async () => {
  * @returns {Promise<Array>} Selector options
  */
 export const getBenefitPoliciesSelectorByEmployer = async (employerOrgId) => {
-  const response = await axiosClient.get(`${BASE_URL}/selector/employer/${employerOrgId}`);
+  const response = await api.get(`${BASE_URL}/selector/employer/${employerOrgId}`);
   return unwrap(response);
 };
 
@@ -143,7 +143,7 @@ export const getBenefitPoliciesSelectorByEmployer = async (employerOrgId) => {
  * @returns {Promise<Array>} List of expiring policies
  */
 export const getExpiringBenefitPolicies = async (days = 30) => {
-  const response = await axiosClient.get(`${BASE_URL}/expiring`, { params: { days } });
+  const response = await api.get(`${BASE_URL}/expiring`, { params: { days } });
   return unwrap(response);
 };
 
@@ -158,7 +158,7 @@ export const getExpiringBenefitPolicies = async (days = 30) => {
  * @returns {Promise<Object>} Created policy
  */
 export const createBenefitPolicy = async (payload) => {
-  const response = await axiosClient.post(BASE_URL, payload);
+  const response = await api.post(BASE_URL, payload);
   return unwrap(response);
 };
 
@@ -170,7 +170,7 @@ export const createBenefitPolicy = async (payload) => {
  * @returns {Promise<Object>} Updated policy
  */
 export const updateBenefitPolicy = async (id, payload) => {
-  const response = await axiosClient.put(`${BASE_URL}/${id}`, payload);
+  const response = await api.put(`${BASE_URL}/${id}`, payload);
   return unwrap(response);
 };
 
@@ -185,7 +185,7 @@ export const updateBenefitPolicy = async (id, payload) => {
  * @returns {Promise<Object>} Activated policy
  */
 export const activateBenefitPolicy = async (id) => {
-  const response = await axiosClient.post(`${BASE_URL}/${id}/activate`);
+  const response = await api.post(`${BASE_URL}/${id}/activate`);
   return unwrap(response);
 };
 
@@ -196,7 +196,7 @@ export const activateBenefitPolicy = async (id) => {
  * @returns {Promise<Object>} Deactivated policy
  */
 export const deactivateBenefitPolicy = async (id) => {
-  const response = await axiosClient.post(`${BASE_URL}/${id}/deactivate`);
+  const response = await api.post(`${BASE_URL}/${id}/deactivate`);
   return unwrap(response);
 };
 
@@ -207,7 +207,7 @@ export const deactivateBenefitPolicy = async (id) => {
  * @returns {Promise<Object>} Suspended policy
  */
 export const suspendBenefitPolicy = async (id) => {
-  const response = await axiosClient.post(`${BASE_URL}/${id}/suspend`);
+  const response = await api.post(`${BASE_URL}/${id}/suspend`);
   return unwrap(response);
 };
 
@@ -218,7 +218,7 @@ export const suspendBenefitPolicy = async (id) => {
  * @returns {Promise<Object>} Cancelled policy
  */
 export const cancelBenefitPolicy = async (id) => {
-  const response = await axiosClient.post(`${BASE_URL}/${id}/cancel`);
+  const response = await api.post(`${BASE_URL}/${id}/cancel`);
   return unwrap(response);
 };
 
@@ -229,7 +229,7 @@ export const cancelBenefitPolicy = async (id) => {
  * @returns {Promise<void>}
  */
 export const deleteBenefitPolicy = async (id) => {
-  const response = await axiosClient.delete(`${BASE_URL}/${id}`);
+  const response = await api.delete(`${BASE_URL}/${id}`);
   return unwrap(response);
 };
 
@@ -240,7 +240,7 @@ export const deleteBenefitPolicy = async (id) => {
  * @returns {Promise<Object>} Paginated response
  */
 export const getDeletedBenefitPolicies = async (params = {}) => {
-  const response = await axiosClient.get(`${BASE_URL}/deleted`, { params });
+  const response = await api.get(`${BASE_URL}/deleted`, { params });
   return unwrap(response);
 };
 
@@ -251,7 +251,7 @@ export const getDeletedBenefitPolicies = async (params = {}) => {
  * @returns {Promise<Object>} Restored policy
  */
 export const restoreBenefitPolicy = async (id) => {
-  const response = await axiosClient.post(`${BASE_URL}/${id}/restore`);
+  const response = await api.post(`${BASE_URL}/${id}/restore`);
   return unwrap(response);
 };
 
@@ -261,7 +261,7 @@ export const restoreBenefitPolicy = async (id) => {
  * @param {number} id - Policy ID
  */
 export const permanentDeleteBenefitPolicy = async (id, currentPassword) => {
-  await axiosClient.delete(`${BASE_URL}/${id}/permanent`, {
+  await api.delete(`${BASE_URL}/${id}/permanent`, {
     data: { currentPassword }
   });
 };
@@ -276,7 +276,7 @@ export const permanentDeleteBenefitPolicy = async (id, currentPassword) => {
  * @returns {Promise<number>} Number of expired policies
  */
 export const expireOldPolicies = async () => {
-  const response = await axiosClient.post(`${BASE_URL}/maintenance/expire-old`);
+  const response = await api.post(`${BASE_URL}/maintenance/expire-old`);
   return unwrap(response);
 };
 

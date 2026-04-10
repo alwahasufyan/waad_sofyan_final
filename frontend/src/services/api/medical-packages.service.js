@@ -1,4 +1,4 @@
-import axiosClient from 'utils/axios';
+import api from 'lib/api';
 import { normalizePaginatedResponse } from 'utils/api-response-normalizer';
 
 /**
@@ -44,7 +44,7 @@ const unwrap = (response) => response.data?.data || response.data;
  * @returns {Promise<Object>} Paginated response { items, total, page, size }
  */
 export const getMedicalPackages = async (params = {}) => {
-  const response = await axiosClient.get(BASE_URL, { params });
+  const response = await api.get(BASE_URL, { params });
   return normalizePaginatedResponse(response);
 };
 
@@ -55,7 +55,7 @@ export const getMedicalPackages = async (params = {}) => {
  * @returns {Promise<Object>} MedicalPackage
  */
 export const getMedicalPackageById = async (id) => {
-  const response = await axiosClient.get(`${BASE_URL}/${id}`);
+  const response = await api.get(`${BASE_URL}/${id}`);
   return unwrap(response);
 };
 
@@ -66,7 +66,7 @@ export const getMedicalPackageById = async (id) => {
  * @returns {Promise<Object>} MedicalPackage
  */
 export const getMedicalPackageByCode = async (code) => {
-  const response = await axiosClient.get(`${BASE_URL}/code/${code}`);
+  const response = await api.get(`${BASE_URL}/code/${code}`);
   return unwrap(response);
 };
 
@@ -77,7 +77,7 @@ export const getMedicalPackageByCode = async (code) => {
  * @returns {Promise<Object>} Created MedicalPackage
  */
 export const createMedicalPackage = async (payload) => {
-  const response = await axiosClient.post(BASE_URL, payload);
+  const response = await api.post(BASE_URL, payload);
   return unwrap(response);
 };
 
@@ -89,7 +89,7 @@ export const createMedicalPackage = async (payload) => {
  * @returns {Promise<Object>} Updated MedicalPackage
  */
 export const updateMedicalPackage = async (id, payload) => {
-  const response = await axiosClient.put(`${BASE_URL}/${id}`, payload);
+  const response = await api.put(`${BASE_URL}/${id}`, payload);
   return unwrap(response);
 };
 
@@ -100,7 +100,7 @@ export const updateMedicalPackage = async (id, payload) => {
  * @returns {Promise<void>}
  */
 export const deleteMedicalPackage = async (id) => {
-  const response = await axiosClient.delete(`${BASE_URL}/${id}`);
+  const response = await api.delete(`${BASE_URL}/${id}`);
   return unwrap(response);
 };
 
@@ -110,7 +110,7 @@ export const deleteMedicalPackage = async (id) => {
  * @returns {Promise<Array>} MedicalPackageSelectorDto[]
  */
 export const getMedicalPackagesSelector = async () => {
-  const response = await axiosClient.get(`${BASE_URL}/selector`);
+  const response = await api.get(`${BASE_URL}/selector`);
   return unwrap(response);
 };
 
@@ -120,7 +120,7 @@ export const getMedicalPackagesSelector = async () => {
  * @returns {Promise<Array>} MedicalPackage[] (active only)
  */
 export const getActiveMedicalPackages = async () => {
-  const response = await axiosClient.get(`${BASE_URL}/active`);
+  const response = await api.get(`${BASE_URL}/active`);
   return unwrap(response);
 };
 

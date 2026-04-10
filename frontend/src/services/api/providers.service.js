@@ -2,7 +2,7 @@
 // DOMAIN NOTE: Providers = Hospitals, Clinics, Labs, Pharmacies
 // Used in Kanban board to display provider network
 
-import axiosClient from 'utils/axios';
+import api from 'lib/api';
 import { createErrorHandler } from 'utils/api-error-handler';
 import { validateEmail, validatePhone } from 'utils/api-validators';
 
@@ -37,7 +37,7 @@ export const providersService = {
    */
   getAll: async (params = {}) => {
     try {
-      const response = await axiosClient.get(BASE_URL, { params });
+      const response = await api.get(BASE_URL, { params });
       const data = unwrap(response);
 
       // Normalize backend response (items/total) to frontend format (content/totalElements)
@@ -81,7 +81,7 @@ export const providersService = {
   getById: async (id) => {
     try {
       if (!id) throw new Error('معرف المزود مطلوب');
-      const response = await axiosClient.get(`${BASE_URL}/${id}`);
+      const response = await api.get(`${BASE_URL}/${id}`);
       return unwrap(response);
     } catch (error) {
       throw handleProviderErrors(error);
@@ -100,7 +100,7 @@ export const providersService = {
       if (data.phone) validatePhone(data.phone);
 
       console.log('[providersService.create] Sending:', data);
-      const response = await axiosClient.post(BASE_URL, data);
+      const response = await api.post(BASE_URL, data);
       const created = unwrap(response);
       console.log('[providersService.create] Response:', created);
 
@@ -127,7 +127,7 @@ export const providersService = {
       if (!data) throw new Error('بيانات التحديث مطلوبة');
       if (data.email) validateEmail(data.email);
       if (data.phone) validatePhone(data.phone);
-      const response = await axiosClient.put(`${BASE_URL}/${id}`, data);
+      const response = await api.put(`${BASE_URL}/${id}`, data);
       return unwrap(response);
     } catch (error) {
       throw handleProviderErrors(error);
@@ -142,7 +142,7 @@ export const providersService = {
   remove: async (id, currentPassword) => {
     try {
       if (!id) throw new Error('معرف المزود مطلوب');
-      const response = await axiosClient.delete(`${BASE_URL}/${id}`);
+      const response = await api.delete(`${BASE_URL}/${id}`);
       return unwrap(response);
     } catch (error) {
       throw handleProviderErrors(error);
@@ -158,7 +158,7 @@ export const providersService = {
     try {
       if (!id) throw new Error('معرف المزود مطلوب');
       if (!currentPassword) throw new Error('كلمة المرور الحالية مطلوبة');
-      const response = await axiosClient.delete(`${BASE_URL}/${id}/hard`, {
+      const response = await api.delete(`${BASE_URL}/${id}/hard`, {
         data: { currentPassword }
       });
       return unwrap(response);
@@ -175,7 +175,7 @@ export const providersService = {
   toggleStatus: async (id) => {
     try {
       if (!id) throw new Error('معرف المزود مطلوب');
-      const response = await axiosClient.post(`${BASE_URL}/${id}/toggle-status`);
+      const response = await api.post(`${BASE_URL}/${id}/toggle-status`);
       return unwrap(response);
     } catch (error) {
       throw handleProviderErrors(error);
@@ -189,7 +189,7 @@ export const providersService = {
    */
   search: async (query) => {
     try {
-      const response = await axiosClient.get(`${BASE_URL}/search`, { params: { query: query || '' } });
+      const response = await api.get(`${BASE_URL}/search`, { params: { query: query || '' } });
       return unwrap(response);
     } catch (error) {
       throw handleProviderErrors(error);
@@ -204,7 +204,7 @@ export const providersService = {
   getByType: async (type) => {
     try {
       if (!type) throw new Error('نوع المزود مطلوب');
-      const response = await axiosClient.get(`${BASE_URL}/type/${type}`);
+      const response = await api.get(`${BASE_URL}/type/${type}`);
       return unwrap(response);
     } catch (error) {
       throw handleProviderErrors(error);
@@ -219,7 +219,7 @@ export const providersService = {
   getByRegion: async (region) => {
     try {
       if (!region) throw new Error('المنطقة مطلوبة');
-      const response = await axiosClient.get(`${BASE_URL}/region/${region}`);
+      const response = await api.get(`${BASE_URL}/region/${region}`);
       return unwrap(response);
     } catch (error) {
       throw handleProviderErrors(error);
@@ -236,7 +236,7 @@ export const providersService = {
    */
   getSelector: async () => {
     try {
-      const response = await axiosClient.get(`${BASE_URL}/selector`);
+      const response = await api.get(`${BASE_URL}/selector`);
       const data = unwrap(response);
 
       if (Array.isArray(data)) return data;
@@ -258,7 +258,7 @@ export const providersService = {
   getAllowedEmployerIds: async (id) => {
     try {
       if (!id) throw new Error('معرف المزود مطلوب');
-      const response = await axiosClient.get(`${BASE_URL}/${id}/allowed-employer-ids`);
+      const response = await api.get(`${BASE_URL}/${id}/allowed-employer-ids`);
       return unwrap(response);
     } catch (error) {
       throw handleProviderErrors(error);
@@ -279,7 +279,7 @@ export const providersService = {
       let hasMore = true;
 
       while (hasMore) {
-        const response = await axiosClient.get(`${BASE_URL}/${providerId}/contracts`, {
+        const response = await api.get(`${BASE_URL}/${providerId}/contracts`, {
           params: { page, size: 1000 }
         });
 
@@ -318,7 +318,7 @@ export const providersService = {
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await axiosClient.post(`${BASE_URL}/import/excel`, formData, {
+      const response = await api.post(`${BASE_URL}/import/excel`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         },
@@ -337,7 +337,7 @@ export const providersService = {
    */
   getDocuments: async (id) => {
     try {
-      const response = await axiosClient.get(`${BASE_URL}/${id}/documents`);
+      const response = await api.get(`${BASE_URL}/${id}/documents`);
       return unwrap(response);
     } catch (error) {
       throw handleProviderErrors(error);
@@ -350,7 +350,7 @@ export const providersService = {
    */
   addDocument: async (id, formData) => {
     try {
-      const response = await axiosClient.post(`${BASE_URL}/${id}/documents`, formData, {
+      const response = await api.post(`${BASE_URL}/${id}/documents`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
@@ -367,7 +367,7 @@ export const providersService = {
    */
   deleteDocument: async (providerId, docId) => {
     try {
-      const response = await axiosClient.delete(`${BASE_URL}/${providerId}/documents/${docId}`);
+      const response = await api.delete(`${BASE_URL}/${providerId}/documents/${docId}`);
       return unwrap(response);
     } catch (error) {
       throw handleProviderErrors(error);
@@ -380,7 +380,7 @@ export const providersService = {
    */
   getAllowedEmployerIds: async (id) => {
     try {
-      const response = await axiosClient.get(`${BASE_URL}/${id}/allowed-employers`);
+      const response = await api.get(`${BASE_URL}/${id}/allowed-employers`);
       return unwrap(response);
     } catch (error) {
       throw handleProviderErrors(error);
@@ -393,7 +393,7 @@ export const providersService = {
    */
   updateAllowedEmployers: async (id, employerIds) => {
     try {
-      const response = await axiosClient.put(`${BASE_URL}/${id}/allowed-employers`, employerIds);
+      const response = await api.put(`${BASE_URL}/${id}/allowed-employers`, employerIds);
       return unwrap(response);
     } catch (error) {
       throw handleProviderErrors(error);
@@ -406,7 +406,7 @@ export const providersService = {
    */
   getByEmployer: async (employerId) => {
     try {
-      const response = await axiosClient.get(`${BASE_URL}/by-employer/${employerId}`);
+      const response = await api.get(`${BASE_URL}/by-employer/${employerId}`);
       return unwrap(response);
     } catch (error) {
       throw handleProviderErrors(error);

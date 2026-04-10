@@ -29,6 +29,7 @@ import com.waad.tba.common.exception.ClaimStateTransitionException;
 import com.waad.tba.common.exception.CoverageValidationException;
 import com.waad.tba.common.exception.PolicyNotActiveException;
 import com.waad.tba.common.exception.ResourceNotFoundException;
+import com.waad.tba.common.exception.UnauthorizedException;
 import com.waad.tba.modules.rbac.exception.AccountLockedException;
 import com.waad.tba.modules.rbac.exception.EmailNotVerifiedException;
 import com.waad.tba.modules.rbac.exception.InvalidResetTokenException;
@@ -423,6 +424,14 @@ public class GlobalExceptionHandler {
         log.warn("Authentication failed - Path: {}, Message: {}, TrackingId: {}",
                 request.getRequestURI(), ex.getMessage(), trackingId);
         return build(HttpStatus.UNAUTHORIZED, ErrorCode.INVALID_CREDENTIALS, "Authentication failed", request, null);
+    }
+
+    @ExceptionHandler(UnauthorizedException.class)
+    public ResponseEntity<ApiError> handleUnauthorized(UnauthorizedException ex, HttpServletRequest request) {
+        String trackingId = generateTrackingId();
+        log.warn("Unauthorized request - Path: {}, Message: {}, TrackingId: {}",
+                request.getRequestURI(), ex.getMessage(), trackingId);
+        return build(HttpStatus.UNAUTHORIZED, ErrorCode.INVALID_TOKEN, ex.getMessage(), request, null);
     }
 
     @ExceptionHandler(AccessDeniedException.class)

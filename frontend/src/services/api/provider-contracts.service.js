@@ -1,4 +1,4 @@
-import axiosClient from 'utils/axios';
+import api from 'lib/api';
 
 /**
  * Provider Contracts API Service
@@ -91,7 +91,7 @@ export const PRICING_MODEL_CONFIG = {
  * @returns {Promise<Object>} Paginated response with content, totalElements, totalPages
  */
 export const getProviderContracts = async (params = {}) => {
-  const response = await axiosClient.get(BASE_URL, { params });
+  const response = await api.get(BASE_URL, { params });
   const data = unwrap(response);
 
   // Normalize backend response (items/total) to frontend format (content/totalElements)
@@ -127,7 +127,7 @@ export const getProviderContracts = async (params = {}) => {
  * @returns {Promise<Object>} Paginated search results
  */
 export const searchProviderContracts = async (params = {}) => {
-  const response = await axiosClient.get(`${BASE_URL}/search`, { params });
+  const response = await api.get(`${BASE_URL}/search`, { params });
   return unwrap(response);
 };
 
@@ -137,7 +137,7 @@ export const searchProviderContracts = async (params = {}) => {
  * @returns {Promise<Object>} Statistics summary
  */
 export const getProviderContractStats = async () => {
-  const response = await axiosClient.get(`${BASE_URL}/stats`);
+  const response = await api.get(`${BASE_URL}/stats`);
   return unwrap(response);
 };
 
@@ -148,7 +148,7 @@ export const getProviderContractStats = async () => {
  * @returns {Promise<Array>} List of expiring contracts
  */
 export const getExpiringContracts = async (days = 30) => {
-  const response = await axiosClient.get(`${BASE_URL}/expiring`, { params: { days } });
+  const response = await api.get(`${BASE_URL}/expiring`, { params: { days } });
   return unwrap(response);
 };
 
@@ -160,7 +160,7 @@ export const getExpiringContracts = async (days = 30) => {
  * @returns {Promise<Object>} Paginated contracts
  */
 export const getContractsByStatus = async (status, params = {}) => {
-  const response = await axiosClient.get(`${BASE_URL}/status/${status}`, { params });
+  const response = await api.get(`${BASE_URL}/status/${status}`, { params });
   return unwrap(response);
 };
 
@@ -171,7 +171,7 @@ export const getContractsByStatus = async (status, params = {}) => {
  * @returns {Promise<Object>} Contract details
  */
 export const getProviderContractById = async (id) => {
-  const response = await axiosClient.get(`${BASE_URL}/${id}`);
+  const response = await api.get(`${BASE_URL}/${id}`);
   return unwrap(response);
 };
 
@@ -182,7 +182,7 @@ export const getProviderContractById = async (id) => {
  * @returns {Promise<Object>} Contract details
  */
 export const getProviderContractByCode = async (code) => {
-  const response = await axiosClient.get(`${BASE_URL}/code/${code}`);
+  const response = await api.get(`${BASE_URL}/code/${code}`);
   return unwrap(response);
 };
 
@@ -194,7 +194,7 @@ export const getProviderContractByCode = async (code) => {
  * @returns {Promise<Object>} Paginated contracts
  */
 export const getContractsByProvider = async (providerId, params = {}) => {
-  const response = await axiosClient.get(`${BASE_URL}/provider/${providerId}`, { params });
+  const response = await api.get(`${BASE_URL}/provider/${providerId}`, { params });
   return unwrap(response);
 };
 
@@ -205,7 +205,7 @@ export const getContractsByProvider = async (providerId, params = {}) => {
  * @returns {Promise<Object>} Active contract or null
  */
 export const getActiveContractByProvider = async (providerId) => {
-  const response = await axiosClient.get(`${BASE_URL}/provider/${providerId}/active`);
+  const response = await api.get(`${BASE_URL}/provider/${providerId}/active`);
   return unwrap(response);
 };
 
@@ -220,7 +220,7 @@ export const getActiveContractByProvider = async (providerId) => {
  * @returns {Promise<Object>} Created contract
  */
 export const createProviderContract = async (data) => {
-  const response = await axiosClient.post(BASE_URL, data);
+  const response = await api.post(BASE_URL, data);
   return unwrap(response);
 };
 
@@ -232,7 +232,7 @@ export const createProviderContract = async (data) => {
  * @returns {Promise<Object>} Updated contract
  */
 export const updateProviderContract = async (id, data) => {
-  const response = await axiosClient.put(`${BASE_URL}/${id}`, data);
+  const response = await api.put(`${BASE_URL}/${id}`, data);
   return unwrap(response);
 };
 
@@ -243,7 +243,7 @@ export const updateProviderContract = async (id, data) => {
  * @returns {Promise<void>}
  */
 export const deleteProviderContract = async (id) => {
-  const response = await axiosClient.delete(`${BASE_URL}/${id}`);
+  const response = await api.delete(`${BASE_URL}/${id}`);
   return unwrap(response);
 };
 
@@ -254,7 +254,7 @@ export const deleteProviderContract = async (id) => {
  * @returns {Promise<void>}
  */
 export const hardDeleteProviderContract = async (id) => {
-  const response = await axiosClient.delete(`${BASE_URL}/${id}/hard`);
+  const response = await api.delete(`${BASE_URL}/${id}/hard`);
   return unwrap(response);
 };
 
@@ -269,7 +269,7 @@ export const hardDeleteProviderContract = async (id) => {
  * @returns {Promise<Object>} Updated contract
  */
 export const activateContract = async (id) => {
-  const response = await axiosClient.post(`${BASE_URL}/${id}/activate`);
+  const response = await api.post(`${BASE_URL}/${id}/activate`);
   return unwrap(response);
 };
 
@@ -281,7 +281,7 @@ export const activateContract = async (id) => {
  * @returns {Promise<Object>} Updated contract
  */
 export const suspendContract = async (id, reason = '') => {
-  const response = await axiosClient.post(`${BASE_URL}/${id}/suspend`, null, {
+  const response = await api.post(`${BASE_URL}/${id}/suspend`, null, {
     params: { reason }
   });
   return unwrap(response);
@@ -295,7 +295,7 @@ export const suspendContract = async (id, reason = '') => {
  * @returns {Promise<Object>} Updated contract
  */
 export const terminateContract = async (id, reason = '') => {
-  const response = await axiosClient.post(`${BASE_URL}/${id}/terminate`, null, {
+  const response = await api.post(`${BASE_URL}/${id}/terminate`, null, {
     params: { reason }
   });
   return unwrap(response);
@@ -313,7 +313,7 @@ export const terminateContract = async (id, reason = '') => {
  * @returns {Promise<Object>} Paginated pricing items
  */
 export const getContractPricingItems = async (contractId, params = {}) => {
-  const response = await axiosClient.get(`${BASE_URL}/${contractId}/pricing`, { params });
+  const response = await api.get(`${BASE_URL}/${contractId}/pricing`, { params });
   return unwrap(response);
 };
 
@@ -326,7 +326,7 @@ export const getContractPricingItems = async (contractId, params = {}) => {
  * @returns {Promise<Object>} Search results
  */
 export const searchContractPricingItems = async (contractId, query, params = {}) => {
-  const response = await axiosClient.get(`${BASE_URL}/${contractId}/pricing/search`, {
+  const response = await api.get(`${BASE_URL}/${contractId}/pricing/search`, {
     params: { q: query, ...params }
   });
   return unwrap(response);
@@ -339,7 +339,7 @@ export const searchContractPricingItems = async (contractId, query, params = {})
  * @returns {Promise<Object>} Pricing statistics
  */
 export const getContractPricingStats = async (contractId) => {
-  const response = await axiosClient.get(`${BASE_URL}/${contractId}/pricing/stats`);
+  const response = await api.get(`${BASE_URL}/${contractId}/pricing/stats`);
   return unwrap(response);
 };
 
@@ -350,7 +350,7 @@ export const getContractPricingStats = async (contractId) => {
  * @returns {Promise<Object>} Pricing item details
  */
 export const getPricingItemById = async (pricingId) => {
-  const response = await axiosClient.get(`${BASE_URL}/pricing/${pricingId}`);
+  const response = await api.get(`${BASE_URL}/pricing/${pricingId}`);
   return unwrap(response);
 };
 
@@ -362,7 +362,7 @@ export const getPricingItemById = async (pricingId) => {
  * @returns {Promise<Object>} Created pricing item
  */
 export const addPricingItem = async (contractId, data) => {
-  const response = await axiosClient.post(`${BASE_URL}/${contractId}/pricing`, data);
+  const response = await api.post(`${BASE_URL}/${contractId}/pricing`, data);
   return unwrap(response);
 };
 
@@ -374,7 +374,7 @@ export const addPricingItem = async (contractId, data) => {
  * @returns {Promise<Array>} Created pricing items
  */
 export const addBulkPricingItems = async (contractId, items) => {
-  const response = await axiosClient.post(`${BASE_URL}/${contractId}/pricing/bulk`, items);
+  const response = await api.post(`${BASE_URL}/${contractId}/pricing/bulk`, items);
   return unwrap(response);
 };
 
@@ -386,7 +386,7 @@ export const addBulkPricingItems = async (contractId, items) => {
  * @returns {Promise<Object>} Updated pricing item
  */
 export const updatePricingItem = async (pricingId, data) => {
-  const response = await axiosClient.put(`${BASE_URL}/pricing/${pricingId}`, data);
+  const response = await api.put(`${BASE_URL}/pricing/${pricingId}`, data);
   return unwrap(response);
 };
 
@@ -397,7 +397,7 @@ export const updatePricingItem = async (pricingId, data) => {
  * @returns {Promise<void>}
  */
 export const deletePricingItem = async (pricingId) => {
-  const response = await axiosClient.delete(`${BASE_URL}/pricing/${pricingId}`);
+  const response = await api.delete(`${BASE_URL}/pricing/${pricingId}`);
   return unwrap(response);
 };
 
@@ -408,7 +408,7 @@ export const deletePricingItem = async (pricingId) => {
  * @returns {Promise<number>} Number of deleted items
  */
 export const deleteAllPricingItems = async (contractId) => {
-  const response = await axiosClient.delete(`${BASE_URL}/${contractId}/pricing`);
+  const response = await api.delete(`${BASE_URL}/${contractId}/pricing`);
   return unwrap(response);
 };
 
@@ -424,7 +424,7 @@ export const deleteAllPricingItems = async (contractId) => {
  */
 export const downloadPricingTemplate = async (contractId) => {
   try {
-    const response = await axiosClient.get(`${BASE_URL}/${contractId}/pricing/import/template`, {
+    const response = await api.get(`${BASE_URL}/${contractId}/pricing/import/template`, {
       responseType: 'blob'
     });
 
@@ -478,7 +478,7 @@ export const uploadContractPricingExcel = async (contractId, file) => {
   formData.append('file', file);
 
   try {
-    const response = await axiosClient.post(`${BASE_URL}/${contractId}/pricing/import`, formData, {
+    const response = await api.post(`${BASE_URL}/${contractId}/pricing/import`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       },
@@ -513,7 +513,7 @@ const PROVIDER_PORTAL_URL = '/provider';
  * @returns {Promise<Object>} Active contract details or null
  */
 export const getMyActiveContract = async () => {
-  const response = await axiosClient.get(`${PROVIDER_PORTAL_URL}/my-contract`);
+  const response = await api.get(`${PROVIDER_PORTAL_URL}/my-contract`);
   return unwrap(response);
 };
 
@@ -529,7 +529,7 @@ export const getMyActiveContract = async () => {
  * @returns {Promise<Object>} Paginated services with contract prices
  */
 export const getMyContractServices = async (params = {}) => {
-  const response = await axiosClient.get(`${PROVIDER_PORTAL_URL}/my-contract/services`, { params });
+  const response = await api.get(`${PROVIDER_PORTAL_URL}/my-contract/services`, { params });
   return unwrap(response);
 };
 
@@ -543,7 +543,7 @@ export const getMyContractServices = async (params = {}) => {
  */
 export const getAllContractedServices = async (providerId) => {
   try {
-    const response = await axiosClient.get(`${BASE_URL}/provider/${providerId}/services`);
+    const response = await api.get(`${BASE_URL}/provider/${providerId}/services`);
     return unwrap(response);
   } catch (error) {
     console.error('Error fetching contracted services:', error);

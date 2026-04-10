@@ -1,4 +1,4 @@
-import axiosClient from 'utils/axios';
+import api from 'lib/api';
 
 /**
  * Report Settings API Service
@@ -8,7 +8,7 @@ const BASE_URL = '/api/v1/pdf/settings';
 
 const getActiveSettings = async () => {
   try {
-    const response = await axiosClient.get(`${BASE_URL}/active`);
+    const response = await api.get(`${BASE_URL}/active`);
     return response.data;
   } catch (error) {
     console.error('Error fetching active report settings:', error);
@@ -18,7 +18,7 @@ const getActiveSettings = async () => {
 
 const updateSettings = async (id, data) => {
   try {
-    const response = await axiosClient.put(`${BASE_URL}/${id}`, data);
+    const response = await api.put(`${BASE_URL}/${id}`, data);
     return response.data;
   } catch (error) {
     console.error(`Error updating report settings ${id}:`, error);
@@ -30,7 +30,7 @@ const uploadLogo = async (id, file) => {
   try {
     const formData = new FormData();
     formData.append('file', file);
-    const response = await axiosClient.post(`${BASE_URL}/${id}/logo`, formData, {
+    const response = await api.post(`${BASE_URL}/${id}/logo`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }

@@ -1,31 +1,18 @@
-/**
- * Hybrid Authentication Service
- * Supports both JWT and Session-based authentication
- *
- * JWT Mode: Stores token in localStorage, sends Authorization header
- * Session Mode: Uses HttpOnly cookies (JSESSIONID)
- *
- * CODESPACES FIX: Using JWT mode for proper port forwarding support
- */
-
-import axiosClient from 'utils/axios';
+import api from 'lib/api';
+import authService from 'services/authService';
 
 /**
  * Login with username/password
- * Uses JWT endpoint for token-based auth (works better with port forwarding)
  */
 export const login = async (credentials) => {
-  const response = await axiosClient.post('/auth/login', credentials);
-  // Backend returns ApiResponse<LoginResponse> with token
+  const response = await api.post('/auth/login', credentials);
   const data = response.data;
+  const token = data?.data?.token;
 
-  // Store JWT token for subsequent requests
-  if (data?.data?.token) {
-    localStorage.setItem('serviceToken', data.data.token);
-    console.log('✅ JWT token stored');
+  if (token) {
+    authService.setToken(token);
   }
 
-  // Return user info (adapt from LoginResponse format)
   return {
     status: data.status,
     data: data.data?.user || data.data,
@@ -34,65 +21,57 @@ export const login = async (credentials) => {
 };
 
 /**
- * Get current authenticated user
- * Tries JWT /me first, falls back to session /me
+ * Register a new user and persist the returned token.
+ */
+export const register = async (payload) => {
+  const response = await api.post('/auth/register', payload);
+  const data = response.data;
+  const token = data?.data?.token;
+
+  if (token) {
+    authService.setToken(token);
+  }
+
+  return {
+    status: data.status,
+    data: data.data?.user || data.data,
+    message: data.message
+  };
+};
+
+/**
+ * Get current authenticated user.
  */
 export const me = async () => {
-  try {
-    // Try JWT endpoint first
-    const response = await axiosClient.get('/auth/me');
-    return response.data;
-  } catch (error) {
-    // If 401, try session endpoint as fallback
-    if (error.response?.status === 401) {
-      try {
-        const sessionResponse = await axiosClient.get('/auth/session/me');
-        return sessionResponse.data;
-      } catch (sessionError) {
-        return { status: 'unauthenticated', data: null };
-      }
-    }
-    // Re-throw other errors (network, 500, etc.)
-    throw error;
-  }
+  const response = await api.get('/auth/me');
+  return response.data;
 };
 
 /**
- * Logout - invalidates both JWT and HTTP session
+ * Logout and clear local token state.
  */
 export const logout = async () => {
-  // Clear local token
-  localStorage.removeItem('serviceToken');
-
-  // Clear backend session
   try {
-    const response = await axiosClient.post('/auth/session/logout');
+    const response = await api.post('/auth/session/logout');
     return response.data;
-  } catch (error) {
-    // Ignore logout errors - token is already cleared
+  } catch {
     return { status: 'success', message: 'Logged out' };
+  } finally {
+    authService.clearToken();
   }
 };
 
 /**
- * Check if user is authenticated
- * Tries to fetch current user - if succeeds, session is valid
+ * Check if a token exists locally.
  */
-export const isAuthenticated = async () => {
-  try {
-    const response = await me();
-    return response.status === 'success';
-  } catch (error) {
-    return false;
-  }
-};
+export const isAuthenticated = () => authService.isAuthenticated();
 
 /**
  * Get public password reset config.
  * Returns: { method: 'TOKEN' | 'OTP', tokenExpiryMinutes, otpExpiryMinutes, otpLength }
  */
 export const getPasswordResetConfig = async () => {
-  const response = await axiosClient.get('/auth/password-reset-config');
+  const response = await api.get('/auth/password-reset-config');
   return response.data?.data || { method: 'TOKEN', tokenExpiryMinutes: 60, otpExpiryMinutes: 10, otpLength: 6 };
 };
 
@@ -100,7 +79,7 @@ export const getPasswordResetConfig = async () => {
  * Request password reset link (token flow).
  */
 export const requestPasswordResetToken = async (email) => {
-  const response = await axiosClient.post('/auth/token/forgot-password', { email });
+  const response = await api.post('/auth/token/forgot-password', { email });
   return response.data;
 };
 
@@ -108,7 +87,7 @@ export const requestPasswordResetToken = async (email) => {
  * Reset password using secure token flow.
  */
 export const resetPasswordWithToken = async (token, newPassword, confirmPassword) => {
-  const response = await axiosClient.post('/auth/token/reset-password', {
+  const response = await api.post('/auth/token/reset-password', {
     token,
     newPassword,
     confirmPassword
@@ -120,7 +99,7 @@ export const resetPasswordWithToken = async (token, newPassword, confirmPassword
  * Request OTP for password reset (legacy flow).
  */
 export const requestPasswordResetOtp = async (email) => {
-  const response = await axiosClient.post('/auth/forgot-password', { email });
+  const response = await api.post('/auth/forgot-password', { email });
   return response.data;
 };
 
@@ -128,7 +107,7 @@ export const requestPasswordResetOtp = async (email) => {
  * Reset password using OTP flow.
  */
 export const resetPasswordWithOtp = async (email, otp, newPassword) => {
-  const response = await axiosClient.post('/auth/reset-password', {
+  const response = await api.post('/auth/reset-password', {
     email,
     otp,
     newPassword
@@ -139,6 +118,7 @@ export const resetPasswordWithOtp = async (email, otp, newPassword) => {
 // Export as default for backward compatibility
 export default {
   login,
+  register,
   me,
   logout,
   isAuthenticated,

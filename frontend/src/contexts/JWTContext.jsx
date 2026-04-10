@@ -26,8 +26,9 @@ import authReducer from 'contexts/auth-reducer/auth';
 
 // project imports
 import Loader from 'components/Loader';
-import axios from 'utils/axios';
+import api from 'lib/api';
 import { useRBACStore } from 'api/rbac';
+import tokenService from 'services/authService';
 
 // ==============================|| INITIAL STATE ||============================== //
 
@@ -54,17 +55,9 @@ const verifyToken = (token) => {
 
 const setSession = (token) => {
   if (token) {
-    localStorage.setItem('serviceToken', token);
-    if (!axios.defaults.headers) axios.defaults.headers = {};
-    if (!axios.defaults.headers.common) axios.defaults.headers.common = {};
-    axios.defaults.headers.common.Authorization = `Bearer ${token}`;
-    console.log('✅ Session token set');
+    tokenService.setToken(token);
   } else {
-    localStorage.removeItem('serviceToken');
-    if (axios.defaults.headers?.common?.Authorization) {
-      delete axios.defaults.headers.common.Authorization;
-    }
-    console.log('🗑️ Session token cleared');
+    tokenService.clearToken();
   }
 };
 
@@ -82,13 +75,13 @@ export const JWTProvider = ({ children }) => {
       console.log('🔄 JWTContext: Starting initialization...');
 
       try {
-        const token = localStorage.getItem('serviceToken');
+        const token = tokenService.getToken();
 
         if (token && verifyToken(token)) {
           console.log('✅ Valid token found, fetching user data...');
           setSession(token);
 
-          const response = await axios.get('/auth/me');
+          const response = await api.get('/auth/me');
           const userData = response.data.data;
 
           console.log('✅ User data fetched:', userData);
@@ -133,7 +126,7 @@ export const JWTProvider = ({ children }) => {
   useEffect(() => {
     if (!state.isLoggedIn) return;
 
-    const token = localStorage.getItem('serviceToken');
+    const token = tokenService.getToken();
     if (!token) return;
 
     try {
@@ -183,7 +176,7 @@ export const JWTProvider = ({ children }) => {
     console.log('🔄 Login attempt for:', identifier);
 
     try {
-      const response = await axios.post('/auth/login', {
+      const response = await api.post('/auth/login', {
         identifier,
         password
       });
@@ -230,8 +223,7 @@ export const JWTProvider = ({ children }) => {
     console.log('✅ RBAC store cleared');
 
     // Clear all storage
-    localStorage.removeItem('serviceToken');
-    sessionStorage.clear();
+    tokenService.clearToken();
 
     dispatch({ type: LOGOUT });
 

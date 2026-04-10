@@ -22,7 +22,7 @@ import {
 import EyeOutlined from '@ant-design/icons/EyeOutlined';
 
 // project imports
-import axios from 'utils/axios';
+import api from 'lib/api';
 
 /**
  * RecentMembers Component
@@ -44,7 +44,7 @@ export default function RecentMembers() {
     const fetchRecentMembers = async () => {
       try {
         setLoading(true);
-        const response = await axios.get('/members/recent', {
+        const response = await api.get('/members/recent', {
           params: { limit: 5 }
         });
         setMembers(response.data.data || response.data || []);

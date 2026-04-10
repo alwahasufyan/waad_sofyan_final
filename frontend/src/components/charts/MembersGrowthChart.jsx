@@ -4,7 +4,7 @@ import ReactApexChart from 'react-apexcharts';
 import { useTheme } from '@mui/material/styles';
 import { Box, Typography, Stack, Skeleton } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
-import axios from 'utils/axios';
+import api from 'lib/api';
 
 // ==============================|| MEMBERS GROWTH CHART ||============================== //
 
@@ -16,7 +16,7 @@ export default function MembersGrowthChart({ height = 365 }) {
   const { data: chartData, isLoading } = useQuery({
     queryKey: ['membersGrowth'],
     queryFn: async () => {
-      const response = await axios.get('/dashboard/members-growth');
+      const response = await api.get('/dashboard/members-growth');
       return response.data;
     },
     initialData: {

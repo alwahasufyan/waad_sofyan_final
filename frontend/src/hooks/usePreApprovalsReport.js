@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import axiosClient from 'utils/axios';
+import api from 'lib/api';
 
 /**
  * Pre-Authorization Status Constants
@@ -93,7 +93,7 @@ export const usePreApprovalsReport = ({ employerId, providerId, filters = DEFAUL
 
       // Provider filtering is done client-side for better compatibility
       // ⚠️ FIXED: Use /v1/pre-authorizations to match Backend API
-      const response = await axiosClient.get('/pre-authorizations', { params });
+      const response = await api.get('/pre-authorizations', { params });
       const data = unwrap(response);
 
       // Handle different response formats

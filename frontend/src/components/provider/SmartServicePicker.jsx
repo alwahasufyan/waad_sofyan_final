@@ -42,7 +42,7 @@ import {
   Warning as WarningIcon,
   LocalOffer as PriceIcon
 } from '@mui/icons-material';
-import axiosClient from 'utils/axios';
+import api from 'lib/api';
 
 // ════════════════════════════════════════════════════════════════════════════
 // CONSTANTS
@@ -82,7 +82,7 @@ const SmartServicePicker = ({
     queryKey: ['provider-contract-services-smart'],
     queryFn: async () => {
       // Call Provider Portal endpoint directly
-      const response = await axiosClient.get(`${PROVIDER_PORTAL_URL}/my-contract/services`, {
+      const response = await api.get(`${PROVIDER_PORTAL_URL}/my-contract/services`, {
         params: { page: 0, size: 500 }
       });
 

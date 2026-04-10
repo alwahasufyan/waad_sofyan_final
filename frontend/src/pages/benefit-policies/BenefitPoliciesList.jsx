@@ -32,7 +32,7 @@ import MainCard from 'components/MainCard';
 import PermissionGuard from 'components/PermissionGuard';
 import { UnifiedMedicalTable } from 'components/common';
 import { ActionConfirmDialog, ModernPageHeader, SoftDeleteToggle } from 'components/tba';
-import axiosClient from 'utils/axios';
+import api from 'lib/api';
 import {
   deleteBenefitPolicy,
   getBenefitPolicies,
@@ -80,7 +80,7 @@ const BenefitPoliciesList = () => {
 
   const fetchEmployers = useCallback(async () => {
     try {
-      const response = await axiosClient.get('/employers/selectors');
+      const response = await api.get('/employers/selectors');
       setEmployers(response.data?.data || []);
     } catch (error) {
       console.error('[BenefitPolicies] Failed to load employer selectors:', error);

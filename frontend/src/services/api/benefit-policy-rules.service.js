@@ -1,4 +1,4 @@
-import axiosClient from 'utils/axios';
+import api from 'lib/api';
 
 /**
  * Benefit Policy Rules API Service
@@ -25,7 +25,7 @@ const unwrap = (response) => response.data?.data || response.data;
  * @returns {Promise<Array>} List of rules
  */
 export const getPolicyRules = async (policyId) => {
-  const response = await axiosClient.get(`/benefit-policies/${policyId}/rules`);
+  const response = await api.get(`/benefit-policies/${policyId}/rules`);
   return unwrap(response);
 };
 
@@ -37,7 +37,7 @@ export const getPolicyRules = async (policyId) => {
  * @returns {Promise<Object>} Paginated response
  */
 export const getPolicyRulesPaged = async (policyId, params = {}) => {
-  const response = await axiosClient.get(`/benefit-policies/${policyId}/rules/paged`, { params });
+  const response = await api.get(`/benefit-policies/${policyId}/rules/paged`, { params });
   return unwrap(response);
 };
 
@@ -48,7 +48,7 @@ export const getPolicyRulesPaged = async (policyId, params = {}) => {
  * @returns {Promise<Array>} List of active rules
  */
 export const getActivePolicyRules = async (policyId) => {
-  const response = await axiosClient.get(`/benefit-policies/${policyId}/rules/active`);
+  const response = await api.get(`/benefit-policies/${policyId}/rules/active`);
   return unwrap(response);
 };
 
@@ -60,7 +60,7 @@ export const getActivePolicyRules = async (policyId) => {
  * @returns {Promise<Object>} Rule details
  */
 export const getPolicyRuleById = async (policyId, ruleId) => {
-  const response = await axiosClient.get(`/benefit-policies/${policyId}/rules/${ruleId}`);
+  const response = await api.get(`/benefit-policies/${policyId}/rules/${ruleId}`);
   return unwrap(response);
 };
 
@@ -71,7 +71,7 @@ export const getPolicyRuleById = async (policyId, ruleId) => {
  * @returns {Promise<Array>} List of category rules
  */
 export const getCategoryRules = async (policyId) => {
-  const response = await axiosClient.get(`/benefit-policies/${policyId}/rules/category`);
+  const response = await api.get(`/benefit-policies/${policyId}/rules/category`);
   return unwrap(response);
 };
 
@@ -82,7 +82,7 @@ export const getCategoryRules = async (policyId) => {
  * @returns {Promise<Array>} List of service rules
  */
 export const getServiceRules = async (policyId) => {
-  const response = await axiosClient.get(`/benefit-policies/${policyId}/rules/service`);
+  const response = await api.get(`/benefit-policies/${policyId}/rules/service`);
   return unwrap(response);
 };
 
@@ -93,7 +93,7 @@ export const getServiceRules = async (policyId) => {
  * @returns {Promise<Array>} List of pre-approval rules
  */
 export const getPreApprovalRules = async (policyId) => {
-  const response = await axiosClient.get(`/benefit-policies/${policyId}/rules/pre-approval`);
+  const response = await api.get(`/benefit-policies/${policyId}/rules/pre-approval`);
   return unwrap(response);
 };
 
@@ -104,7 +104,7 @@ export const getPreApprovalRules = async (policyId) => {
  * @returns {Promise<Object>} { total, active, inactive }
  */
 export const getPolicyRulesCount = async (policyId) => {
-  const response = await axiosClient.get(`/benefit-policies/${policyId}/rules/count`);
+  const response = await api.get(`/benefit-policies/${policyId}/rules/count`);
   return unwrap(response);
 };
 
@@ -122,7 +122,7 @@ export const getPolicyRulesCount = async (policyId) => {
 export const getCoverageForService = async (policyId, serviceId, categoryId = null) => {
   const params = {};
   if (categoryId) params.categoryId = categoryId;
-  const response = await axiosClient.get(`/benefit-policies/${policyId}/coverage/service/${serviceId}`, { params });
+  const response = await api.get(`/benefit-policies/${policyId}/coverage/service/${serviceId}`, { params });
   return unwrap(response);
 };
 
@@ -136,7 +136,7 @@ export const getCoverageForService = async (policyId, serviceId, categoryId = nu
 export const checkServiceCoverage = async (policyId, serviceId, categoryId = null) => {
   const params = {};
   if (categoryId) params.categoryId = categoryId;
-  const response = await axiosClient.get(`/benefit-policies/${policyId}/coverage/service/${serviceId}/check`, { params });
+  const response = await api.get(`/benefit-policies/${policyId}/coverage/service/${serviceId}/check`, { params });
   return unwrap(response);
 };
 
@@ -156,7 +156,7 @@ export const checkServiceUsageLimit = async (policyId, serviceId, memberId, cate
   if (categoryId) params.categoryId = categoryId;
   if (year) params.year = year;
   if (excludeClaimId) params.excludeClaimId = excludeClaimId;
-  const response = await axiosClient.get(`/benefit-policies/${policyId}/coverage/service/${serviceId}/usage`, { params });
+  const response = await api.get(`/benefit-policies/${policyId}/coverage/service/${serviceId}/usage`, { params });
   return unwrap(response);
 };
 
@@ -180,7 +180,7 @@ export const checkServiceUsageLimit = async (policyId, serviceId, memberId, cate
  * @returns {Promise<Object>} Created rule
  */
 export const createPolicyRule = async (policyId, payload) => {
-  const response = await axiosClient.post(`/benefit-policies/${policyId}/rules`, payload);
+  const response = await api.post(`/benefit-policies/${policyId}/rules`, payload);
   return unwrap(response);
 };
 
@@ -192,7 +192,7 @@ export const createPolicyRule = async (policyId, payload) => {
  * @returns {Promise<Array>} Created rules
  */
 export const createPolicyRulesBulk = async (policyId, rules) => {
-  const response = await axiosClient.post(`/benefit-policies/${policyId}/rules/bulk`, rules);
+  const response = await api.post(`/benefit-policies/${policyId}/rules/bulk`, rules);
   return unwrap(response);
 };
 
@@ -209,7 +209,7 @@ export const createPolicyRulesBulk = async (policyId, rules) => {
  * @returns {Promise<Object>} Updated rule
  */
 export const updatePolicyRule = async (policyId, ruleId, payload) => {
-  const response = await axiosClient.put(`/benefit-policies/${policyId}/rules/${ruleId}`, payload);
+  const response = await api.put(`/benefit-policies/${policyId}/rules/${ruleId}`, payload);
   return unwrap(response);
 };
 
@@ -221,7 +221,7 @@ export const updatePolicyRule = async (policyId, ruleId, payload) => {
  * @returns {Promise<Object>} Updated rule
  */
 export const togglePolicyRuleActive = async (policyId, ruleId) => {
-  const response = await axiosClient.post(`/benefit-policies/${policyId}/rules/${ruleId}/toggle`);
+  const response = await api.post(`/benefit-policies/${policyId}/rules/${ruleId}/toggle`);
   return unwrap(response);
 };
 
@@ -237,7 +237,7 @@ export const togglePolicyRuleActive = async (policyId, ruleId) => {
  * @returns {Promise<void>}
  */
 export const deletePolicyRule = async (policyId, ruleId) => {
-  const response = await axiosClient.delete(`/benefit-policies/${policyId}/rules/${ruleId}`);
+  const response = await api.delete(`/benefit-policies/${policyId}/rules/${ruleId}`);
   return unwrap(response);
 };
 
@@ -249,7 +249,7 @@ export const deletePolicyRule = async (policyId, ruleId) => {
  * @returns {Promise<void>}
  */
 export const hardDeletePolicyRule = async (policyId, ruleId) => {
-  const response = await axiosClient.delete(`/benefit-policies/${policyId}/rules/${ruleId}/hard`);
+  const response = await api.delete(`/benefit-policies/${policyId}/rules/${ruleId}/hard`);
   return unwrap(response);
 };
 
@@ -260,7 +260,7 @@ export const hardDeletePolicyRule = async (policyId, ruleId) => {
  * @returns {Promise<void>}
  */
 export const deleteAllPolicyRules = async (policyId) => {
-  const response = await axiosClient.delete(`/benefit-policies/${policyId}/rules`);
+  const response = await api.delete(`/benefit-policies/${policyId}/rules`);
   return unwrap(response);
 };
 
@@ -271,7 +271,7 @@ export const deleteAllPolicyRules = async (policyId) => {
  * @returns {Promise<number>} Number of deactivated rules
  */
 export const deactivateAllPolicyRules = async (policyId) => {
-  const response = await axiosClient.post(`/benefit-policies/${policyId}/rules/deactivate-all`);
+  const response = await api.post(`/benefit-policies/${policyId}/rules/deactivate-all`);
   return unwrap(response);
 };
 

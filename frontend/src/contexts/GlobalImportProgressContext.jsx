@@ -19,7 +19,7 @@ import {
   TableBody,
   Chip
 } from '@mui/material';
-import axios from 'utils/axios';
+import api from 'lib/api';
 
 const ImportProgressContext = createContext(null);
 
@@ -52,7 +52,7 @@ export const GlobalImportProgressProvider = ({ children }) => {
     try {
       // Using the endpoint we verified: MemberExcelTemplateController
       // Using relative path since baseURL handles /api
-      const response = await axios.get(`unified-members/import/status/${activeImport.batchId}`);
+      const response = await api.get(`unified-members/import/status/${activeImport.batchId}`);
       const log = response.data?.data; // ApiResponse.data contains the MemberImportLog
 
       console.log('🕵️‍♂️ IMPORT STATUS UPDATE:', {
@@ -139,7 +139,7 @@ export const GlobalImportProgressProvider = ({ children }) => {
 
   const viewErrors = async (batchId) => {
     try {
-      const response = await axios.get(`unified-members/import/errors/${batchId}`);
+      const response = await api.get(`unified-members/import/errors/${batchId}`);
       const errors = response.data?.data || response.data?.result || [];
       setErrorDetails({ batchId, errors });
       setIsErrorModalOpen(true);

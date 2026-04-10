@@ -1,4 +1,4 @@
-import axiosClient from 'utils/axios';
+import api from 'lib/api';
 import ExcelJS from 'exceljs';
 
 /**
@@ -387,7 +387,7 @@ const validateEmployerDto = (dto) => {
 export const getEmployers = async () => {
   try {
     console.debug('[EmployerService] Fetching all employers...');
-    const response = await axiosClient.get(BASE_URL);
+    const response = await api.get(BASE_URL);
     const rawData = unwrapArray(response);
     return normalizeEmployerArrayResponse(rawData);
   } catch (error) {
@@ -419,7 +419,7 @@ export const getEmployers = async () => {
 export const getEmployerById = async (id) => {
   try {
     console.debug(`[EmployerService] Fetching employer ID: ${id}...`);
-    const response = await axiosClient.get(`${BASE_URL}/${id}`);
+    const response = await api.get(`${BASE_URL}/${id}`);
     const rawData = unwrap(response);
     return normalizeEmployerResponse(rawData);
   } catch (error) {
@@ -498,7 +498,7 @@ export const createEmployer = async (frontendDto) => {
     const backendDto = normalizeEmployerRequest(frontendDto);
 
     // Send to backend
-    const response = await axiosClient.post(BASE_URL, backendDto);
+    const response = await api.post(BASE_URL, backendDto);
     const rawData = unwrap(response);
 
     console.info('[EmployerService] Employer created successfully:', rawData);
@@ -560,7 +560,7 @@ export const updateEmployer = async (id, frontendDto) => {
     const backendDto = normalizeEmployerRequest(frontendDto);
 
     // Send to backend
-    const response = await axiosClient.put(`${BASE_URL}/${id}`, backendDto);
+    const response = await api.put(`${BASE_URL}/${id}`, backendDto);
     const rawData = unwrap(response);
 
     console.info(`[EmployerService] Employer ID: ${id} updated successfully`);
@@ -585,7 +585,7 @@ export const updateEmployer = async (id, frontendDto) => {
 export const deleteEmployer = async (id) => {
   try {
     console.debug(`[EmployerService] Hard-deleting employer ID: ${id}...`);
-    const response = await axiosClient.delete(`${BASE_URL}/${id}`);
+    const response = await api.delete(`${BASE_URL}/${id}`);
     console.info(`[EmployerService] Employer ID: ${id} permanently deleted`);
     return unwrap(response);
   } catch (error) {
@@ -607,7 +607,7 @@ export const archiveEmployer = async (id, currentPassword) => {
     if (!currentPassword) {
       throw new Error('كلمة المرور الحالية مطلوبة');
     }
-    const response = await axiosClient.post(`${BASE_URL}/${id}/archive`, { currentPassword });
+    const response = await api.post(`${BASE_URL}/${id}/archive`, { currentPassword });
     console.info(`[EmployerService] Employer ID: ${id} archived successfully`);
     return unwrap(response);
   } catch (error) {
@@ -626,7 +626,7 @@ export const archiveEmployer = async (id, currentPassword) => {
 export const restoreEmployer = async (id) => {
   try {
     console.debug(`[EmployerService] Restoring employer ID: ${id}...`);
-    const response = await axiosClient.post(`${BASE_URL}/${id}/restore`);
+    const response = await api.post(`${BASE_URL}/${id}/restore`);
     console.info(`[EmployerService] Employer ID: ${id} restored successfully`);
     return unwrap(response);
   } catch (error) {
@@ -646,7 +646,7 @@ export const restoreEmployer = async (id) => {
 export const getEmployerSelectors = async () => {
   try {
     console.debug('[EmployerService] Fetching employer selectors...');
-    const response = await axiosClient.get(`${BASE_URL}/selectors`);
+    const response = await api.get(`${BASE_URL}/selectors`);
     return unwrapArray(response);
   } catch (error) {
     if (error?.response?.status === 403) {
@@ -669,7 +669,7 @@ export const checkEmployerField = async (field, value, excludeId = null) => {
   try {
     const params = { field, value: field === 'code' ? value.trim().toUpperCase() : value.trim() };
     if (excludeId) params.excludeId = excludeId;
-    const response = await axiosClient.get(`${BASE_URL}/check`, { params });
+    const response = await api.get(`${BASE_URL}/check`, { params });
     return unwrap(response) === true;
   } catch {
     return true; // on network error, allow typing to continue
@@ -684,7 +684,7 @@ export const checkEmployerField = async (field, value, excludeId = null) => {
 export const getEmployerCount = async () => {
   try {
     console.debug('[EmployerService] Fetching employer count...');
-    const response = await axiosClient.get(`${BASE_URL}/count`);
+    const response = await api.get(`${BASE_URL}/count`);
     return unwrap(response);
   } catch (error) {
     console.error('[EmployerService] getEmployerCount failed:', error);
@@ -701,7 +701,7 @@ export const getEmployerCount = async () => {
 export const exportEmployers = async (params = {}) => {
   try {
     const defaultParams = { page: 0, size: 10000, includeArchived: params.showArchived || false };
-    const res = await axiosClient.get(BASE_URL, { params: defaultParams });
+    const res = await api.get(BASE_URL, { params: defaultParams });
     const content = res.data?.data?.content || [];
 
     const workbook = new ExcelJS.Workbook();

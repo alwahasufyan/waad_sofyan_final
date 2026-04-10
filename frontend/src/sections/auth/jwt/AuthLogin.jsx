@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import PropTypes from 'prop-types';
-import { Link as RouterLink, useSearchParams, useNavigate } from 'react-router-dom';
+import { Link as RouterLink, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
 // material-ui
 import Button from '@mui/material/Button';
@@ -43,6 +43,7 @@ export default function AuthLogin({ isDemo = false }) {
 
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [showPassword, setShowPassword] = useState(false);
   const handleClickShowPassword = () => {
@@ -84,7 +85,7 @@ export default function AuthLogin({ isDemo = false }) {
 
             // Phase 5.5: Role-based landing page redirect
             const primaryRole = user?.role || (Array.isArray(user?.roles) ? user.roles[0] : null);
-            const landingRoute = getDefaultRouteForRole(primaryRole);
+            const landingRoute = location.state?.from || getDefaultRouteForRole(primaryRole);
             navigate(landingRoute);
           } catch (err) {
             console.error('Login error:', err);

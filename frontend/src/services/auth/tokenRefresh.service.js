@@ -9,10 +9,9 @@
  * - لا حاجة للخروج والدخول مرة أخرى
  */
 
-import axios from 'axios';
 import { useState } from 'react';
-
-const API_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || '/api/v1';
+import api from 'lib/api';
+import authService from 'services/authService';
 
 /**
  * تحديث JWT Token مع الصلاحيات الجديدة
@@ -22,41 +21,20 @@ const API_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_UR
  */
 export const refreshToken = async () => {
   try {
-    // Get current token from localStorage
-    const currentToken = localStorage.getItem('token');
-
-    if (!currentToken) {
+    if (!authService.isAuthenticated()) {
       throw new Error('No token found. Please login first.');
     }
 
-    // Call refresh-token endpoint
-    const response = await axios.post(
-      `${API_URL}/auth/refresh-token`,
-      {},
-      {
-        headers: {
-          Authorization: `Bearer ${currentToken}`
-        }
-      }
-    );
+    const response = await api.post('/auth/refresh-token', {});
 
     const { token, user } = response.data.data;
 
-    // Update localStorage with new token and user data
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(user));
-
-    console.log('✅ Token refreshed successfully!');
-    console.log('📋 Updated permissions:', user.permissions);
+    authService.setToken(token);
 
     return { token, user };
   } catch (error) {
-    console.error('❌ Failed to refresh token:', error);
-
     if (error.response?.status === 401) {
-      // Token expired or invalid - redirect to login
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+      authService.clearToken();
       window.location.href = '/login';
     }
 

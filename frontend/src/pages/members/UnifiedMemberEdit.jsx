@@ -53,7 +53,7 @@ import dayjs from 'dayjs';
 import MainCard from 'components/MainCard';
 import ModernPageHeader from 'components/tba/ModernPageHeader';
 import { getMember, updateMember, uploadPhoto, deletePhoto, RELATIONSHIPS, GENDERS } from 'services/api/unified-members.service';
-import axiosClient from 'utils/axios';
+import api from 'lib/api';
 import { openSnackbar } from 'api/snackbar';
 import { MemberAvatar } from '../../components/tba';
 
@@ -186,8 +186,8 @@ const UnifiedMemberEdit = () => {
   const fetchLookupData = async () => {
     try {
       const [orgsRes, policiesRes] = await Promise.all([
-        axiosClient.get('/employers/selectors'),
-        axiosClient.get('/benefit-policies', { params: { size: 1000 } })
+        api.get('/employers/selectors'),
+        api.get('/benefit-policies', { params: { size: 1000 } })
       ]);
       setEmployers(orgsRes.data?.data || []);
       setBenefitPolicies(policiesRes.data?.data?.content || []);

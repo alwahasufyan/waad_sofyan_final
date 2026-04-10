@@ -1,4 +1,4 @@
-import axiosClient from 'utils/axios';
+import api from 'lib/api';
 import { normalizePaginatedResponse } from 'utils/api-response-normalizer';
 
 /**
@@ -19,7 +19,7 @@ const unwrap = (response) => response.data?.data || response.data;
  * @returns {Promise<Object>} Paginated response
  */
 export const getMedicalServices = async (params = {}) => {
-  const response = await axiosClient.get(BASE_URL, { params });
+  const response = await api.get(BASE_URL, { params });
   return normalizePaginatedResponse(response);
 };
 
@@ -29,7 +29,7 @@ export const getMedicalServices = async (params = {}) => {
  * @returns {Promise<Object>} Service details
  */
 export const getMedicalServiceById = async (id) => {
-  const response = await axiosClient.get(`${BASE_URL}/${id}`);
+  const response = await api.get(`${BASE_URL}/${id}`);
   return unwrap(response);
 };
 
@@ -39,7 +39,7 @@ export const getMedicalServiceById = async (id) => {
  * @returns {Promise<Object>} Created service
  */
 export const createMedicalService = async (payload) => {
-  const response = await axiosClient.post(BASE_URL, payload);
+  const response = await api.post(BASE_URL, payload);
   return unwrap(response);
 };
 
@@ -50,7 +50,7 @@ export const createMedicalService = async (payload) => {
  * @returns {Promise<Object>} Updated service
  */
 export const updateMedicalService = async (id, payload) => {
-  const response = await axiosClient.put(`${BASE_URL}/${id}`, payload);
+  const response = await api.put(`${BASE_URL}/${id}`, payload);
   return unwrap(response);
 };
 
@@ -60,7 +60,7 @@ export const updateMedicalService = async (id, payload) => {
  * @returns {Promise<void>}
  */
 export const deleteMedicalService = async (id) => {
-  const response = await axiosClient.delete(`${BASE_URL}/${id}`);
+  const response = await api.delete(`${BASE_URL}/${id}`);
   return unwrap(response);
 };
 
@@ -69,7 +69,7 @@ export const deleteMedicalService = async (id) => {
  * @returns {Promise<Array>} All services
  */
 export const getAllMedicalServices = async () => {
-  const response = await axiosClient.get(`${BASE_URL}/all`);
+  const response = await api.get(`${BASE_URL}/all`);
   return unwrap(response);
 };
 
@@ -78,7 +78,7 @@ export const getAllMedicalServices = async () => {
  * @returns {Promise<Blob>} Excel file blob
  */
 export const downloadMedicalServicesTemplate = async () => {
-  const response = await axiosClient.get(`${BASE_URL}/import/template`, {
+  const response = await api.get(`${BASE_URL}/import/template`, {
     responseType: 'blob'
   });
   return response.data;
@@ -93,7 +93,7 @@ export const uploadMedicalServicesExcel = async (file) => {
   const formData = new FormData();
   formData.append('file', file);
 
-  const response = await axiosClient.post(`${BASE_URL}/import`, formData, {
+  const response = await api.post(`${BASE_URL}/import`, formData, {
     headers: {
       'Content-Type': 'multipart/form-data'
     }
@@ -107,7 +107,7 @@ export const uploadMedicalServicesExcel = async (file) => {
  * @returns {Promise<Object>} Stats { total, active, inactive }
  */
 export const getMedicalServicesStats = async () => {
-  const response = await axiosClient.get(`${BASE_URL}/stats`);
+  const response = await api.get(`${BASE_URL}/stats`);
   return unwrap(response);
 };
 
@@ -116,7 +116,7 @@ export const getMedicalServicesStats = async () => {
  * @returns {Promise<number>} Number of services deactivated
  */
 export const deactivateAllMedicalServices = async () => {
-  const response = await axiosClient.put(`${BASE_URL}/bulk/deactivate`);
+  const response = await api.put(`${BASE_URL}/bulk/deactivate`);
   return unwrap(response);
 };
 
@@ -125,7 +125,7 @@ export const deactivateAllMedicalServices = async () => {
  * @returns {Promise<number>} Number of services activated
  */
 export const activateAllMedicalServices = async () => {
-  const response = await axiosClient.put(`${BASE_URL}/bulk/activate`);
+  const response = await api.put(`${BASE_URL}/bulk/activate`);
   return unwrap(response);
 };
 
@@ -135,7 +135,7 @@ export const activateAllMedicalServices = async () => {
  * @returns {Promise<number>} Number of services permanently deleted
  */
 export const deleteAllMedicalServices = async () => {
-  const response = await axiosClient.delete(`${BASE_URL}/bulk/all?confirm=true`);
+  const response = await api.delete(`${BASE_URL}/bulk/all?confirm=true`);
   return unwrap(response);
 };
 
@@ -146,7 +146,7 @@ export const deleteAllMedicalServices = async () => {
  * @returns {Promise<Object>} Updated service
  */
 export const updateServiceCategory = async (id, categoryId) => {
-  const response = await axiosClient.patch(`${BASE_URL}/${id}/category`, { categoryId });
+  const response = await api.patch(`${BASE_URL}/${id}/category`, { categoryId });
   return unwrap(response);
 };
 
@@ -157,7 +157,7 @@ export const updateServiceCategory = async (id, categoryId) => {
  * @returns {Promise<Object>} Update result { updated, failed }
  */
 export const bulkUpdateServiceCategory = async (serviceIds, categoryId) => {
-  const response = await axiosClient.patch(`${BASE_URL}/bulk/category`, { serviceIds, categoryId });
+  const response = await api.patch(`${BASE_URL}/bulk/category`, { serviceIds, categoryId });
   return unwrap(response);
 };
 
@@ -174,7 +174,7 @@ export const bulkUpdateServiceCategory = async (serviceIds, categoryId) => {
  * @returns {Promise<Object>} Paginated search results
  */
 export const searchMedicalServices = async (params = {}) => {
-  const response = await axiosClient.get(`${BASE_URL}/search`, { params });
+  const response = await api.get(`${BASE_URL}/search`, { params });
   return unwrap(response);
 };
 
@@ -206,7 +206,7 @@ export const lookupMedicalServices = async (params = {}) => {
     return [];
   }
 
-  const response = await axiosClient.get(`/medical-categories/${categoryId}/medical-services`);
+  const response = await api.get(`/medical-categories/${categoryId}/medical-services`);
   const services = unwrap(response) || [];
 
   // Keep search UX parity by filtering client-side on code/name/category labels.

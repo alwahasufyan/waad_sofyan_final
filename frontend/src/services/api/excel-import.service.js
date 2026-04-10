@@ -1,3 +1,4 @@
+import api from 'lib/api';
 /**
  * Excel Import Service - Unified API for all modules
  *
@@ -7,8 +8,6 @@
  * 3. Upload filled template
  * 4. Review detailed results
  */
-
-import axios from 'utils/axios';
 
 const unwrap = (response) => response.data?.data || response.data;
 
@@ -23,7 +22,7 @@ const unwrap = (response) => response.data?.data || response.data;
  * NOTE: No /api prefix - axios baseURL already includes /api
  */
 export const downloadMemberTemplate = async () => {
-  const response = await axios.get('/members/import/template', {
+  const response = await api.get('/members/import/template', {
     responseType: 'blob'
   });
   return response.data;
@@ -41,7 +40,7 @@ export const importMembers = async (file) => {
   const formData = new FormData();
   formData.append('file', file);
 
-  const response = await axios.post('/members/import', formData, {
+  const response = await api.post('/members/import', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
     timeout: 300000 // 5 minutes for large Excel files
   });
@@ -59,7 +58,7 @@ export const importMembers = async (file) => {
  * NOTE: No /api prefix - axios baseURL already includes /api
  */
 export const downloadProviderTemplate = async () => {
-  const response = await axios.get('/providers/import/template', {
+  const response = await api.get('/providers/import/template', {
     responseType: 'blob'
   });
   return response.data;
@@ -77,7 +76,7 @@ export const importProviders = async (file) => {
   const formData = new FormData();
   formData.append('file', file);
 
-  const response = await axios.post('/providers/import', formData, {
+  const response = await api.post('/providers/import', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
     timeout: 300000 // 5 minutes for large Excel files
   });
@@ -95,7 +94,7 @@ export const importProviders = async (file) => {
  * NOTE: No /api prefix - axios baseURL already includes /api
  */
 export const downloadMedicalServiceTemplate = async () => {
-  const response = await axios.get('/medical-services/import/template', {
+  const response = await api.get('/medical-services/import/template', {
     responseType: 'blob'
   });
   return response.data;
@@ -113,7 +112,7 @@ export const importMedicalServices = async (file) => {
   const formData = new FormData();
   formData.append('file', file);
 
-  const response = await axios.post('/medical-services/import', formData, {
+  const response = await api.post('/medical-services/import', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
     timeout: 300000 // 5 minutes for large Excel files
   });
@@ -131,7 +130,7 @@ export const importMedicalServices = async (file) => {
  * NOTE: No /api prefix - axios baseURL already includes /api
  */
 export const downloadMedicalCategoryTemplate = async () => {
-  const response = await axios.get('/medical-categories/import/template', {
+  const response = await api.get('/medical-categories/import/template', {
     responseType: 'blob'
   });
   return response.data;
@@ -149,7 +148,7 @@ export const importMedicalCategories = async (file) => {
   const formData = new FormData();
   formData.append('file', file);
 
-  const response = await axios.post('/medical-categories/import', formData, {
+  const response = await api.post('/medical-categories/import', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
     timeout: 300000 // 5 minutes for large Excel files
   });
@@ -167,7 +166,7 @@ export const importMedicalCategories = async (file) => {
  * NOTE: No /api prefix - axios baseURL already includes /api
  */
 export const downloadMedicalPackageTemplate = async () => {
-  const response = await axios.get('/medical-packages/import/template', {
+  const response = await api.get('/medical-packages/import/template', {
     responseType: 'blob'
   });
   return response.data;
@@ -185,7 +184,7 @@ export const importMedicalPackages = async (file) => {
   const formData = new FormData();
   formData.append('file', file);
 
-  const response = await axios.post('/medical-packages/import', formData, {
+  const response = await api.post('/medical-packages/import', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
     timeout: 300000 // 5 minutes for large Excel files
   });

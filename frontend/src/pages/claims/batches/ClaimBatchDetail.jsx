@@ -52,6 +52,7 @@ import MainCard from 'components/MainCard';
 import { ModernPageHeader } from 'components/tba';
 import GenericDataTable from 'components/GenericDataTable';
 import useTableState from 'hooks/useTableState';
+import useAuth from 'hooks/useAuth';
 import claimsService from 'services/api/claims.service';
 import employersService from 'services/api/employers.service';
 import providersService from 'services/api/providers.service';
@@ -80,6 +81,7 @@ export default function ClaimBatchDetail() {
     const providerId = searchParams.get('providerId');
     const month = parseInt(searchParams.get('month'));
     const year = parseInt(searchParams.get('year'));
+    const { user } = useAuth();
 
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
@@ -94,17 +96,7 @@ export default function ClaimBatchDetail() {
     const { enqueueSnackbar } = useSnackbar();
     const queryClient = useQueryClient();
 
-    // Detect superadmin / reviewer role from session storage
-    const currentUserRole = (() => {
-        try {
-            const u = localStorage.getItem('user_details');
-            if (u) {
-                const parsed = JSON.parse(u);
-                return parsed?.role || (Array.isArray(parsed?.roles) ? parsed.roles[0] : null) || '';
-            }
-        } catch { /* ignore */ }
-        return '';
-    })();
+    const currentUserRole = user?.role || (Array.isArray(user?.roles) ? user.roles[0] : null) || '';
     const canSuspend = currentUserRole === 'SUPER_ADMIN' || currentUserRole === 'MEDICAL_REVIEWER' || currentUserRole === 'ACCOUNTANT';
 
     const suspendMutation = useMutation({

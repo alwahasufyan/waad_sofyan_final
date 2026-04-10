@@ -1,4 +1,4 @@
-import axiosClient from 'utils/axios';
+import api from 'lib/api';
 import { normalizePaginatedResponse } from 'utils/api-response-normalizer';
 
 /**
@@ -147,7 +147,7 @@ export const normalizeMemberResponse = (data) => {
  */
 export const bulkDeleteMembers = async (ids) => {
   if (!ids || ids.length === 0) return;
-  return await axiosClient.delete(`${BASE_URL}/bulk`, { data: ids });
+  return await api.delete(`${BASE_URL}/bulk`, { data: ids });
 };
 
 /**
@@ -158,7 +158,7 @@ export const bulkDeleteMembers = async (ids) => {
  * @returns {Promise<Object>} Response with deletion count
  */
 export const deleteAllMembersByEmployer = async (employerId) => {
-  const response = await axiosClient.delete(`${BASE_URL}/employer/${employerId}`);
+  const response = await api.delete(`${BASE_URL}/employer/${employerId}`);
   return unwrap(response);
 };
 
@@ -177,7 +177,7 @@ export const exportMembersPdf = async (params = {}) => {
   console.log('📄 [PDF Export] Starting PDF export with params:', params);
 
   try {
-    const response = await axiosClient.get(`${BASE_URL}/export/pdf`, {
+    const response = await api.get(`${BASE_URL}/export/pdf`, {
       params,
       responseType: 'blob', // Important for binary PDF file
       timeout: 120000, // ✅ FIX: 2 minutes timeout (120 seconds)
@@ -258,7 +258,7 @@ export const previewPdf = (blob, title = 'معاينة PDF') => {
  * @returns {Promise<Object>} Paginated response with items, total, page, size
  */
 export const getMembers = async (params = {}) => {
-  const response = await axiosClient.get(BASE_URL, { params });
+  const response = await api.get(BASE_URL, { params });
   return normalizePaginatedResponse(response);
 };
 
@@ -269,7 +269,7 @@ export const getMembers = async (params = {}) => {
  * @returns {Promise<Object>} MemberViewDto with family members
  */
 export const getMemberById = async (id) => {
-  const response = await axiosClient.get(`${BASE_URL}/${id}`);
+  const response = await api.get(`${BASE_URL}/${id}`);
   return unwrap(response);
 };
 
@@ -297,7 +297,7 @@ export const createMember = async (payload) => {
   console.log('🆕 [Create Member] Normalized payload (after cleanup):', JSON.stringify(normalizedPayload, null, 2));
 
   try {
-    const response = await axiosClient.post(BASE_URL, normalizedPayload);
+    const response = await api.post(BASE_URL, normalizedPayload);
     const result = normalizeMemberResponse(unwrap(response));
 
     console.log('✅ [Create Member] Member created successfully:', result);
@@ -333,7 +333,7 @@ export const updateMember = async (id, payload) => {
   console.log(`📝 [Update Member] Normalized payload (after cleanup):`, JSON.stringify(normalizedPayload, null, 2));
 
   try {
-    const response = await axiosClient.put(`${BASE_URL}/${id}`, normalizedPayload);
+    const response = await api.put(`${BASE_URL}/${id}`, normalizedPayload);
     const result = unwrap(response);
 
     console.log(`✅ [Update Member] Member ${id} updated successfully:`, result);
@@ -358,7 +358,7 @@ export const updateMember = async (id, payload) => {
  * @returns {Promise<void>}
  */
 export const deleteMember = async (id) => {
-  const response = await axiosClient.delete(`${BASE_URL}/${id}`);
+  const response = await api.delete(`${BASE_URL}/${id}`);
   return unwrap(response);
 };
 
@@ -368,7 +368,7 @@ export const deleteMember = async (id) => {
  * @returns {Promise<Array>} Active members list for selection
  */
 export const getMembersSelector = async () => {
-  const response = await axiosClient.get(`${BASE_URL}/selector`);
+  const response = await api.get(`${BASE_URL}/selector`);
   return unwrap(response);
 };
 
@@ -380,7 +380,7 @@ export const getMembersSelector = async () => {
  */
 export const getMembersCount = async (employerId = null) => {
   const params = employerId ? { employerId } : {};
-  const response = await axiosClient.get(`${BASE_URL}/count`, { params });
+  const response = await api.get(`${BASE_URL}/count`, { params });
   return unwrap(response);
 };
 
@@ -401,7 +401,7 @@ export const getMembersCount = async (employerId = null) => {
  */
 export const searchForEligibility = async (params = {}) => {
   try {
-    const response = await axiosClient.get(`${BASE_URL}/search`, { params });
+    const response = await api.get(`${BASE_URL}/search`, { params });
     const data = response.data?.data;
     return Array.isArray(data) ? data : [];
   } catch (error) {
@@ -433,7 +433,7 @@ export const unifiedSearchMembers = async (params = {}) => {
  * @returns {Promise<Array>} Filtered members list
  */
 export const searchMembers = async (query) => {
-  const response = await axiosClient.get(`${BASE_URL}/search`, {
+  const response = await api.get(`${BASE_URL}/search`, {
     params: { query }
   });
   return unwrap(response);
@@ -460,7 +460,7 @@ export const advancedSearchMembers = async (searchType, searchValue, employerId 
   if (employerId) {
     params.employerId = employerId;
   }
-  const response = await axiosClient.get(`${BASE_URL}/search/advanced`, { params });
+  const response = await api.get(`${BASE_URL}/search/advanced`, { params });
   return unwrap(response);
 };
 
@@ -471,7 +471,7 @@ export const advancedSearchMembers = async (searchType, searchValue, employerId 
  * @returns {Promise<Object>} MemberViewDto
  */
 export const getMemberByCard = async (cardNumber) => {
-  const response = await axiosClient.get(`${BASE_URL}/card/${encodeURIComponent(cardNumber)}`);
+  const response = await api.get(`${BASE_URL}/card/${encodeURIComponent(cardNumber)}`);
   return normalizeMemberResponse(unwrap(response));
 };
 
@@ -482,7 +482,7 @@ export const getMemberByCard = async (cardNumber) => {
  * @returns {Promise<Object>} MemberViewDto
  */
 export const getMemberByBarcode = async (barcode) => {
-  const response = await axiosClient.get(`${BASE_URL}/barcode/${encodeURIComponent(barcode)}`);
+  const response = await api.get(`${BASE_URL}/barcode/${encodeURIComponent(barcode)}`);
   return normalizeMemberResponse(unwrap(response));
 };
 
@@ -494,7 +494,7 @@ export const getMemberByBarcode = async (barcode) => {
  * @returns {Promise<Object>} MemberViewDto
  */
 export const getMemberByCivilId = async (civilId) => {
-  const response = await axiosClient.get(`${BASE_URL}/civil-id/${encodeURIComponent(civilId)}`);
+  const response = await api.get(`${BASE_URL}/civil-id/${encodeURIComponent(civilId)}`);
   return normalizeMemberResponse(unwrap(response));
 };
 
@@ -512,7 +512,7 @@ export const detectColumns = async (file) => {
   const formData = new FormData();
   formData.append('file', file);
 
-  const response = await axiosClient.post(`${BASE_URL}/import/detect-columns`, formData, {
+  const response = await api.post(`${BASE_URL}/import/detect-columns`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   });
   return unwrap(response);
@@ -533,7 +533,7 @@ export const previewImport = async (file, customMappings = null) => {
     formData.append('customMappings', JSON.stringify(customMappings));
   }
 
-  const response = await axiosClient.post(`${BASE_URL}/import/preview`, formData, {
+  const response = await api.post(`${BASE_URL}/import/preview`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
     timeout: 300000 // 5 minutes for large Excel files
   });
@@ -559,7 +559,7 @@ export const executeImport = async (file, batchId, employerId, benefitPolicyId =
     formData.append('benefitPolicyId', benefitPolicyId);
   }
 
-  const response = await axiosClient.post(`${BASE_URL}/import/execute`, formData, {
+  const response = await api.post(`${BASE_URL}/import/execute`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
     timeout: 300000 // 5 minutes for large Excel files
   });
@@ -573,7 +573,7 @@ export const executeImport = async (file, batchId, employerId, benefitPolicyId =
  * @returns {Promise<Object>} Paginated import logs
  */
 export const getImportLogs = async (params = {}) => {
-  const response = await axiosClient.get(`${BASE_URL}/import/logs`, { params });
+  const response = await api.get(`${BASE_URL}/import/logs`, { params });
   return unwrap(response);
 };
 
@@ -584,7 +584,7 @@ export const getImportLogs = async (params = {}) => {
  * @returns {Promise<Object>} Import log details
  */
 export const getImportLogDetails = async (batchId) => {
-  const response = await axiosClient.get(`${BASE_URL}/import/logs/${batchId}`);
+  const response = await api.get(`${BASE_URL}/import/logs/${batchId}`);
   return unwrap(response);
 };
 
@@ -595,7 +595,7 @@ export const getImportLogDetails = async (batchId) => {
  * @returns {Promise<Array>} List of import errors
  */
 export const getImportErrors = async (batchId) => {
-  const response = await axiosClient.get(`${BASE_URL}/import/logs/${batchId}/errors`);
+  const response = await api.get(`${BASE_URL}/import/logs/${batchId}/errors`);
   return unwrap(response);
 };
 
@@ -605,7 +605,7 @@ export const getImportErrors = async (batchId) => {
  * @returns {Promise<Object>} Template column info
  */
 export const getImportTemplate = async () => {
-  const response = await axiosClient.get(`${BASE_URL}/import/template`);
+  const response = await api.get(`${BASE_URL}/import/template`);
   return unwrap(response);
 };
 
@@ -615,7 +615,7 @@ export const getImportTemplate = async () => {
  * @returns {Promise<Blob>} Excel file blob
  */
 export const downloadImportTemplate = async () => {
-  const response = await axiosClient.get(`${BASE_URL}/import/template`, {
+  const response = await api.get(`${BASE_URL}/import/template`, {
     responseType: 'blob'
   });
   return response.data;
@@ -631,7 +631,7 @@ export const uploadMembersExcel = async (file) => {
   const formData = new FormData();
   formData.append('file', file);
 
-  const response = await axiosClient.post(`${BASE_URL}/import`, formData, {
+  const response = await api.post(`${BASE_URL}/import`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   });
   return unwrap(response);
@@ -649,7 +649,7 @@ export const uploadMembersExcel = async (file) => {
  * @returns {Promise<Object>} Assignment result with count
  */
 export const assignBenefitPolicyToEmployer = async (employerId, benefitPolicyId) => {
-  const response = await axiosClient.post(`${BASE_URL}/employer/${employerId}/assign-benefit-policy`, null, {
+  const response = await api.post(`${BASE_URL}/employer/${employerId}/assign-benefit-policy`, null, {
     params: { benefitPolicyId }
   });
   return unwrap(response);
@@ -662,7 +662,7 @@ export const assignBenefitPolicyToEmployer = async (employerId, benefitPolicyId)
  * @returns {Promise<number>} Number of members updated
  */
 export const refreshBenefitPoliciesForEmployer = async (employerOrgId) => {
-  const response = await axiosClient.post(`${BASE_URL}/employer/${employerOrgId}/refresh-policies`);
+  const response = await api.post(`${BASE_URL}/employer/${employerOrgId}/refresh-policies`);
   return unwrap(response);
 };
 
@@ -683,7 +683,7 @@ export const refreshBenefitPoliciesForEmployer = async (employerOrgId) => {
  * @returns {Promise<Object>} Updated MemberViewDto (normalized)
  */
 export const suspendMember = async (id, reason) => {
-  const response = await axiosClient.post(`${BASE_URL}/${id}/suspend`, { reason });
+  const response = await api.post(`${BASE_URL}/${id}/suspend`, { reason });
   return normalizeMemberResponse(unwrap(response));
 };
 
@@ -699,7 +699,7 @@ export const suspendMember = async (id, reason) => {
  * @returns {Promise<Object>} Updated MemberViewDto (normalized)
  */
 export const activateMember = async (id) => {
-  const response = await axiosClient.post(`${BASE_URL}/${id}/activate`);
+  const response = await api.post(`${BASE_URL}/${id}/activate`);
   return normalizeMemberResponse(unwrap(response));
 };
 
@@ -719,7 +719,7 @@ export const activateMember = async (id) => {
  * @returns {Promise<Object>} Updated MemberViewDto (normalized)
  */
 export const terminateMember = async (id) => {
-  const response = await axiosClient.post(`${BASE_URL}/${id}/terminate`);
+  const response = await api.post(`${BASE_URL}/${id}/terminate`);
   return normalizeMemberResponse(unwrap(response));
 };
 
@@ -739,7 +739,7 @@ export const terminateMember = async (id) => {
  * @returns {Promise<Object>} Updated MemberViewDto (normalized)
  */
 export const blockCard = async (id, reason) => {
-  const response = await axiosClient.post(`${BASE_URL}/${id}/card/block`, { reason });
+  const response = await api.post(`${BASE_URL}/${id}/card/block`, { reason });
   return normalizeMemberResponse(unwrap(response));
 };
 
@@ -754,7 +754,7 @@ export const blockCard = async (id, reason) => {
  * @returns {Promise<Object>} Updated MemberViewDto (normalized)
  */
 export const activateCard = async (id) => {
-  const response = await axiosClient.post(`${BASE_URL}/${id}/card/activate`);
+  const response = await api.post(`${BASE_URL}/${id}/card/activate`);
   return normalizeMemberResponse(unwrap(response));
 };
 
@@ -769,7 +769,7 @@ export const activateCard = async (id) => {
  * @returns {Promise<Object>} Member details (normalized)
  */
 export const getMemberByCardNumber = async (cardNumber) => {
-  const response = await axiosClient.get(`${BASE_URL}/card/${cardNumber}`);
+  const response = await api.get(`${BASE_URL}/card/${cardNumber}`);
   return normalizeMemberResponse(unwrap(response));
 };
 
@@ -798,7 +798,7 @@ export const getMemberByCardNumber = async (cardNumber) => {
  */
 export const checkEligibility = async (id, serviceDate = null) => {
   const params = serviceDate ? { serviceDate } : {};
-  const response = await axiosClient.get(`${BASE_URL}/${id}/eligibility`, { params });
+  const response = await api.get(`${BASE_URL}/${id}/eligibility`, { params });
   return unwrap(response);
 };
 
@@ -817,7 +817,7 @@ export const checkEligibility = async (id, serviceDate = null) => {
  * @returns {string} message - Additional message (e.g., warnings)
  */
 export const checkEligibilityByCardNumber = async (cardNumber) => {
-  const response = await axiosClient.get(`${BASE_URL}/check-eligibility`, {
+  const response = await api.get(`${BASE_URL}/check-eligibility`, {
     params: { cardNumber }
   });
   return unwrap(response);
@@ -840,7 +840,7 @@ export const searchMembersByName = async (query) => {
   if (!query || query.trim().length < 3) {
     return [];
   }
-  const response = await axiosClient.get(`${BASE_URL}/search`, {
+  const response = await api.get(`${BASE_URL}/search`, {
     params: { query: query.trim() }
   });
   // Response is direct array, not wrapped in ApiResponse
@@ -878,7 +878,7 @@ export const searchMembersByName = async (query) => {
  * @returns {number} data[].similarityScore - Similarity score (for fuzzy search)
  */
 export const unifiedMemberSearch = async (query) => {
-  const response = await axiosClient.get(`${BASE_URL}/search`, {
+  const response = await api.get(`${BASE_URL}/search`, {
     params: { query: query.trim() }
   });
   return response.data; // Return full ApiResponse structure
@@ -903,7 +903,7 @@ export const unifiedMemberSearch = async (query) => {
 export const exportMemberCardPdf = async (id, params = {}) => {
   console.log(`📄 [Export Member Card PDF] Member ID: ${id}`);
   try {
-    const response = await axiosClient.get(`${BASE_URL}/${id}/export/card-pdf`, {
+    const response = await api.get(`${BASE_URL}/${id}/export/card-pdf`, {
       params,
       responseType: 'blob',
       timeout: 120000 // 2 minutes timeout for PDF generation

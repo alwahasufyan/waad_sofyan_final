@@ -1,6 +1,5 @@
 import PropTypes from 'prop-types';
-import { useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { Box, CircularProgress } from '@mui/material';
 
 // project imports
@@ -11,21 +10,7 @@ import { AUTH_STATUS } from 'contexts/AuthContext';
 
 export default function AuthGuard({ children }) {
   const { authStatus } = useAuth();
-  const navigate = useNavigate();
   const location = useLocation();
-
-  useEffect(() => {
-    // CRITICAL: Only redirect when we KNOW user is unauthenticated
-    // Do NOT redirect during INITIALIZING (prevents infinite loops)
-    if (authStatus === AUTH_STATUS.UNAUTHENTICATED) {
-      navigate('/login', {
-        state: {
-          from: location.pathname
-        },
-        replace: true
-      });
-    }
-  }, [authStatus, navigate, location]);
 
   // Show loading during initialization
   if (authStatus === AUTH_STATUS.INITIALIZING) {
@@ -41,6 +26,10 @@ export default function AuthGuard({ children }) {
         <CircularProgress size={60} />
       </Box>
     );
+  }
+
+  if (authStatus === AUTH_STATUS.UNAUTHENTICATED) {
+    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
 
   // Authenticated - render children

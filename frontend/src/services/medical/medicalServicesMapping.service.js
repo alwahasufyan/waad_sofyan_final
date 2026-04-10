@@ -2,7 +2,7 @@
  * Medical Services Mapping API Service
  * Backend: /api/v1/medical-services-mapping
  */
-import axiosClient from 'utils/axios';
+import api from 'lib/api';
 
 const BASE = '/medical-services-mapping';
 const unwrap = (res) => res.data?.data ?? res.data;
@@ -13,7 +13,7 @@ const medicalServicesMappingService = {
    * @returns {Promise<{total,pending,mapped,rejected,providersWithRawServices,medicalServicesTotal}>}
    */
   getStats: async () => {
-    const res = await axiosClient.get(`${BASE}/stats`);
+    const res = await api.get(`${BASE}/stats`);
     return unwrap(res);
   },
 
@@ -22,7 +22,7 @@ const medicalServicesMappingService = {
    * @param {{ code, name, categoryId, rawServiceIds: number[] }} payload
    */
   createAndMap: async (payload) => {
-    const res = await axiosClient.post(`${BASE}/create-and-map`, payload);
+    const res = await api.post(`${BASE}/create-and-map`, payload);
     return unwrap(res);
   },
 
@@ -31,7 +31,7 @@ const medicalServicesMappingService = {
    * @param {{ medicalServiceId: number, rawServiceIds: number[] }} payload
    */
   linkAndMap: async (payload) => {
-    const res = await axiosClient.post(`${BASE}/link-and-map`, payload);
+    const res = await api.post(`${BASE}/link-and-map`, payload);
     return unwrap(res);
   }
 };

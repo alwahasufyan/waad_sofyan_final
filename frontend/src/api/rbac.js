@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { SystemRole, isProviderRole, getPrivilegeLevel, getAssignableRoles, canModifyRole } from 'constants/rbac';
+import { AUTH_TOKEN_KEY } from 'services/authService';
 
 /**
  * RBAC Store — Phase 5 (Static Role-Based Auth)
@@ -14,7 +15,7 @@ import { SystemRole, isProviderRole, getPrivilegeLevel, getAssignableRoles, canM
 const STORAGE_KEYS = {
   ROLES: 'userRoles',
   USER: 'userData',
-  TOKEN: 'serviceToken'
+  TOKEN: AUTH_TOKEN_KEY
 };
 
 export const useRBACStore = create((set, get) => ({

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import axiosClient from 'utils/axios';
+import api from 'lib/api';
 
 /**
  * Helper to unwrap API response
@@ -98,7 +98,7 @@ export const useVisitsReport = ({ employerId, providerId, filters = DEFAULT_FILT
       }
 
       // Fetch visits
-      const visitsResponse = await axiosClient.get('/visits', { params });
+      const visitsResponse = await api.get('/visits', { params });
       const visitsData = unwrap(visitsResponse);
 
       // Handle different response formats
@@ -138,7 +138,7 @@ export const useVisitsReport = ({ employerId, providerId, filters = DEFAULT_FILT
       // Fetch members count for avg calculation
       try {
         const membersParams = employerId ? { organizationId: employerId, size: 1 } : { size: 1 };
-        const membersResponse = await axiosClient.get('/unified-members', { params: membersParams });
+        const membersResponse = await api.get('/unified-members', { params: membersParams });
         const membersData = unwrap(membersResponse);
         setMembersCount(membersData?.total ?? membersData?.totalElements ?? 0);
       } catch {

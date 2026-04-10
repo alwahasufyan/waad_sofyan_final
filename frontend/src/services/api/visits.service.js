@@ -1,4 +1,4 @@
-import axiosClient from 'utils/axios';
+import api from 'lib/api';
 import { createErrorHandler } from 'utils/api-error-handler';
 
 // ==============================|| VISITS SERVICE ||============================== //
@@ -72,7 +72,7 @@ export const visitsService = {
         ...(search && { search }),
         ...(employerId && { employerId: employerId.toString() })
       });
-      const response = await axiosClient.get(`${BASE_URL}?${queryParams}`);
+      const response = await api.get(`${BASE_URL}?${queryParams}`);
       return unwrap(response);
     } catch (error) {
       throw handleVisitErrors(error);
@@ -86,7 +86,7 @@ export const visitsService = {
    */
   getAll: async () => {
     try {
-      const response = await axiosClient.get(`${BASE_URL}/all`);
+      const response = await api.get(`${BASE_URL}/all`);
       return unwrap(response);
     } catch (error) {
       throw handleVisitErrors(error);
@@ -102,7 +102,7 @@ export const visitsService = {
   getById: async (id) => {
     try {
       if (!id) throw new Error('معرف الزيارة مطلوب');
-      const response = await axiosClient.get(`${BASE_URL}/${id}`);
+      const response = await api.get(`${BASE_URL}/${id}`);
       return unwrap(response);
     } catch (error) {
       throw handleVisitErrors(error);
@@ -118,7 +118,7 @@ export const visitsService = {
   create: async (data) => {
     try {
       if (!data) throw new Error('بيانات الزيارة مطلوبة');
-      const response = await axiosClient.post(BASE_URL, data);
+      const response = await api.post(BASE_URL, data);
       return unwrap(response);
     } catch (error) {
       throw handleVisitErrors(error);
@@ -136,7 +136,7 @@ export const visitsService = {
     try {
       if (!id) throw new Error('معرف الزيارة مطلوب');
       if (!data) throw new Error('بيانات التحديث مطلوبة');
-      const response = await axiosClient.put(`${BASE_URL}/${id}`, data);
+      const response = await api.put(`${BASE_URL}/${id}`, data);
       return unwrap(response);
     } catch (error) {
       throw handleVisitErrors(error);
@@ -152,7 +152,7 @@ export const visitsService = {
   remove: async (id) => {
     try {
       if (!id) throw new Error('معرف الزيارة مطلوب');
-      const response = await axiosClient.delete(`${BASE_URL}/${id}`);
+      const response = await api.delete(`${BASE_URL}/${id}`);
       return unwrap(response);
     } catch (error) {
       throw handleVisitErrors(error);
@@ -168,7 +168,7 @@ export const visitsService = {
   getCount: async (employerId) => {
     try {
       const url = employerId ? `${BASE_URL}/count?employerId=${employerId}` : `${BASE_URL}/count`;
-      const response = await axiosClient.get(url);
+      const response = await api.get(url);
       return unwrap(response);
     } catch (error) {
       throw handleVisitErrors(error);
@@ -197,7 +197,7 @@ export const visitsService = {
       formData.append('attachmentType', attachmentType);
       if (description) formData.append('description', description);
 
-      const response = await axiosClient.post(`${BASE_URL}/${visitId}/attachments`, formData, {
+      const response = await api.post(`${BASE_URL}/${visitId}/attachments`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       return response.data;
@@ -215,7 +215,7 @@ export const visitsService = {
   getAttachments: async (visitId) => {
     try {
       if (!visitId) throw new Error('معرف الزيارة مطلوب');
-      const response = await axiosClient.get(`${BASE_URL}/${visitId}/attachments`);
+      const response = await api.get(`${BASE_URL}/${visitId}/attachments`);
       return response.data;
     } catch (error) {
       throw handleVisitErrors(error);
@@ -232,7 +232,7 @@ export const visitsService = {
   downloadAttachment: async (visitId, attachmentId) => {
     try {
       if (!visitId || !attachmentId) throw new Error('معرف الزيارة والمرفق مطلوبان');
-      const response = await axiosClient.get(`${BASE_URL}/${visitId}/attachments/${attachmentId}`, {
+      const response = await api.get(`${BASE_URL}/${visitId}/attachments/${attachmentId}`, {
         responseType: 'blob'
       });
       return response.data;
@@ -251,7 +251,7 @@ export const visitsService = {
   deleteAttachment: async (visitId, attachmentId) => {
     try {
       if (!visitId || !attachmentId) throw new Error('معرف الزيارة والمرفق مطلوبان');
-      const response = await axiosClient.delete(`${BASE_URL}/${visitId}/attachments/${attachmentId}`);
+      const response = await api.delete(`${BASE_URL}/${visitId}/attachments/${attachmentId}`);
       return response.data;
     } catch (error) {
       throw handleVisitErrors(error);
@@ -283,7 +283,7 @@ export const visitsService = {
   getContext: async (visitId) => {
     try {
       if (!visitId) throw new Error('معرف الزيارة مطلوب');
-      const response = await axiosClient.get(`/provider/visits/${visitId}/context`);
+      const response = await api.get(`/provider/visits/${visitId}/context`);
       return unwrap(response);
     } catch (error) {
       console.error('[VISITS] Error getting visit context:', error);

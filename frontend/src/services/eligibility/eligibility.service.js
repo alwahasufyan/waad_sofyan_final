@@ -3,7 +3,7 @@
  * Handles eligibility checks for members and their families
  */
 
-import axiosServices from 'utils/axios';
+import api from 'lib/api';
 
 const BASE_URL = '/eligibility';
 
@@ -12,7 +12,7 @@ export const eligibilityService = {
    * Check eligibility for a single member
    */
   checkEligibility: (data) => {
-    return axiosServices.post(`${BASE_URL}/check`, data);
+    return api.post(`${BASE_URL}/check`, data);
   },
 
   /**
@@ -22,35 +22,35 @@ export const eligibilityService = {
    */
   checkFamilyEligibility: (memberId, serviceDate = null) => {
     const params = serviceDate ? { serviceDate } : {};
-    return axiosServices.get(`${BASE_URL}/family/${memberId}`, { params });
+    return api.get(`${BASE_URL}/family/${memberId}`, { params });
   },
 
   /**
    * Get eligibility check logs
    */
   getLogs: (params = {}) => {
-    return axiosServices.get(`${BASE_URL}/logs`, { params });
+    return api.get(`${BASE_URL}/logs`, { params });
   },
 
   /**
    * Get specific eligibility check by request ID
    */
   getLogByRequestId: (requestId) => {
-    return axiosServices.get(`${BASE_URL}/logs/${requestId}`);
+    return api.get(`${BASE_URL}/logs/${requestId}`);
   },
 
   /**
    * Get active eligibility rules
    */
   getActiveRules: () => {
-    return axiosServices.get(`${BASE_URL}/rules`);
+    return api.get(`${BASE_URL}/rules`);
   },
 
   /**
    * Health check
    */
   healthCheck: () => {
-    return axiosServices.get(`${BASE_URL}/health`);
+    return api.get(`${BASE_URL}/health`);
   }
 };
 

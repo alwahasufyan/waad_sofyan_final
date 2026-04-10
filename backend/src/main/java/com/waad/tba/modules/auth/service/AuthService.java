@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.waad.tba.common.exception.BusinessRuleException;
 import com.waad.tba.common.exception.ResourceNotFoundException;
+import com.waad.tba.common.exception.UnauthorizedException;
 import com.waad.tba.common.service.SystemSettingsService;
 import com.waad.tba.core.email.EmailService;
 import com.waad.tba.modules.auth.dto.LoginRequest;
@@ -249,20 +250,18 @@ public class AuthService {
          */
         @Transactional(readOnly = true)
         public LoginResponse.UserInfo getCurrentUser(String token) {
-                // SECURITY FIX: Validate token input
                 if (token == null || token.isBlank()) {
-                        throw new IllegalArgumentException("Token cannot be null or empty");
+                        throw new UnauthorizedException("Invalid or expired token");
                 }
 
                 String username = jwtTokenProvider.getUsernameFromToken(token);
 
-                // SECURITY FIX: Validate username extraction
                 if (username == null || username.isBlank()) {
-                        throw new RuntimeException("Invalid token: Unable to extract username");
+                        throw new UnauthorizedException("Invalid or expired token");
                 }
 
                 User user = userRepository.findByUsername(username)
-                                .orElseThrow(() -> new RuntimeException("User not found"));
+                                .orElseThrow(() -> new UnauthorizedException("Invalid or expired token"));
 
                 String userRole = user.getUserType() != null ? user.getUserType() : "DATA_ENTRY";
                 List<String> roles = List.of(userRole);

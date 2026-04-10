@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
-import axiosClient from 'utils/axios';
+import api from 'lib/api';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { QRCodeCanvas } from 'qrcode.react';
@@ -227,10 +227,10 @@ const BeneficiariesReports = () => {
 
     try {
       const [financialSummaryResult, statementResult, claimsResult, preAuthResult] = await Promise.allSettled([
-        axiosClient.get(`/unified-members/${member.id}/financial-summary`),
+        api.get(`/unified-members/${member.id}/financial-summary`),
         claimsService.getMemberStatement(member.id),
-        axiosClient.get(`/claims/member/${member.id}`),
-        axiosClient.get(`/pre-authorizations/member/${member.id}?page=0&size=500&sortBy=requestDate&sortDirection=DESC`)
+        api.get(`/claims/member/${member.id}`),
+        api.get(`/pre-authorizations/member/${member.id}?page=0&size=500&sortBy=requestDate&sortDirection=DESC`)
       ]);
 
       const financialSummaryPayload =
@@ -312,7 +312,7 @@ const BeneficiariesReports = () => {
     if (activeFilters.search) params.append('searchQuery', activeFilters.search);
 
     try {
-      const response = await axiosClient.get(`/unified-members/export/excel?${params.toString()}`, {
+      const response = await api.get(`/unified-members/export/excel?${params.toString()}`, {
         responseType: 'blob'
       });
       const url = window.URL.createObjectURL(new Blob([response.data || response]));

@@ -32,7 +32,7 @@ import MainCard from 'components/MainCard';
 import UnifiedPageHeader from 'components/UnifiedPageHeader';
 import { UnifiedMedicalTable } from 'components/common';
 import PermissionGuard from 'components/PermissionGuard';
-import axiosClient from 'utils/axios';
+import api from 'lib/api';
 import { formatCurrency, formatDate } from 'utils/formatters';
 
 /**
@@ -76,7 +76,7 @@ const ProviderVisitsReport = () => {
         ...(status && { status }),
         ...(filters.memberBarcode && { memberBarcode: filters.memberBarcode })
       };
-      const response = await axiosClient.get('/api/v1/provider/reports/visits', { params });
+      const response = await api.get('/api/v1/provider/reports/visits', { params });
       return response?.data?.data ?? response?.data ?? { content: [], totalElements: 0 };
     }
   });
@@ -120,7 +120,7 @@ const ProviderVisitsReport = () => {
         ...(filters.memberBarcode && { memberBarcode: filters.memberBarcode })
       };
 
-      const response = await axiosClient.get('/api/v1/provider/reports/visits/export', {
+      const response = await api.get('/api/v1/provider/reports/visits/export', {
         params,
         responseType: 'blob'
       });

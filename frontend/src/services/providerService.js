@@ -1,4 +1,4 @@
-import api from '../utils/axios';
+import api from 'lib/api';
 
 /**
  * Provider Portal API Service

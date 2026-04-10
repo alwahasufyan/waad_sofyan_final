@@ -66,7 +66,17 @@ export default [
       'no-restricted-imports': [
         'error',
         {
-          patterns: ['@mui/*/*/*', '!@mui/material/test-utils/*']
+          patterns: ['@mui/*/*/*', '!@mui/material/test-utils/*'],
+          paths: [
+            {
+              name: 'axios',
+              message: 'Use lib/api so Authorization and global 401 handling stay centralized.'
+            },
+            {
+              name: 'utils/axios',
+              message: 'Use lib/api instead of the legacy axios wrapper.'
+            }
+          ]
         }
       ],
 

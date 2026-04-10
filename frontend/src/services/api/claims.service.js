@@ -1,4 +1,4 @@
-import axiosClient from 'utils/axios';
+import api from 'lib/api';
 import { createErrorHandler } from 'utils/api-error-handler';
 import { validateClaimNumber, validateAmount } from 'utils/api-validators';
 import { normalizePaginatedResponse } from 'utils/api-response-normalizer';
@@ -44,7 +44,7 @@ export const claimsService = {
       if (params.search) queryParams.append('search', params.search);
 
       const url = queryParams.toString() ? `${BASE_URL}?${queryParams.toString()}` : BASE_URL;
-      const response = await axiosClient.get(url);
+      const response = await api.get(url);
       return normalizePaginatedResponse(response);
     } catch (error) {
       throw handleClaimErrors(error);
@@ -63,7 +63,7 @@ export const claimsService = {
           queryParams.append(key, params[key]);
         }
       });
-      const response = await axiosClient.get(`${BASE_URL}?${queryParams.toString()}`);
+      const response = await api.get(`${BASE_URL}?${queryParams.toString()}`);
       return normalizePaginatedResponse(response);
     } catch (error) {
       throw handleClaimErrors(error);
@@ -82,7 +82,7 @@ export const claimsService = {
           queryParams.append(key, params[key]);
         }
       });
-      const response = await axiosClient.get(`${BASE_URL}/deleted?${queryParams.toString()}`);
+      const response = await api.get(`${BASE_URL}/deleted?${queryParams.toString()}`);
       return normalizePaginatedResponse(response);
     } catch (error) {
       throw handleClaimErrors(error);
@@ -97,7 +97,7 @@ export const claimsService = {
   getById: async (id) => {
     try {
       if (!id) throw new Error('معرف المطالبة مطلوب');
-      const response = await axiosClient.get(`${BASE_URL}/${id}`);
+      const response = await api.get(`${BASE_URL}/${id}`);
       return unwrap(response);
     } catch (error) {
       throw handleClaimErrors(error);
@@ -114,7 +114,7 @@ export const claimsService = {
   getByClaimNumber: async (claimNumber) => {
     try {
       validateClaimNumber(claimNumber);
-      const response = await axiosClient.get(`${BASE_URL}/number/${claimNumber}`);
+      const response = await api.get(`${BASE_URL}/number/${claimNumber}`);
       return unwrap(response);
     } catch (error) {
       throw handleClaimErrors(error);
@@ -132,7 +132,7 @@ export const claimsService = {
       if (data.requestedAmount !== undefined) {
         validateAmount(data.requestedAmount, 'المبلغ المطلوب');
       }
-      const response = await axiosClient.post(BASE_URL, data);
+      const response = await api.post(BASE_URL, data);
       return unwrap(response);
     } catch (error) {
       throw handleClaimErrors(error);
@@ -152,7 +152,7 @@ export const claimsService = {
       if (data.requestedAmount !== undefined) {
         validateAmount(data.requestedAmount, 'المبلغ المطلوب');
       }
-      const response = await axiosClient.put(`${BASE_URL}/${id}/data`, data);
+      const response = await api.put(`${BASE_URL}/${id}/data`, data);
       return unwrap(response);
     } catch (error) {
       throw handleClaimErrors(error);
@@ -169,7 +169,7 @@ export const claimsService = {
     try {
       if (!id) throw new Error('معرف المطالبة مطلوب');
       if (!data) throw new Error('بيانات المراجعة مطلوبة');
-      const response = await axiosClient.put(`${BASE_URL}/${id}/review`, data);
+      const response = await api.put(`${BASE_URL}/${id}/review`, data);
       return unwrap(response);
     } catch (error) {
       throw handleClaimErrors(error);
@@ -190,7 +190,7 @@ export const claimsService = {
       const queryParams = new URLSearchParams();
       if (options?.reason) queryParams.append('reason', options.reason);
       const suffix = queryParams.toString() ? `?${queryParams.toString()}` : '';
-      const response = await axiosClient.delete(`${BASE_URL}/${id}${suffix}`);
+      const response = await api.delete(`${BASE_URL}/${id}${suffix}`);
       return unwrap(response);
     } catch (error) {
       throw handleClaimErrors(error);
@@ -204,7 +204,7 @@ export const claimsService = {
   restore: async (id) => {
     try {
       if (!id) throw new Error('معرف المطالبة مطلوب');
-      const response = await axiosClient.post(`${BASE_URL}/${id}/restore`);
+      const response = await api.post(`${BASE_URL}/${id}/restore`);
       return unwrap(response);
     } catch (error) {
       throw handleClaimErrors(error);
@@ -218,7 +218,7 @@ export const claimsService = {
   hardDelete: async (id) => {
     try {
       if (!id) throw new Error('معرف المطالبة مطلوب');
-      const response = await axiosClient.delete(`${BASE_URL}/${id}/hard`);
+      const response = await api.delete(`${BASE_URL}/${id}/hard`);
       return unwrap(response);
     } catch (error) {
       throw handleClaimErrors(error);
@@ -233,7 +233,7 @@ export const claimsService = {
   getByVisit: async (visitId) => {
     try {
       if (!visitId) throw new Error('معرف الزيارة مطلوب');
-      const response = await axiosClient.get(`${BASE_URL}/visit/${visitId}`);
+      const response = await api.get(`${BASE_URL}/visit/${visitId}`);
       return unwrap(response);
     } catch (error) {
       throw handleClaimErrors(error);
@@ -248,7 +248,7 @@ export const claimsService = {
   getByStatus: async (status) => {
     try {
       if (!status) throw new Error('حالة المطالبة مطلوبة');
-      const response = await axiosClient.get(`${BASE_URL}/status/${status}`);
+      const response = await api.get(`${BASE_URL}/status/${status}`);
       return unwrap(response);
     } catch (error) {
       throw handleClaimErrors(error);
@@ -273,7 +273,7 @@ export const claimsService = {
         validateAmount(data.approvedAmount, 'المبلغ المعتمد');
       }
       // Async approval - returns immediately (no long timeout needed)
-      const response = await axiosClient.post(`${BASE_URL}/${id}/approve`, data);
+      const response = await api.post(`${BASE_URL}/${id}/approve`, data);
       return unwrap(response);
     } catch (error) {
       throw handleClaimErrors(error);
@@ -292,7 +292,7 @@ export const claimsService = {
       if (!data?.rejectionReason) {
         throw new Error('سبب الرفض مطلوب');
       }
-      const response = await axiosClient.post(`${BASE_URL}/${id}/reject`, data);
+      const response = await api.post(`${BASE_URL}/${id}/reject`, data);
       return unwrap(response);
     } catch (error) {
       throw handleClaimErrors(error);
@@ -306,7 +306,7 @@ export const claimsService = {
    */
   search: async (searchTerm) => {
     try {
-      const response = await axiosClient.get(`${BASE_URL}/search?q=${encodeURIComponent(searchTerm || '')}`);
+      const response = await api.get(`${BASE_URL}/search?q=${encodeURIComponent(searchTerm || '')}`);
       return unwrap(response);
     } catch (error) {
       throw handleClaimErrors(error);
@@ -334,7 +334,7 @@ export const claimsService = {
       if (params.status) queryParams.append('status', params.status);
       if (params.search) queryParams.append('search', params.search);
 
-      const response = await axiosClient.get(`${BASE_URL}/inbox/pending?${queryParams.toString()}`);
+      const response = await api.get(`${BASE_URL}/inbox/pending?${queryParams.toString()}`);
       return normalizePaginatedResponse(response);
     } catch (error) {
       throw handleClaimErrors(error);
@@ -356,7 +356,7 @@ export const claimsService = {
       if (params.employerId) queryParams.append('employerId', params.employerId);
       if (params.providerId) queryParams.append('providerId', params.providerId);
 
-      const response = await axiosClient.get(`${BASE_URL}/inbox/approved?${queryParams.toString()}`);
+      const response = await api.get(`${BASE_URL}/inbox/approved?${queryParams.toString()}`);
       return normalizePaginatedResponse(response);
     } catch (error) {
       throw handleClaimErrors(error);
@@ -384,7 +384,7 @@ export const claimsService = {
       if (params.employerId) queryParams.append('employerId', params.employerId);
       if (params.providerId) queryParams.append('providerId', params.providerId);
 
-      const response = await axiosClient.get(`${BASE_URL}?${queryParams.toString()}`);
+      const response = await api.get(`${BASE_URL}?${queryParams.toString()}`);
       return normalizePaginatedResponse(response);
     } catch (error) {
       throw handleClaimErrors(error);
@@ -396,7 +396,7 @@ export const claimsService = {
       if (params.sortBy) queryParams.append('sortBy', params.sortBy);
       if (params.sortDir) queryParams.append('sortDir', params.sortDir);
 
-      const response = await axiosClient.get(`${BASE_URL}/inbox/approved?${queryParams.toString()}`);
+      const response = await api.get(`${BASE_URL}/inbox/approved?${queryParams.toString()}`);
       return normalizePaginatedResponse(response);
     } catch (error) {
       throw handleClaimErrors(error);
@@ -412,7 +412,7 @@ export const claimsService = {
     try {
       if (!id) throw new Error('معرف المطالبة مطلوب');
       // Increase timeout for cost breakdown (complex calculations)
-      const response = await axiosClient.get(`${BASE_URL}/${id}/cost-breakdown`, {
+      const response = await api.get(`${BASE_URL}/${id}/cost-breakdown`, {
         timeout: 60000 // 1 minute timeout
       });
       return unwrap(response);
@@ -429,7 +429,7 @@ export const claimsService = {
   getAttachments: async (id) => {
     try {
       if (!id) throw new Error('معرف المطالبة مطلوب');
-      const response = await axiosClient.get(`${BASE_URL}/${id}/attachments`);
+      const response = await api.get(`${BASE_URL}/${id}/attachments`);
       return unwrap(response);
     } catch (error) {
       throw handleClaimErrors(error);
@@ -446,7 +446,7 @@ export const claimsService = {
     try {
       if (!id) throw new Error('معرف المطالبة مطلوب');
       if (!formData) throw new Error('بيانات الملف مطلوبة');
-      const response = await axiosClient.post(`${BASE_URL}/${id}/attachments`, formData, {
+      const response = await api.post(`${BASE_URL}/${id}/attachments`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
@@ -467,7 +467,7 @@ export const claimsService = {
     try {
       if (!claimId) throw new Error('معرف المطالبة مطلوب');
       if (!attachmentId) throw new Error('معرف المرفق مطلوب');
-      const response = await axiosClient.get(`${BASE_URL}/${claimId}/attachments/${attachmentId}`, {
+      const response = await api.get(`${BASE_URL}/${claimId}/attachments/${attachmentId}`, {
         responseType: 'blob'
       });
       return response.data;
@@ -484,7 +484,7 @@ export const claimsService = {
   submit: async (id) => {
     try {
       if (!id) throw new Error('معرف المطالبة مطلوب');
-      const response = await axiosClient.post(`${BASE_URL}/${id}/submit`);
+      const response = await api.post(`${BASE_URL}/${id}/submit`);
       return unwrap(response);
     } catch (error) {
       throw handleClaimErrors(error);
@@ -499,7 +499,7 @@ export const claimsService = {
   startReview: async (id) => {
     try {
       if (!id) throw new Error('معرف المطالبة مطلوب');
-      const response = await axiosClient.post(`${BASE_URL}/${id}/start-review`);
+      const response = await api.post(`${BASE_URL}/${id}/start-review`);
       return unwrap(response);
     } catch (error) {
       throw handleClaimErrors(error);
@@ -538,7 +538,7 @@ export const claimsService = {
     try {
       if (!id) throw new Error('معرف المطالبة مطلوب');
       if (!data?.reason) throw new Error('سبب طلب المعلومات مطلوب');
-      const response = await axiosClient.post(`${BASE_URL}/${id}/return-for-info`, data);
+      const response = await api.post(`${BASE_URL}/${id}/return-for-info`, data);
       return unwrap(response);
     } catch (error) {
       throw handleClaimErrors(error);
@@ -560,7 +560,7 @@ export const claimsService = {
       if (params.providerId) queryParams.append('providerId', params.providerId);
       if (params.status) queryParams.append('status', params.status);
 
-      const response = await axiosClient.get(`/reports/adjudication?${queryParams.toString()}`);
+      const response = await api.get(`/reports/adjudication?${queryParams.toString()}`);
       return unwrap(response);
     } catch (error) {
       throw handleClaimErrors(error);
@@ -580,7 +580,7 @@ export const claimsService = {
       if (params.startDate) queryParams.append('startDate', params.startDate);
       if (params.endDate) queryParams.append('endDate', params.endDate);
 
-      const response = await axiosClient.get(`/reports/provider-settlement/${providerId}?${queryParams.toString()}`);
+      const response = await api.get(`/reports/provider-settlement/${providerId}?${queryParams.toString()}`);
       return unwrap(response);
     } catch (error) {
       throw handleClaimErrors(error);
@@ -595,7 +595,7 @@ export const claimsService = {
   getMemberStatement: async (memberId) => {
     try {
       if (!memberId) throw new Error('معرف العضو مطلوب');
-      const response = await axiosClient.get(`/reports/member-statement/${memberId}`);
+      const response = await api.get(`/reports/member-statement/${memberId}`);
       return unwrap(response);
     } catch (error) {
       throw handleClaimErrors(error);
@@ -633,7 +633,7 @@ export const claimsService = {
 
       const queryString = queryParams.toString();
       const url = `${BASE_URL}/financial-summary${queryString ? `?${queryString}` : ''}`;
-      const response = await axiosClient.get(url);
+      const response = await api.get(url);
       return unwrap(response);
     } catch (error) {
       throw handleClaimErrors(error);
@@ -654,7 +654,7 @@ export const claimsService = {
 
       const queryString = queryParams.toString();
       const url = `${BASE_URL}/settlement-summary${queryString ? `?${queryString}` : ''}`;
-      const response = await axiosClient.get(url);
+      const response = await api.get(url);
       return unwrap(response);
     } catch (error) {
       throw handleClaimErrors(error);

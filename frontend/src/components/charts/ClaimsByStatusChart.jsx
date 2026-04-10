@@ -4,7 +4,7 @@ import ReactApexChart from 'react-apexcharts';
 import { useTheme } from '@mui/material/styles';
 import { Box, Typography, Stack, Skeleton } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
-import axios from 'utils/axios';
+import api from 'lib/api';
 
 // ==============================|| CLAIMS BY STATUS CHART ||============================== //
 
@@ -14,7 +14,7 @@ export default function ClaimsByStatusChart({ height = 365 }) {
   const { data: chartData, isLoading } = useQuery({
     queryKey: ['claimsByStatus'],
     queryFn: async () => {
-      const response = await axios.get('/dashboard/claims-by-status');
+      const response = await api.get('/dashboard/claims-by-status');
       return response.data;
     },
     initialData: {

@@ -1,4 +1,4 @@
-import axiosClient from 'utils/axios';
+import api from 'lib/api';
 
 /**
  * Medical Catalog API — read-only unified catalog view.
@@ -11,7 +11,7 @@ import axiosClient from 'utils/axios';
  * @returns {Promise<Array>} categories, each with `.services[]`
  */
 export const getCatalogTree = async () => {
-  const res = await axiosClient.get('/medical-catalog/tree');
+  const res = await api.get('/medical-catalog/tree');
   return res.data?.data ?? [];
 };
 
@@ -21,7 +21,7 @@ export const getCatalogTree = async () => {
  * @returns {Promise<Array>} flat list of up to 50 matching services
  */
 export const searchCatalog = async (q) => {
-  const res = await axiosClient.get('/medical-catalog/search', { params: { q } });
+  const res = await api.get('/medical-catalog/search', { params: { q } });
   return res.data?.data ?? [];
 };
 
@@ -31,6 +31,6 @@ export const searchCatalog = async (q) => {
  * @returns {Promise<Array>} list of { id, code, nameAr, nameEn }
  */
 export const getSpecialties = async () => {
-  const res = await axiosClient.get('/medical-specialties');
+  const res = await api.get('/medical-specialties');
   return res.data?.data ?? [];
 };

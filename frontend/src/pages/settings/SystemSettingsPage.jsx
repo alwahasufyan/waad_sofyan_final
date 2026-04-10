@@ -19,7 +19,7 @@ import {
   Typography
 } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
-import axios from 'utils/axios';
+import api from 'lib/api';
 import {
   Business as BusinessIcon,
   CloudUpload as CloudUploadIcon,
@@ -188,7 +188,7 @@ const SystemSettingsPage = () => {
         featureFlagsService.getAllFlags(),
         companyService.getSystemCompany(),
         reportSettingsService.getActiveSettings(),
-        axios.get('/admin/settings/email')
+        api.get('/admin/settings/email')
       ]);
 
       const normalized = settings || [];
@@ -312,7 +312,7 @@ const SystemSettingsPage = () => {
               claimReportSigLeftBottom: dataToSave.claimReportSigLeftBottom
             })]
           : []),
-        axios.post('/admin/settings/email', emailToSave)
+        api.post('/admin/settings/email', emailToSave)
       ]);
 
       if (dataToSave.fontFamily) setField('fontFamily', dataToSave.fontFamily);

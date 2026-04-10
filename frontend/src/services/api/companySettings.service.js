@@ -1,4 +1,4 @@
-import axiosClient from 'utils/axios';
+import api from 'lib/api';
 
 /**
  * ============================================================================
@@ -71,7 +71,7 @@ const BASE_URL = '/company-settings';
  */
 const getByEmployerId = async (employerId) => {
   try {
-    const response = await axiosClient.get(`${BASE_URL}/employer/${employerId}`);
+    const response = await api.get(`${BASE_URL}/employer/${employerId}`);
     return response.data;
   } catch (error) {
     console.error(`Error fetching settings for employer ${employerId}:`, error);
@@ -87,7 +87,7 @@ const getByEmployerId = async (employerId) => {
  */
 const updateSettings = async (employerId, data) => {
   try {
-    const response = await axiosClient.put(`${BASE_URL}/employer/${employerId}`, data);
+    const response = await api.put(`${BASE_URL}/employer/${employerId}`, data);
     return response.data;
   } catch (error) {
     console.error(`Error updating settings for employer ${employerId}:`, error);
@@ -106,7 +106,7 @@ const updateSettings = async (employerId, data) => {
  */
 const getUiVisibility = async (employerId) => {
   try {
-    const response = await axiosClient.get(`${BASE_URL}/employer/${employerId}/ui`);
+    const response = await api.get(`${BASE_URL}/employer/${employerId}/ui`);
     return response.data;
   } catch (error) {
     console.error(`Error fetching UI visibility for employer ${employerId}:`, error);
@@ -122,7 +122,7 @@ const getUiVisibility = async (employerId) => {
  */
 const updateUiVisibility = async (employerId, data) => {
   try {
-    const response = await axiosClient.put(`${BASE_URL}/employer/${employerId}/ui`, data);
+    const response = await api.put(`${BASE_URL}/employer/${employerId}/ui`, data);
     return response.data;
   } catch (error) {
     console.error(`Error updating UI visibility for employer ${employerId}:`, error);

@@ -6,6 +6,7 @@ import Loadable from 'components/Loadable';
 import SidebarLayout from 'layout/SidebarLayout';
 import PermissionGuard from 'components/PermissionGuard';
 import ProviderPortalGuard from 'components/guards/ProviderPortalGuard';
+import AuthGuard from 'utils/route-guard/AuthGuard';
 
 // Contexts - Phase D2.3 Table Refresh
 import { TableRefreshLayout, TableRefreshProvider } from 'contexts/TableRefreshContext';
@@ -179,7 +180,11 @@ const ProviderAccountView = Loadable(lazy(() => import('pages/settlement/Provide
 
 const MainRoutes = {
   path: '/',
-  element: <SidebarLayout />,
+  element: (
+    <AuthGuard>
+      <SidebarLayout />
+    </AuthGuard>
+  ),
   children: [
     // Dashboard (Permission-guarded)
     {

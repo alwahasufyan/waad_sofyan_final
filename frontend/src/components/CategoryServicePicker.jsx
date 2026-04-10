@@ -42,7 +42,7 @@ import {
   Warning as WarningIcon,
   Info as InfoIcon
 } from '@mui/icons-material';
-import axiosClient from 'utils/axios';
+import api from 'lib/api';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // CONSTANTS
@@ -125,7 +125,7 @@ const CategoryServicePicker = ({
         setLoadingCategories(true);
         setFetchError(null);
 
-        const response = await axiosClient.get('/medical-categories/all');
+        const response = await api.get('/medical-categories/all');
         const data = response.data?.data || response.data || [];
 
         setCategories(data);
@@ -166,7 +166,7 @@ const CategoryServicePicker = ({
         setFetchError(null);
 
         // CANONICAL ENDPOINT: Get services filtered by category
-        const response = await axiosClient.get(`/medical-categories/${selectedCategory.id}/medical-services`);
+        const response = await api.get(`/medical-categories/${selectedCategory.id}/medical-services`);
         const data = response.data?.data || response.data || [];
 
         setServices(data);

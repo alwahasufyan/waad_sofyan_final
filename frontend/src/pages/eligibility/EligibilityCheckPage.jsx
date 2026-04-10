@@ -46,7 +46,7 @@ import {
   Refresh as RefreshIcon
 } from '@mui/icons-material';
 import { Html5Qrcode } from 'html5-qrcode';
-import axiosClient from 'utils/axios';
+import api from 'lib/api';
 import MainCard from 'components/MainCard';
 
 const EligibilityCheckPage = () => {
@@ -87,7 +87,7 @@ const EligibilityCheckPage = () => {
     setLoading(true);
 
     try {
-      const response = await axiosClient.get('/members/eligibility', {
+      const response = await api.get('/members/eligibility', {
         params: { query: query.trim() }
       });
 

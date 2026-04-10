@@ -1,6 +1,8 @@
 import { Navigate } from 'react-router-dom';
 import useAuth from 'hooks/useAuth';
 import { getDefaultRouteForRole } from 'utils/roleRoutes';
+import { AUTH_STATUS } from 'contexts/AuthContext';
+import { Box, CircularProgress } from '@mui/material';
 
 /**
  * RoleBasedRedirect Component
@@ -11,7 +13,15 @@ import { getDefaultRouteForRole } from 'utils/roleRoutes';
  * - Authenticated users → role-specific landing page
  */
 export default function RoleBasedRedirect() {
-  const { isLoggedIn, user } = useAuth();
+  const { authStatus, isLoggedIn, user } = useAuth();
+
+  if (authStatus === AUTH_STATUS.INITIALIZING) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+        <CircularProgress size={60} />
+      </Box>
+    );
+  }
 
   // If not logged in, redirect to login
   if (!isLoggedIn || !user) {

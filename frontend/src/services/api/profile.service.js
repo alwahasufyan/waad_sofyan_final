@@ -8,7 +8,7 @@
  * Last Updated: 2024-12-21
  */
 
-import axiosClient from 'utils/axios';
+import api from 'lib/api';
 
 /**
  * Change password for the currently authenticated user
@@ -21,7 +21,7 @@ import axiosClient from 'utils/axios';
  * @throws {Error} If current password is wrong or validation fails
  */
 export const changePassword = async (payload) => {
-  const response = await axiosClient.post('/profile/change-password', payload);
+  const response = await api.post('/profile/change-password', payload);
   return response;
 };
 

@@ -1,4 +1,4 @@
-import axiosClient from 'utils/axios';
+import api from 'lib/api';
 
 /**
  * PreAuthorization Analytics Dashboard Service
@@ -8,7 +8,7 @@ const preAuthDashboardService = {
    * Get complete dashboard data
    */
   getDashboard: async (trendDays = 30, topProviders = 10) => {
-    const response = await axiosClient.get('/pre-authorizations/dashboard', {
+    const response = await api.get('/pre-authorizations/dashboard', {
       params: { trendDays, topProviders }
     });
     return response.data;
@@ -18,7 +18,7 @@ const preAuthDashboardService = {
    * Get overall statistics
    */
   getStats: async () => {
-    const response = await axiosClient.get('/pre-authorizations/dashboard/stats');
+    const response = await api.get('/pre-authorizations/dashboard/stats');
     return response.data;
   },
 
@@ -26,7 +26,7 @@ const preAuthDashboardService = {
    * Get status distribution
    */
   getStatusDistribution: async () => {
-    const response = await axiosClient.get('/pre-authorizations/dashboard/status-distribution');
+    const response = await api.get('/pre-authorizations/dashboard/status-distribution');
     return response.data;
   },
 
@@ -34,7 +34,7 @@ const preAuthDashboardService = {
    * Get high priority queue (EMERGENCY, URGENT)
    */
   getHighPriorityQueue: async (limit = 10) => {
-    const response = await axiosClient.get('/pre-authorizations/dashboard/high-priority', {
+    const response = await api.get('/pre-authorizations/dashboard/high-priority', {
       params: { limit }
     });
     return response.data;
@@ -44,7 +44,7 @@ const preAuthDashboardService = {
    * Get expiring soon alerts
    */
   getExpiringSoon: async (withinDays = 7, limit = 10) => {
-    const response = await axiosClient.get('/pre-authorizations/dashboard/expiring-soon', {
+    const response = await api.get('/pre-authorizations/dashboard/expiring-soon', {
       params: { withinDays, limit }
     });
     return response.data;
@@ -54,7 +54,7 @@ const preAuthDashboardService = {
    * Get trends (daily counts)
    */
   getTrends: async (days = 30) => {
-    const response = await axiosClient.get('/pre-authorizations/dashboard/trends', {
+    const response = await api.get('/pre-authorizations/dashboard/trends', {
       params: { days }
     });
     return response.data;
@@ -64,7 +64,7 @@ const preAuthDashboardService = {
    * Get top providers by volume
    */
   getTopProviders: async (limit = 10) => {
-    const response = await axiosClient.get('/pre-authorizations/dashboard/top-providers', {
+    const response = await api.get('/pre-authorizations/dashboard/top-providers', {
       params: { limit }
     });
     return response.data;
@@ -74,7 +74,7 @@ const preAuthDashboardService = {
    * Get recent activity
    */
   getRecentActivity: async (limit = 10) => {
-    const response = await axiosClient.get('/pre-authorizations/dashboard/recent-activity', {
+    const response = await api.get('/pre-authorizations/dashboard/recent-activity', {
       params: { limit }
     });
     return response.data;

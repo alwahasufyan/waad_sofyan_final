@@ -9,7 +9,7 @@
  * API Base: /api/v1/admin/features
  */
 
-import axiosClient from 'utils/axios';
+import api from 'lib/api';
 
 const BASE_URL = '/admin/features';
 
@@ -20,7 +20,7 @@ const featureFlagsService = {
    * @returns {Promise<Array>} List of public feature flag DTOs
    */
   getPublicFlags: async () => {
-    const response = await axiosClient.get(`${BASE_URL}/public`);
+    const response = await api.get(`${BASE_URL}/public`);
     return response.data?.data ?? [];
   },
 
@@ -29,7 +29,7 @@ const featureFlagsService = {
    * @returns {Promise<Array>} Full list of feature flags
    */
   getAllFlags: async () => {
-    const response = await axiosClient.get(BASE_URL);
+    const response = await api.get(BASE_URL);
     return response.data?.data ?? [];
   },
 
@@ -40,7 +40,7 @@ const featureFlagsService = {
    * @returns {Promise<Object>} Updated flag DTO
    */
   toggleFlag: async (flagKey, enabled) => {
-    const response = await axiosClient.put(`${BASE_URL}/${flagKey}/toggle`, null, {
+    const response = await api.put(`${BASE_URL}/${flagKey}/toggle`, null, {
       params: { enabled }
     });
     return response.data?.data;
@@ -52,7 +52,7 @@ const featureFlagsService = {
    * @returns {Promise<Object>}
    */
   getUiConfig: async () => {
-    const response = await axiosClient.get('/admin/system-settings/ui-config');
+    const response = await api.get('/admin/system-settings/ui-config');
     return response.data;
   }
 };

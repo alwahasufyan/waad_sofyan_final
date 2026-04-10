@@ -1,4 +1,4 @@
-import axiosClient from 'utils/axios';
+import api from 'lib/api';
 import { createErrorHandler } from 'utils/api-error-handler';
 import { validateAmount } from 'utils/api-validators';
 import { normalizePaginatedResponse } from 'utils/api-response-normalizer';
@@ -39,7 +39,7 @@ export const preApprovalsService = {
       if (params.sortDir) queryParams.append('sortDirection', params.sortDir);
 
       const url = queryParams.toString() ? `${BASE_URL}?${queryParams.toString()}` : BASE_URL;
-      const response = await axiosClient.get(url);
+      const response = await api.get(url);
       return normalizePaginatedResponse(response);
     } catch (error) {
       throw handlePreApprovalErrors(error);
@@ -54,7 +54,7 @@ export const preApprovalsService = {
   getById: async (id) => {
     try {
       if (!id) throw new Error('معرف الموافقة المسبقة مطلوب');
-      const response = await axiosClient.get(`${BASE_URL}/${id}`);
+      const response = await api.get(`${BASE_URL}/${id}`);
       return unwrap(response);
     } catch (error) {
       throw handlePreApprovalErrors(error);
@@ -75,7 +75,7 @@ export const preApprovalsService = {
         validateAmount(data.requestedAmount, 'المبلغ المطلوب');
       }
       // Use standard endpoint (Visit-Centric Architecture)
-      const response = await axiosClient.post(BASE_URL, data);
+      const response = await api.post(BASE_URL, data);
       return unwrap(response);
     } catch (error) {
       throw handlePreApprovalErrors(error);
@@ -94,7 +94,7 @@ export const preApprovalsService = {
       if (data.requestedAmount !== undefined) {
         validateAmount(data.requestedAmount, 'المبلغ المطلوب');
       }
-      const response = await axiosClient.post(BASE_URL, data);
+      const response = await api.post(BASE_URL, data);
       return unwrap(response);
     } catch (error) {
       throw handlePreApprovalErrors(error);
@@ -114,7 +114,7 @@ export const preApprovalsService = {
       if (data.requestedAmount !== undefined) {
         validateAmount(data.requestedAmount, 'المبلغ المطلوب');
       }
-      const response = await axiosClient.put(`${BASE_URL}/${id}/data`, data);
+      const response = await api.put(`${BASE_URL}/${id}/data`, data);
       return unwrap(response);
     } catch (error) {
       throw handlePreApprovalErrors(error);
@@ -131,7 +131,7 @@ export const preApprovalsService = {
     try {
       if (!id) throw new Error('معرف الموافقة المسبقة مطلوب');
       if (!data) throw new Error('بيانات المراجعة مطلوبة');
-      const response = await axiosClient.put(`${BASE_URL}/${id}/review`, data);
+      const response = await api.put(`${BASE_URL}/${id}/review`, data);
       return unwrap(response);
     } catch (error) {
       throw handlePreApprovalErrors(error);
@@ -149,7 +149,7 @@ export const preApprovalsService = {
   remove: async (id) => {
     try {
       if (!id) throw new Error('معرف الموافقة المسبقة مطلوب');
-      const response = await axiosClient.delete(`${BASE_URL}/${id}`);
+      const response = await api.delete(`${BASE_URL}/${id}`);
       return unwrap(response);
     } catch (error) {
       throw handlePreApprovalErrors(error);
@@ -164,7 +164,7 @@ export const preApprovalsService = {
   getByStatus: async (status) => {
     try {
       if (!status) throw new Error('حالة الموافقة مطلوبة');
-      const response = await axiosClient.get(`${BASE_URL}/status/${status}`);
+      const response = await api.get(`${BASE_URL}/status/${status}`);
       return unwrap(response);
     } catch (error) {
       throw handlePreApprovalErrors(error);
@@ -194,7 +194,7 @@ export const preApprovalsService = {
       if (params.providerId) queryParams.append('providerId', params.providerId);
 
       const url = queryParams.toString() ? `${BASE_URL}/inbox/pending?${queryParams.toString()}` : `${BASE_URL}/inbox/pending`;
-      const response = await axiosClient.get(url);
+      const response = await api.get(url);
       return normalizePaginatedResponse(response);
     } catch (error) {
       throw handlePreApprovalErrors(error);
@@ -213,7 +213,7 @@ export const preApprovalsService = {
       // Only send approvalNotes - backend calculates all financial values (approvedAmount, copayAmount, etc.)
       const payload = { approvalNotes: data?.approvalNotes || null };
       // Async approval - returns immediately with APPROVAL_IN_PROGRESS status
-      const response = await axiosClient.post(`${BASE_URL}/${id}/approve`, payload);
+      const response = await api.post(`${BASE_URL}/${id}/approve`, payload);
       return unwrap(response);
     } catch (error) {
       throw handlePreApprovalErrors(error);
@@ -232,7 +232,7 @@ export const preApprovalsService = {
       if (!data?.rejectionReason) {
         throw new Error('سبب الرفض مطلوب');
       }
-      const response = await axiosClient.post(`${BASE_URL}/${id}/reject`, data);
+      const response = await api.post(`${BASE_URL}/${id}/reject`, data);
       return unwrap(response);
     } catch (error) {
       throw handlePreApprovalErrors(error);
@@ -248,7 +248,7 @@ export const preApprovalsService = {
   acknowledge: async (id) => {
     try {
       if (!id) throw new Error('معرف الموافقة مطلوب');
-      const response = await axiosClient.post(`${BASE_URL}/${id}/acknowledge`);
+      const response = await api.post(`${BASE_URL}/${id}/acknowledge`);
       return unwrap(response);
     } catch (error) {
       throw handlePreApprovalErrors(error);
@@ -263,7 +263,7 @@ export const preApprovalsService = {
   startReview: async (id) => {
     try {
       if (!id) throw new Error('معرف الموافقة مطلوب');
-      const response = await axiosClient.post(`${BASE_URL}/${id}/start-review`);
+      const response = await api.post(`${BASE_URL}/${id}/start-review`);
       return unwrap(response);
     } catch (error) {
       throw handlePreApprovalErrors(error);
@@ -288,7 +288,7 @@ export const preApprovalsService = {
       queryParams.append('size', size);
       queryParams.append('status', status.toUpperCase());
 
-      const response = await axiosClient.get(`${BASE_URL}/inbox/pending?${queryParams.toString()}`);
+      const response = await api.get(`${BASE_URL}/inbox/pending?${queryParams.toString()}`);
       return normalizePaginatedResponse(response);
     } catch (error) {
       throw handlePreApprovalErrors(error);
@@ -308,7 +308,7 @@ export const preApprovalsService = {
       if (params.sortBy) queryParams.append('sortBy', params.sortBy);
       if (params.sortDir) queryParams.append('sortDir', params.sortDir);
 
-      const response = await axiosClient.get(`${BASE_URL}/inbox/pending?${queryParams.toString()}`);
+      const response = await api.get(`${BASE_URL}/inbox/pending?${queryParams.toString()}`);
       return normalizePaginatedResponse(response);
     } catch (error) {
       throw handlePreApprovalErrors(error);
@@ -323,7 +323,7 @@ export const preApprovalsService = {
   getByMember: async (memberId) => {
     try {
       if (!memberId) throw new Error('معرف العضو مطلوب');
-      const response = await axiosClient.get(`${BASE_URL}/member/${memberId}`);
+      const response = await api.get(`${BASE_URL}/member/${memberId}`);
       return unwrap(response);
     } catch (error) {
       throw handlePreApprovalErrors(error);
@@ -340,7 +340,7 @@ export const preApprovalsService = {
     try {
       if (!memberId) throw new Error('معرف العضو مطلوب');
       if (!serviceCode) throw new Error('رمز الخدمة مطلوب');
-      const response = await axiosClient.get(`${BASE_URL}/check-validity?memberId=${memberId}&serviceCode=${serviceCode}`);
+      const response = await api.get(`${BASE_URL}/check-validity?memberId=${memberId}&serviceCode=${serviceCode}`);
       return unwrap(response);
     } catch (error) {
       throw handlePreApprovalErrors(error);
@@ -355,7 +355,7 @@ export const preApprovalsService = {
   getAttachments: async (id) => {
     try {
       if (!id) throw new Error('معرف الموافقة المسبقة مطلوب');
-      const response = await axiosClient.get(`${BASE_URL}/${id}/attachments`);
+      const response = await api.get(`${BASE_URL}/${id}/attachments`);
       return unwrap(response);
     } catch (error) {
       throw handlePreApprovalErrors(error);
@@ -372,7 +372,7 @@ export const preApprovalsService = {
     try {
       if (!id) throw new Error('معرف الموافقة المسبقة مطلوب');
       if (!formData) throw new Error('بيانات الملف مطلوبة');
-      const response = await axiosClient.post(`${BASE_URL}/${id}/attachments`, formData, {
+      const response = await api.post(`${BASE_URL}/${id}/attachments`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
@@ -393,7 +393,7 @@ export const preApprovalsService = {
     try {
       if (!preApprovalId) throw new Error('معرف الموافقة المسبقة مطلوب');
       if (!attachmentId) throw new Error('معرف المرفق مطلوب');
-      const response = await axiosClient.get(`${BASE_URL}/${preApprovalId}/attachments/${attachmentId}`, {
+      const response = await api.get(`${BASE_URL}/${preApprovalId}/attachments/${attachmentId}`, {
         responseType: 'blob'
       });
       return response.data;
@@ -416,7 +416,7 @@ export const preApprovalsService = {
       if (params.sortBy) queryParams.append('sortBy', params.sortBy);
       if (params.sortDir) queryParams.append('sortDirection', params.sortDir);
 
-      const response = await axiosClient.get(`${BASE_URL}/search?${queryParams.toString()}`);
+      const response = await api.get(`${BASE_URL}/search?${queryParams.toString()}`);
       return normalizePaginatedResponse(response);
     } catch (error) {
       throw handlePreApprovalErrors(error);

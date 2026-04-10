@@ -5,7 +5,7 @@
  * API Base: /api/v1/admin/system-settings
  */
 
-import axiosClient from 'utils/axios';
+import api from 'lib/api';
 
 const BASE_URL = '/admin/system-settings';
 
@@ -18,7 +18,7 @@ export const systemSettingsService = {
    * @returns {Promise<Array>} List of settings
    */
   getAll: async () => {
-    const response = await axiosClient.get(BASE_URL);
+    const response = await api.get(BASE_URL);
     return response.data;
   },
 
@@ -28,7 +28,7 @@ export const systemSettingsService = {
    * @returns {Promise<Array>} List of settings in category
    */
   getByCategory: async (category) => {
-    const response = await axiosClient.get(`${BASE_URL}/category/${category}`);
+    const response = await api.get(`${BASE_URL}/category/${category}`);
     return response.data;
   },
 
@@ -37,7 +37,7 @@ export const systemSettingsService = {
    * @returns {Promise<Object>} { slaDays, description }
    */
   getClaimSlaDays: async () => {
-    const response = await axiosClient.get(`${BASE_URL}/claim-sla-days`);
+    const response = await api.get(`${BASE_URL}/claim-sla-days`);
     return response.data;
   },
 
@@ -47,7 +47,7 @@ export const systemSettingsService = {
    * @returns {Promise<Object>} { oldValue, newValue, message, updatedBy }
    */
   updateClaimSlaDays: async (slaDays) => {
-    const response = await axiosClient.put(`${BASE_URL}/claim-sla-days`, { slaDays });
+    const response = await api.put(`${BASE_URL}/claim-sla-days`, { slaDays });
     return response.data;
   },
 
@@ -56,7 +56,7 @@ export const systemSettingsService = {
    * @returns {Promise<Object>} { oldValue, newValue, message, updatedBy }
    */
   resetClaimSlaDays: async () => {
-    const response = await axiosClient.post(`${BASE_URL}/claim-sla-days/reset`);
+    const response = await api.post(`${BASE_URL}/claim-sla-days/reset`);
     return response.data;
   },
 
@@ -65,7 +65,7 @@ export const systemSettingsService = {
    * @returns {Promise<Object>} Compliance report
    */
   getSlaComplianceReport: async () => {
-    const response = await axiosClient.get(`${BASE_URL}/sla-compliance-report`);
+    const response = await api.get(`${BASE_URL}/sla-compliance-report`);
     return response.data;
   },
 
@@ -76,7 +76,7 @@ export const systemSettingsService = {
    * @returns {Promise<Object>} Updated setting
    */
   updateSetting: async (key, value) => {
-    const response = await axiosClient.put(`${BASE_URL}/${key}`, { value });
+    const response = await api.put(`${BASE_URL}/${key}`, { value });
     return response.data;
   }
 };

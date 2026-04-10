@@ -38,7 +38,7 @@ import UnifiedPageHeader from 'components/UnifiedPageHeader';
 import { UnifiedMedicalTable } from 'components/common';
 import PermissionGuard from 'components/PermissionGuard';
 import { DocumentPreviewDrawer } from 'components/tba/documents';
-import axiosClient from 'utils/axios';
+import api from 'lib/api';
 
 // ==================== CONSTANTS ====================
 
@@ -117,7 +117,7 @@ const ProviderDocuments = () => {
         ...(filters.fromDate && { fromDate: dayjs(filters.fromDate).format('YYYY-MM-DD') }),
         ...(filters.toDate && { toDate: dayjs(filters.toDate).format('YYYY-MM-DD') })
       };
-      const response = await axiosClient.get('/api/v1/provider/documents', { params });
+      const response = await api.get('/api/v1/provider/documents', { params });
       return response.data.data;
     }
   });
@@ -126,7 +126,7 @@ const ProviderDocuments = () => {
   const { data: stats } = useQuery({
     queryKey: ['provider-documents-stats'],
     queryFn: async () => {
-      const response = await axiosClient.get('/api/v1/provider/documents/stats');
+      const response = await api.get('/api/v1/provider/documents/stats');
       return response.data.data;
     }
   });
@@ -266,7 +266,7 @@ const ProviderDocuments = () => {
         return;
       }
 
-      const response = await axiosClient.get(downloadRequestUrl, {
+      const response = await api.get(downloadRequestUrl, {
         responseType: 'blob'
       });
 
@@ -304,7 +304,7 @@ const ProviderDocuments = () => {
           return;
         }
 
-        const response = await axiosClient.get(downloadRequestUrl, {
+        const response = await api.get(downloadRequestUrl, {
           responseType: 'blob'
         });
 

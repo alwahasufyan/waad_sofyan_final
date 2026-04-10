@@ -1,4 +1,4 @@
-import axiosClient from 'utils/axios';
+import api from 'lib/api';
 import { createErrorHandler } from 'utils/api-error-handler';
 import { normalizePaginatedResponse } from 'utils/api-response-normalizer';
 
@@ -37,7 +37,7 @@ export const reportsService = {
       if (params.toDate) queryParams.append('toDate', params.toDate);
 
       const url = queryParams.toString() ? `${BASE_URL}/financial-summary?${queryParams.toString()}` : `${BASE_URL}/financial-summary`;
-      const response = await axiosClient.get(url);
+      const response = await api.get(url);
       return unwrap(response);
     } catch (error) {
       throw handleReportErrors(error);
@@ -55,7 +55,7 @@ export const reportsService = {
       if (params.employerOrgId) queryParams.append('employerOrgId', params.employerOrgId);
 
       const url = queryParams.toString() ? `${BASE_URL}/settlement-summary?${queryParams.toString()}` : `${BASE_URL}/settlement-summary`;
-      const response = await axiosClient.get(url);
+      const response = await api.get(url);
       return unwrap(response);
     } catch (error) {
       throw handleReportErrors(error);
@@ -79,7 +79,7 @@ export const reportsService = {
         params.statuses.forEach((s) => queryParams.append('statuses', s));
       }
 
-      const response = await axiosClient.get(`${BASE_URL}/adjudication?${queryParams.toString()}`);
+      const response = await api.get(`${BASE_URL}/adjudication?${queryParams.toString()}`);
       return unwrap(response);
     } catch (error) {
       throw handleReportErrors(error);
@@ -133,7 +133,7 @@ export const reportsService = {
       const url = queryParams.toString()
         ? `${BASE_URL}/provider-settlements?${queryParams.toString()}`
         : `${BASE_URL}/provider-settlements`;
-      const response = await axiosClient.get(url);
+      const response = await api.get(url);
       return unwrap(response);
     } catch (error) {
       throw handleReportErrors(error);
@@ -149,7 +149,7 @@ export const reportsService = {
    */
   getProvidersForSettlementReport: async () => {
     try {
-      const response = await axiosClient.get(`${BASE_URL}/provider-settlements/providers`);
+      const response = await api.get(`${BASE_URL}/provider-settlements/providers`);
       return unwrap(response);
     } catch (error) {
       throw handleReportErrors(error);
@@ -175,7 +175,7 @@ export const reportsService = {
       const url = queryParams.toString()
         ? `${BASE_URL}/member-statement/${memberId}?${queryParams.toString()}`
         : `${BASE_URL}/member-statement/${memberId}`;
-      const response = await axiosClient.get(url);
+      const response = await api.get(url);
       return unwrap(response);
     } catch (error) {
       throw handleReportErrors(error);
@@ -190,7 +190,7 @@ export const reportsService = {
    */
   getSummary: async () => {
     try {
-      const response = await axiosClient.get(`${BASE_URL}/summary`);
+      const response = await api.get(`${BASE_URL}/summary`);
       return unwrap(response);
     } catch (error) {
       throw handleReportErrors(error);

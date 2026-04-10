@@ -1,4 +1,4 @@
-import axiosClient from 'utils/axios';
+import api from 'lib/api';
 import { createErrorHandler } from 'utils/api-error-handler';
 import { normalizePaginatedResponse } from 'utils/api-response-normalizer';
 
@@ -28,7 +28,7 @@ export const emailPreAuthService = {
    */
   getAll: async (params = {}) => {
     try {
-      const response = await axiosClient.get(BASE_URL, { params });
+      const response = await api.get(BASE_URL, { params });
       return normalizePaginatedResponse(response);
     } catch (error) {
       throw handleError(error);
@@ -43,7 +43,7 @@ export const emailPreAuthService = {
   getById: async (id) => {
     try {
       if (!id) throw new Error('معرف الطلب مطلوب');
-      const response = await axiosClient.get(`${BASE_URL}/${id}`);
+      const response = await api.get(`${BASE_URL}/${id}`);
       return unwrap(response);
     } catch (error) {
       throw handleError(error);
@@ -55,7 +55,7 @@ export const emailPreAuthService = {
    */
   fetchFromEmailServer: async () => {
     try {
-      await axiosClient.post(`${BASE_URL}/fetch`);
+      await api.post(`${BASE_URL}/fetch`);
     } catch (error) {
       throw handleError(error);
     }
@@ -66,7 +66,7 @@ export const emailPreAuthService = {
    */
   markProcessed: async (id, preAuthId) => {
     try {
-      await axiosClient.post(`${BASE_URL}/${id}/mark-processed`, null, { params: { preAuthId } });
+      await api.post(`${BASE_URL}/${id}/mark-processed`, null, { params: { preAuthId } });
     } catch (error) {
       throw handleError(error);
     }
@@ -79,7 +79,7 @@ export const emailPreAuthService = {
     try {
       const params = { memberId, serviceId };
       if (notes) params.notes = notes;
-      const response = await axiosClient.post(`${BASE_URL}/${id}/approve`, null, { params });
+      const response = await api.post(`${BASE_URL}/${id}/approve`, null, { params });
       return unwrap(response);
     } catch (error) {
       throw handleError(error);
@@ -94,7 +94,7 @@ export const emailPreAuthService = {
   remove: async (id) => {
     try {
       if (!id) throw new Error('معرف الطلب مطلوب');
-      await axiosClient.delete(`${BASE_URL}/${id}`);
+      await api.delete(`${BASE_URL}/${id}`);
     } catch (error) {
       throw handleError(error);
     }
@@ -107,7 +107,7 @@ export const emailPreAuthService = {
   reidentify: async (id) => {
     try {
       if (!id) throw new Error('معرف الطلب مطلوب');
-      const response = await axiosClient.post(`${BASE_URL}/${id}/reidentify`);
+      const response = await api.post(`${BASE_URL}/${id}/reidentify`);
       return unwrap(response);
     } catch (error) {
       throw handleError(error);

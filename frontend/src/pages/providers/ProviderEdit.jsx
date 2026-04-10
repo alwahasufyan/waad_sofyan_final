@@ -71,6 +71,7 @@ import {
 import MainCard from 'components/MainCard';
 import ModernPageHeader from 'components/tba/ModernPageHeader';
 import DocumentPreviewPanel from 'components/documents/DocumentPreviewPanel';
+import useAuth from 'hooks/useAuth';
 import { useProviderDetails, useUpdateProvider } from 'hooks/useProviders';
 import GregorianDatePicker from 'components/common/GregorianDatePicker';
 import { downloadFileByUrl } from 'services/api/files.service';
@@ -125,6 +126,7 @@ const ProviderEdit = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { enqueueSnackbar } = useSnackbar();
+  const { user } = useAuth();
   const { provider, loading } = useProviderDetails(id);
   const { update, updating } = useUpdateProvider();
 
@@ -480,8 +482,7 @@ const ProviderEdit = () => {
       await usersService.updateUser(selectedUserToLink.id, payload);
 
       // ✨ AUTO-REFRESH TOKEN: If linking current user to provider
-      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-      if (currentUser.id === selectedUserToLink.id) {
+      if (user?.id === selectedUserToLink.id) {
         try {
           await refreshToken();
           enqueueSnackbar('تم ربط المستخدم وتحديث بياناتك بنجاح', {

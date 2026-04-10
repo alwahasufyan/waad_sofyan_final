@@ -28,7 +28,7 @@ import {
 import { CloudUpload, Code, Business, CheckCircle, Warning, Error as ErrorIcon } from '@mui/icons-material';
 import { useDropzone } from 'react-dropzone';
 import { useSnackbar } from 'notistack';
-import axios from 'utils/axios';
+import api from 'lib/api';
 import { useImportProgress } from 'contexts/GlobalImportProgressContext';
 import employersService from 'services/api/employers.service';
 
@@ -113,7 +113,7 @@ const DataImportWizard = ({
 
     try {
       // Using parameterized baseApiUrl
-      const response = await axios.post(`${baseApiUrl}/preview`, formData, {
+      const response = await api.post(`${baseApiUrl}/preview`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       // NEW: Extract data from ApiResponse wrapper correctly
@@ -164,7 +164,7 @@ const DataImportWizard = ({
     formData.append('importPolicy', 'UPDATE');
 
     try {
-      const response = await axios.post(`${baseApiUrl}/execute`, formData, {
+      const response = await api.post(`${baseApiUrl}/execute`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       const result = response.data?.data || response.data?.result || response.data;
@@ -186,7 +186,7 @@ const DataImportWizard = ({
 
   const downloadTemplate = async () => {
     try {
-      const response = await axios.get(`${baseApiUrl}/template`, { responseType: 'blob' });
+      const response = await api.get(`${baseApiUrl}/template`, { responseType: 'blob' });
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;

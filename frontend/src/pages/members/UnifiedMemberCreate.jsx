@@ -57,7 +57,7 @@ import MainCard from 'components/MainCard';
 import ModernPageHeader from 'components/tba/ModernPageHeader';
 import { createPrincipalMember, uploadPhoto, GENDERS } from 'services/api/unified-members.service';
 import { getEffectiveBenefitPolicy } from 'services/api/benefit-policies.service';
-import axiosClient from 'utils/axios';
+import api from 'lib/api';
 import { openSnackbar } from 'api/snackbar';
 
 /**
@@ -159,7 +159,7 @@ const UnifiedMemberCreate = () => {
   const fetchEmployers = async () => {
     try {
       // Use selectors endpoint for dropdown population - faster and lighter
-      const response = await axiosClient.get('/employers/selectors');
+      const response = await api.get('/employers/selectors');
       setEmployers(response.data?.data || []);
     } catch (error) {
       console.error('Error fetching employers:', error);

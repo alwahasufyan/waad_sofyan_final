@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { Avatar, Box, CircularProgress, Tooltip } from '@mui/material';
 import { Star as VIPIcon, Bolt as FlashIcon } from '@mui/icons-material';
-import axiosClient from 'utils/axios';
+import api from 'lib/api';
 
 /**
  * MemberAvatar - Reusable Enterprise Component
@@ -60,7 +60,7 @@ const MemberAvatar = ({ member, size = 40, sx = {}, refreshTrigger }) => {
       }
 
       try {
-        const response = await axiosClient.get(resolvedUrl, {
+        const response = await api.get(resolvedUrl, {
           responseType: 'blob',
           headers: {
             Accept: 'image/*'

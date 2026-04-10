@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import axiosClient from 'utils/axios';
+import api from 'lib/api';
 
 /**
  * Claim Status Constants
@@ -116,7 +116,7 @@ export const useEmployerDashboardKPIs = (employerId) => {
       const params = employerId ? { employerId } : {};
 
       // Fetch from backend aggregation endpoint
-      const response = await axiosClient.get('/dashboard/summary', { params });
+      const response = await api.get('/dashboard/summary', { params });
       const data = unwrap(response);
 
       if (!data) {
@@ -162,7 +162,7 @@ export const useEmployerDashboardKPIs = (employerId) => {
   const fetchClaimsStatusBreakdown = useCallback(async () => {
     try {
       const params = employerId ? { employerOrgId: employerId } : {};
-      const response = await axiosClient.get('/claims/financial-summary', { params });
+      const response = await api.get('/claims/financial-summary', { params });
       const data = unwrap(response);
 
       // Build status counts from backend response

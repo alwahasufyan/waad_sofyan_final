@@ -14,7 +14,7 @@
  * @since 2026-01-11
  */
 
-import api from '../../utils/axios';
+import api from 'lib/api';
 
 const UNIFIED_MEMBERS_BASE_URL = '/unified-members';
 

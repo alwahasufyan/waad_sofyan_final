@@ -18,7 +18,7 @@ import {
   Paper
 } from '@mui/material';
 import { SettingOutlined, CheckCircleOutlined } from '@ant-design/icons';
-import axios from 'utils/axios';
+import api from 'lib/api';
 import { openSnackbar } from 'api/snackbar';
 
 const EmailSettingsTab = ({ settings, setSettings }) => {
@@ -37,7 +37,7 @@ const EmailSettingsTab = ({ settings, setSettings }) => {
     const label = type === 'imap' ? 'خادم الاستقبال (IMAP)' : 'خادم الإرسال (SMTP)';
     try {
       const endpoint = type === 'imap' ? '/admin/settings/email/test-imap' : '/admin/settings/email/test-smtp';
-      const response = await axios.post(endpoint, settings);
+      const response = await api.post(endpoint, settings);
       
       if (response.data === true) {
         openSnackbar({

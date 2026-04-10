@@ -1,4 +1,4 @@
-import axiosClient from 'utils/axios';
+import api from 'lib/api';
 
 /**
  * ============================================================================
@@ -51,7 +51,7 @@ export const getDashboardSummary = async (employerId = null) => {
       params.employerId = employerId;
     }
 
-    const response = await axiosClient.get(`${BASE_URL}/summary`, { params });
+    const response = await api.get(`${BASE_URL}/summary`, { params });
     return unwrap(response);
   } catch (error) {
     console.error('Error fetching dashboard summary:', error);
@@ -74,7 +74,7 @@ export const getMonthlyTrends = async (months = 12, employerId = null) => {
       params.employerId = employerId;
     }
 
-    const response = await axiosClient.get(`${BASE_URL}/monthly-trends`, { params });
+    const response = await api.get(`${BASE_URL}/monthly-trends`, { params });
     return unwrap(response);
   } catch (error) {
     console.error('Error fetching monthly trends:', error);
@@ -91,7 +91,7 @@ export const getMonthlyTrends = async (months = 12, employerId = null) => {
  */
 export const getMembersGrowth = async (months = 12) => {
   try {
-    const response = await axiosClient.get(`${BASE_URL}/members-growth`, {
+    const response = await api.get(`${BASE_URL}/members-growth`, {
       params: { months }
     });
     return unwrap(response);
@@ -110,7 +110,7 @@ export const getMembersGrowth = async (months = 12) => {
  */
 export const getCostsByProvider = async (limit = 10) => {
   try {
-    const response = await axiosClient.get(`${BASE_URL}/cost-by-provider`, {
+    const response = await api.get(`${BASE_URL}/cost-by-provider`, {
       params: { limit }
     });
     return unwrap(response);
@@ -128,7 +128,7 @@ export const getCostsByProvider = async (limit = 10) => {
  */
 export const getServiceDistribution = async () => {
   try {
-    const response = await axiosClient.get(`${BASE_URL}/service-distribution`);
+    const response = await api.get(`${BASE_URL}/service-distribution`);
     return unwrap(response);
   } catch (error) {
     console.error('Error fetching service distribution:', error);
@@ -145,7 +145,7 @@ export const getServiceDistribution = async () => {
  */
 export const getRecentActivities = async (limit = 10) => {
   try {
-    const response = await axiosClient.get(`${BASE_URL}/recent-activities`, {
+    const response = await api.get(`${BASE_URL}/recent-activities`, {
       params: { limit }
     });
     return unwrap(response);
