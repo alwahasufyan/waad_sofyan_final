@@ -2,12 +2,26 @@
 
 ## 1. Environment File
 
-Use [.env.waadapp.example](.env.waadapp.example) as the server `.env` base.
+Use [.env.production.example](.env.production.example) as the server `.env` base.
+
+On the server:
+
+```bash
+cp .env.production.example .env
+```
+
+Generate a strong JWT secret (Linux):
+
+```bash
+openssl rand -base64 64
+```
+
+Then paste it into `JWT_SECRET` in `.env`.
 
 Minimum production values:
 
 ```dotenv
-DB_PASSWORD=WAAD@359228
+DB_PASSWORD=CHANGE_ME_STRONG_DB_PASSWORD
 POSTGRES_DB=tba_waad_system
 POSTGRES_USER=postgres
 TZ=Africa/Tripoli
@@ -15,21 +29,21 @@ PGTZ=Africa/Tripoli
 SPRING_PROFILES_ACTIVE=prod
 SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/tba_waad_system
 SPRING_DATASOURCE_USERNAME=postgres
-JWT_SECRET=waad_super_secret_key_2026_prod_2026_secure
+JWT_SECRET=CHANGE_ME_SUPER_LONG_RANDOM_SECRET_MIN_64_CHARS
 APP_FRONTEND_URL=https://waadapp.ly
 CORS_ALLOWED_ORIGINS=https://waadapp.ly,https://www.waadapp.ly
 VITE_API_URL=/api/v1
 FRONTEND_PORT=80
 NGINX_CONFIG=nginx.local.conf
 BUILD_NODE_OPTIONS=--max-old-space-size=4096
-EMAIL_ENABLED=false
+EMAIL_ENABLED=true
 EMAIL_HOST=smtp.lsbox.email
 EMAIL_PORT=587
 EMAIL_USERNAME=info@waadapp.ly
-EMAIL_PASSWORD=your_app_password
+EMAIL_PASSWORD=CHANGE_ME_MAILBOX_APP_PASSWORD
 EMAIL_FROM=info@waadapp.ly
 EMAIL_FROM_NAME=شركة وعد لإدارة النفقات الطبية
-ADMIN_DEFAULT_PASSWORD=Admin@123
+ADMIN_DEFAULT_PASSWORD=CHANGE_ME_STRONG_ADMIN_PASSWORD
 ```
 
 ## 2. First Deployment
